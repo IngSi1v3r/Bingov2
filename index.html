@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Festival Bingo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <h1>Festival Bingo</h1>
+
+    <p id="gameName" class="game-name clickable">Lade Spiel...</p>
+
+    <div id="scoreDisplay">Score: 0</div>
+
+    <div class="top-bar">
+  <div id="playerDisplay">Eingeloggt als: -</div>
+
+  <div class="top-bar-actions">
+    <button id="rulesBtn" class="secondary-btn">Regeln</button>
+    <button id="logoutBtn" class="logout-btn">Logout</button>
+  </div>
+</div>
+
+    <div id="grid" class="grid"></div>
+
+    <!-- LEADERBOARD -->
+    <div class="leaderboard">
+      <h2>Leaderboard</h2>
+      <div id="leaderboardList" class="leaderboard-list"></div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- MODAL (CHALLENGE) -->
+  <!-- ===================== -->
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="modalTitle">Titel</h2>
+      <p id="modalTask">Aufgabe</p>
+      <p id="modalPoints">Punkte</p>
+      <div class="modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- LOGIN OVERLAY -->
+  <!-- ===================== -->
+  <div id="loginOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>Willkommen</h2>
+
+    <div id="authChoiceView">
+      <p>Wie möchtest du weitermachen?</p>
+      <div class="modal-actions auth-choice-actions">
+        <button id="showLoginBtn">Anmelden</button>
+        <button id="showRegisterBtn">Neuen Spieler anlegen</button>
+      </div>
+    </div>
+
+    <div id="loginView" class="hidden">
+      <p>Mit bestehendem Spieler anmelden</p>
+      <input id="loginNameInput" type="text" placeholder="Name" />
+      <input id="loginPinInput" type="password" placeholder="PIN" />
+
+      <div class="modal-actions auth-actions">
+        <button id="doLoginBtn">Login</button>
+        <button id="backToChoiceFromLoginBtn" type="button">Zurück</button>
+      </div>
+    </div>
+
+    <div id="registerView" class="hidden">
+      <p>Neuen Spieler erstellen</p>
+      <input id="registerNameInput" type="text" placeholder="Name" />
+      <input id="registerPinInput" type="password" placeholder="PIN" />
+
+      <div class="modal-actions auth-actions">
+        <button id="doRegisterBtn">Erstellen</button>
+        <button id="backToChoiceFromRegisterBtn" type="button">Zurück</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- ===================== -->
+  <!-- GAME SELECT OVERLAY -->
+  <!-- ===================== -->
+  <div id="gameSelectOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Spiel auswählen</h2>
+      <div id="gameList" class="game-list"></div>
+      <div class="modal-actions">
+        <button id="closeGameSelectBtn">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- Regeln -->
+  <!-- ===================== -->
+
+  <div id="rulesOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>Regeln & Punkte</h2>
+
+    <div class="rules-content">
+      <p><strong>Ziel:</strong> Löse Aufgaben auf dem Spielfeld und sammle möglichst viele Punkte.</p>
+
+      <p><strong>So funktioniert's:</strong></p>
+      <ul>
+        <li>Alle Spieler sehen dasselbe Spielfeld.</li>
+        <li>Du kannst immer nur eine Aufgabe gleichzeitig aktiv haben.</li>
+        <li>Nach dem Anklicken eines Feldes musst du dich entscheiden: <strong>Bestanden</strong> oder <strong>Aufgeben</strong>.</li>
+      </ul>
+
+      <p><strong>Punkte:</strong></p>
+      <ul>
+        <li>Jede Aufgabe bringt 1, 2 oder 3 Punkte.</li>
+        <li>Wer eine Aufgabe als Erster löst, bekommt <strong>doppelte Punkte</strong>.</li>
+      </ul>
+
+      <p><strong>Bingo:</strong></p>
+      <ul>
+        <li>5 gelöste Felder in einer Reihe ergeben ein <strong>Bingo</strong>.</li>
+        <li>Ein Bingo bringt <strong>+5 Bonuspunkte</strong>.</li>
+        <li>Bingos zählen horizontal, vertikal und diagonal.</li>
+      </ul>
+
+      <p><strong>Cooldown:</strong></p>
+      <ul>
+        <li>Wenn du aufgibst, bekommst du eine kurze Strafzeit.</li>
+        <li>Währenddessen kannst du keine neue Aufgabe starten.</li>
+      </ul>
+
+      <p><strong>Hinweise im Spielfeld:</strong></p>
+      <ul>
+        <li>Die Zahl unten links zeigt, wie viele Spieler das Feld bereits gelöst haben.</li>
+        <li>Der Banner oben im Feld zeigt, wenn andere Spieler gerade an dieser Aufgabe arbeiten.</li>
+        <li>Ein Stern bedeutet, dass du diese Aufgabe als Erster gelöst hast.</li>
+      </ul>
+    </div>
+
+    <div class="modal-actions">
+      <button id="closeRulesBtn">Schließen</button>
+    </div>
+  </div>
+</div>
+
+  <!-- ===================== -->
+  <!-- Hinweise-->
+  <!-- ===================== -->
+
+<div id="detailsOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>Hinweise</h2>
+
+    <div id="detailsContent" class="rules-content">
+      <!-- wird dynamisch gefüllt -->
+    </div>
+
+    <div class="modal-actions">
+      <button id="closeDetailsBtn">Schließen</button>
+    </div>
+  </div>
+</div>
+
+  <!-- ===================== -->
+  <!-- BINGO BANNER -->
+  <!-- ===================== -->
+  <div id="bingoBanner" class="bingo-banner hidden">
+    <div class="bingo-card">
+      <h2>BINGO!</h2>
+      <p>+5 Punkte</p>
+    </div>
+  </div>
+
+    <!-- ===================== -->
+  <!-- FOTO UPLOAD -->
+  <!-- ===================== -->
+
+  <div id="uploadOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Beweisfoto hochladen</h2>
+
+      <div class="rules-content">
+        <p id="uploadChallengeTitle"><strong>Aufgabe:</strong> -</p>
+        <p>Bitte lade ein Beweisfoto hoch, um die Aufgabe abzuschließen.</p>
+
+        <input id="uploadPhotoInput" type="file" accept="image/*" />
+
+        <p id="uploadStatusText" style="margin-top: 12px;"></p>
+      </div>
+
+      <div class="modal-actions">
+        <button id="doUploadBtn">Hochladen</button>
+        <button id="cancelUploadBtn" type="button">Zurück</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- FIRST SOLVER BANNER -->
+  <!-- ===================== -->
+  <div id="firstSolverBanner" class="first-solver-banner hidden">
+    <div class="first-solver-card">
+      <h2>First Solver!</h2>
+      <p>Doppelte Punkte</p>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- SCRIPTS -->
+  <!-- ===================== -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <script src="auth.js"></script>
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+  <script src="app.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
