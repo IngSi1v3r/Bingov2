@@ -26,18 +26,91 @@ const uploadPhotoInput = document.getElementById("uploadPhotoInput");
 const uploadStatusText = document.getElementById("uploadStatusText");
 const doUploadBtn = document.getElementById("doUploadBtn");
 const cancelUploadBtn = document.getElementById("cancelUploadBtn");
+const photoViewerOverlay = document.getElementById("photoViewerOverlay");
+const photoViewerTitle = document.getElementById("photoViewerTitle");
+const photoViewerContent = document.getElementById("photoViewerContent");
+const closePhotoViewerBtn = document.getElementById("closePhotoViewerBtn");
+const modalCloseBtn = document.getElementById("modalCloseBtn");
+const uploadPreviewContainer = document.getElementById("uploadPreviewContainer");
+const uploadPreviewImage = document.getElementById("uploadPreviewImage");
+const closeFinalBtn = document.getElementById("closeFinalBtn");
+const finalOverlay = document.getElementById("finalOverlay");
+const finalScoreText = document.getElementById("finalScoreText");
+const playerProfileOverlay = document.getElementById("playerProfileOverlay");
+const playerProfileName = document.getElementById("playerProfileName");
+const playerProfileStats = document.getElementById("playerProfileStats");
+const playerProfileGallery = document.getElementById("playerProfileGallery");
+const closePlayerProfileBtn = document.getElementById("closePlayerProfileBtn");
+const playerProfileCompletedList = document.getElementById("playerProfileCompletedList");
+const playerProfileLogoutBtn = document.getElementById("playerProfileLogoutBtn");
+const resetProgressBtn = document.getElementById("resetProgressBtn");
+const deletePlayerBtn = document.getElementById("deletePlayerBtn");
+const failConfirmOverlay = document.getElementById("failConfirmOverlay");
+const failConfirmText = document.getElementById("failConfirmText");
+const cancelFailBtn = document.getElementById("cancelFailBtn");
+const confirmFailBtn = document.getElementById("confirmFailBtn");
+const cooldownDisplay = document.getElementById("cooldownDisplay");
+const cooldownTimerText = document.getElementById("cooldownTimerText");
+const scoreValue = document.getElementById("scoreValue");
 
+// =======================
+// Globale Variablen
+// =======================
 
+let pendingUploadChallenge = null;
+
+let currentCompletionGallery = [];
+let currentGalleryIndex = 0;
+
+let currentPlayerProfileGallery = [];
+let currentPlayerProfileGalleryIndex = 0;
+
+let displayedScore = 0;
+let freezeScoreDisplay = false;
 
 // =======================
 // MODAL FUNKTIONEN
 // =======================
 
+function lockBodyScroll() {
+  document.body.style.overflow = "hidden";
+}
+
+function unlockBodyScroll() {
+  document.body.style.overflow = "";
+}
+
 function formatCompletedDateTime(isoString) {
   if (!isoString) return "-";
 
   const date = new Date(isoString);
+  const now = new Date();
 
+  // Nur Datum (ohne Uhrzeit) vergleichen
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const diffMs = nowOnly - dateOnly;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  const timeString = date.toLocaleTimeString("de-AT", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  if (diffDays === 0) {
+    return `heute ${timeString}`;
+  }
+
+  if (diffDays === 1) {
+    return `gestern ${timeString}`;
+  }
+
+  if (diffDays === 2) {
+    return `vorgestern ${timeString}`;
+  }
+
+  // fallback: volles Datum
   return date.toLocaleString("de-AT", {
     day: "2-digit",
     month: "2-digit",
@@ -48,7 +121,13 @@ function formatCompletedDateTime(isoString) {
 }
 
 function openChallengeModal(challenge) {
-  modalTitle.textContent = challenge.title;
+  modalCloseBtn.classList.add("hidden");
+
+  modalTitle.innerHTML = `
+    ${challenge.title}
+    ${challenge.requiresPhotoProof ? '<span class="photo-required-icon">📷</span>' : ''}
+  `;
+
   modalTask.textContent = challenge.task;
   modalPoints.textContent = `Punkte: ${challenge.points}`;
 
@@ -56,19 +135,19 @@ function openChallengeModal(challenge) {
 
   modalActions.innerHTML = `
     ${hasDetails ? `<button id="detailsBtn">Hinweise</button>` : ""}
-    <button id="completeBtn">Bestanden</button>
+    <button id="completeBtn">
+      ${challenge.requiresPhotoProof ? "Foto hochladen" : "Bestanden"}
+    </button>
     <button id="failBtn">Aufgeben</button>
   `;
 
-  // Hinweise Button (nur wenn vorhanden)
   if (hasDetails) {
     document.getElementById("detailsBtn").onclick = () => {
       openDetailsModal(challenge.details);
     };
   }
 
-  // Standard Buttons
-    document.getElementById("completeBtn").onclick = async () => {
+  document.getElementById("completeBtn").onclick = async () => {
     if (challenge.requiresPhotoProof) {
       closeModal();
       openUploadModal(challenge);
@@ -78,58 +157,180 @@ function openChallengeModal(challenge) {
     await completeChallenge(challenge.boardId);
   };
 
-  document.getElementById("failBtn").onclick = async () => {
-    await failChallenge();
+    document.getElementById("failBtn").onclick = () => {
+    openFailConfirmModal();
   };
 
+  lockBodyScroll();
   modalOverlay.classList.remove("hidden");
 }
 
-function openCompletedChallengeModal(challenge) {
-  modalTitle.textContent = challenge.title;
+function renderCompletionGallery() {
+  const galleryContainer = document.getElementById("completionGallery");
 
-  const solvedAt = gameState.completedAt[challenge.boardId];
+  if (!galleryContainer) return;
 
-  const imagePath = gameState.proofImagePaths[challenge.boardId];
+  if (!currentCompletionGallery.length) {
+    galleryContainer.innerHTML = "";
+    return;
+  }
 
-let imageHtml = "";
+  const entry = currentCompletionGallery[currentGalleryIndex];
 
-if (imagePath) {
   const { data } = supabaseClient.storage
     .from("proof-photos")
-    .getPublicUrl(imagePath);
+    .getPublicUrl(entry.proofImagePath);
 
   const imageUrl = data.publicUrl;
 
-  imageHtml = `
-    <div style="margin-top: 16px;">
-      <img src="${imageUrl}" style="width: 100%; border-radius: 12px;" />
+  galleryContainer.innerHTML = `
+    <div class="gallery-wrapper gallery-fade-in">
+      <p class="gallery-caption">
+        <strong>Foto von:</strong> ${entry.username}
+        <span class="gallery-time">(${formatCompletedDateTime(entry.completedAt)})</span>
+      </p>
+
+      <div class="gallery-image-container">
+        ${currentGalleryIndex > 0 ? `<div class="gallery-arrow left" id="prevGalleryBtn">‹</div>` : ""}
+        <img src="${imageUrl}" class="gallery-image" />
+        ${currentGalleryIndex < currentCompletionGallery.length - 1 ? `<div class="gallery-arrow right" id="nextGalleryBtn">›</div>` : ""}
+      </div>
+    </div>
+  `;
+
+  const prevBtn = document.getElementById("prevGalleryBtn");
+  const nextBtn = document.getElementById("nextGalleryBtn");
+
+  if (prevBtn) {
+    prevBtn.onclick = () => {
+      if (currentGalleryIndex > 0) {
+        currentGalleryIndex--;
+        renderCompletionGallery();
+      }
+    };
+  }
+
+  if (nextBtn) {
+    nextBtn.onclick = () => {
+      if (currentGalleryIndex < currentCompletionGallery.length - 1) {
+        currentGalleryIndex++;
+        renderCompletionGallery();
+      }
+    };
+  }
+}
+
+function setGalleryToPlayer(playerId) {
+  const index = currentCompletionGallery.findIndex(entry => entry.playerId === playerId);
+
+  if (index >= 0) {
+    currentGalleryIndex = index;
+    renderCompletionGallery();
+  }
+}
+
+async function openCompletedChallengeModal(challenge) {
+
+    modalCloseBtn.classList.remove("hidden");
+
+  modalTitle.textContent = challenge.title;
+
+  const completions = await loadChallengeCompletions(challenge.dbId);
+
+  const galleryEntries = completions.filter(entry => entry.proofImagePath);
+
+  currentCompletionGallery = galleryEntries;
+  currentGalleryIndex = 0;
+
+  if (currentCompletionGallery.length > 0 && currentPlayer) {
+    const ownIndex = currentCompletionGallery.findIndex(
+      entry => entry.playerId === currentPlayer.id
+    );
+
+    if (ownIndex >= 0) {
+      currentGalleryIndex = ownIndex;
+    }
+  }
+
+  let completionsHtml = `
+    <div id="completionGallery"></div>
+
+    <div class="completion-list">
+      <h3>Bereits gelöst von</h3>
+  `;
+
+  if (completions.length === 0) {
+    completionsHtml += `<p>Noch niemand.</p>`;
+  } else {
+    completions.forEach((entry, index) => {
+      const isCurrentPlayer = currentPlayer && entry.playerId === currentPlayer.id;
+      const isClickable = !!entry.proofImagePath;
+
+      completionsHtml += `
+        <div class="completion-row ${isCurrentPlayer ? "current-player" : ""}">
+          <div 
+            class="completion-name ${isClickable ? "clickable" : ""}"
+            data-player-id="${entry.playerId}"
+          >
+            ${index + 1}. ${entry.username}${index === 0 ? `<span class="completion-star">⭐</span>` : ""}
+          </div>
+          <div class="completion-time">
+            ${formatCompletedDateTime(entry.completedAt)}
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  completionsHtml += `</div>`;
+
+  let successHtml = "";
+
+if (challenge.successText && challenge.successText.trim() !== "") {
+  successHtml = `
+    <div class="success-text">
+      ${challenge.successText}
     </div>
   `;
 }
 
-  modalTask.innerHTML = `
+modalTask.innerHTML = `
   <p>${challenge.task}</p>
-  <p><strong>Gelöst um:</strong> ${formatCompletedDateTime(solvedAt)}</p>
-  ${imageHtml}
+  <p><strong>Punkte:</strong> ${challenge.points}</p>
+  ${successHtml}
+  ${completionsHtml}
 `;
 
-  modalPoints.textContent = `Punkte: ${challenge.points}`;
+  modalPoints.textContent = "";
 
   modalActions.innerHTML = `
-    <button id="backBtn">Zurück</button>
+    <button id="resetChallengeBtn" class="secondary-btn">Challenge zurücksetzen</button>
   `;
 
-  document.getElementById("backBtn").onclick = () => {
-    closeModal();
+  document.getElementById("resetChallengeBtn").onclick = async () => {
+    await resetCompletedChallenge(challenge.boardId);
   };
 
+  const clickableNames = modalTask.querySelectorAll(".completion-name.clickable");
+
+  clickableNames.forEach(el => {
+    el.addEventListener("click", () => {
+      const playerId = Number(el.dataset.playerId);
+      setGalleryToPlayer(playerId);
+    });
+  });
+
+  lockBodyScroll();
   modalOverlay.classList.remove("hidden");
+  renderCompletionGallery();
 }
 
 
 
 function openCooldownModal() {
+
+    modalCloseBtn.classList.add("hidden");
+
   modalTitle.textContent = "Cooldown aktiv";
   modalTask.innerHTML = `
     <div class="timer-box">
@@ -141,14 +342,18 @@ function openCooldownModal() {
   modalPoints.textContent = "";
 
   modalActions.innerHTML = "";
+  lockBodyScroll();
   modalOverlay.classList.remove("hidden");
 }
 
 function closeModal() {
   modalOverlay.classList.add("hidden");
+  modalCloseBtn.classList.add("hidden");
+  unlockBodyScroll();
 }
 
 function openRulesModal() {
+    modalCloseBtn.classList.remove("hidden");
   rulesOverlay.classList.remove("hidden");
 }
 
@@ -166,7 +371,8 @@ function closeDetailsModal() {
 }
 
 
-let pendingUploadChallenge = null;
+
+
 
 function openUploadModal(challenge) {
   pendingUploadChallenge = challenge;
@@ -174,7 +380,11 @@ function openUploadModal(challenge) {
   uploadChallengeTitle.innerHTML = `<strong>Aufgabe:</strong> ${challenge.title}`;
   uploadPhotoInput.value = "";
   uploadStatusText.textContent = "";
+  doUploadBtn.textContent = "Hochladen";
+  setUploadButtonsDisabled(false);
+  resetUploadPreview();
 
+  lockBodyScroll();
   uploadOverlay.classList.remove("hidden");
 }
 
@@ -183,7 +393,122 @@ function closeUploadModal() {
   pendingUploadChallenge = null;
   uploadPhotoInput.value = "";
   uploadStatusText.textContent = "";
+  doUploadBtn.textContent = "Hochladen";
+  setUploadButtonsDisabled(false);
+  resetUploadPreview();
+  unlockBodyScroll();
 }
+
+function resetUploadPreview() {
+  uploadPreviewImage.src = "";
+  uploadPreviewContainer.classList.add("hidden");
+}
+
+function setUploadButtonsDisabled(disabled) {
+  doUploadBtn.disabled = disabled;
+  cancelUploadBtn.disabled = disabled;
+}
+
+async function openPlayerProfileModal() {
+  if (!currentPlayer) return;
+
+  playerProfileName.innerHTML = `<strong>Spieler:</strong> ${currentPlayer.username}`;
+
+  const completedRows = await loadCompletedChallengesForCurrentPlayer(currentPlayer.id);
+
+  currentPlayerProfileGallery = completedRows
+    .filter(row => row.proof_image_path)
+    .map(row => {
+      const challenge = getChallengeByDbId(row.challenge_id);
+      return challenge
+        ? {
+            challengeId: row.challenge_id,
+            challengeTitle: challenge.title,
+            completedAt: row.completed_at,
+            proofImagePath: row.proof_image_path,
+            wasFirstSolver: row.was_first_solver,
+            pointsAwarded: row.points_awarded
+          }
+        : null;
+    })
+    .filter(Boolean);
+
+  const logoutBtn = document.getElementById("playerProfileLogoutBtn");
+
+    if (logoutBtn) {
+    logoutBtn.onclick = () => {
+    closePlayerProfileModal();
+    logoutPlayer();
+    };
+    }
+
+  currentPlayerProfileGalleryIndex = 0;
+
+  // 👉 jetzt erst Stats (weil Bilderanzahl gebraucht wird)
+  await renderPlayerProfileStats();
+
+  renderPlayerProfileGallery();
+  await renderPlayerProfileCompletedList();
+
+  lockBodyScroll();
+  playerProfileOverlay.classList.remove("hidden");
+}
+
+function closePlayerProfileModal() {
+  playerProfileOverlay.classList.add("hidden");
+  unlockBodyScroll();
+}
+
+
+function formatCooldownMinutesText(seconds) {
+  const minutes = Math.ceil(seconds / 60);
+
+  if (minutes === 1) {
+    return "1 Minute";
+  }
+
+  return `${minutes} Minuten`;
+}
+
+
+
+// =======================
+// BESTÄTIGUNG AUFGEBEN
+// =======================
+
+
+function openFailConfirmModal() {
+  const cooldownSeconds = currentGame?.cooldown_seconds ?? 0;
+  const cooldownText = formatCooldownMinutesText(cooldownSeconds);
+
+  failConfirmText.innerHTML = `
+    Bist du sicher, dass du diese Challenge aufgeben willst?<br><br>
+    <strong>Achtung:</strong> Danach bist du für <strong>${cooldownText}</strong> für neue Aufgaben gesperrt.<br>
+    Du kannst diese Challenge später erneut versuchen.
+  `;
+
+  failConfirmOverlay.classList.remove("hidden");
+  lockBodyScroll();
+}
+
+function closeFailConfirmModal() {
+  failConfirmOverlay.classList.add("hidden");
+}
+
+function updateCooldownDisplay() {
+  if (!cooldownDisplay || !cooldownTimerText) return;
+
+  if (isCooldownActive()) {
+    cooldownDisplay.classList.remove("hidden");
+    cooldownTimerText.textContent = formatCooldownTime(getRemainingCooldownSeconds());
+  } else {
+    cooldownDisplay.classList.add("hidden");
+    cooldownTimerText.textContent = "00:00";
+  }
+}
+
+
+
 
 // =======================
 // Animationen
@@ -213,6 +538,73 @@ function showFirstSolverAnimation() {
       resolve();
     }, 2300);
   });
+}
+
+function animateScoreDisplay(newScore) {
+  return new Promise((resolve) => {
+    const animationDuration = 1100;
+    const updateDelay = 420;
+
+    if (scoreValue) {
+      scoreValue.classList.remove("score-pop");
+      void scoreValue.offsetWidth;
+      scoreValue.classList.add("score-pop");
+
+      setTimeout(() => {
+        displayedScore = newScore;
+        setScoreDisplay(displayedScore);
+      }, updateDelay);
+
+      setTimeout(() => {
+        scoreValue.classList.remove("score-pop");
+        resolve();
+      }, animationDuration);
+    } else {
+      scoreDisplay.classList.remove("score-pop");
+      void scoreDisplay.offsetWidth;
+      scoreDisplay.classList.add("score-pop");
+
+      setTimeout(() => {
+        displayedScore = newScore;
+        setScoreDisplay(displayedScore);
+      }, updateDelay);
+
+      setTimeout(() => {
+        scoreDisplay.classList.remove("score-pop");
+        resolve();
+      }, animationDuration);
+    }
+  });
+}
+
+function showPointsPopup(boardId, awardedPoints) {
+  return new Promise((resolve) => {
+    const cell = document.querySelector(`.cell[data-board-id="${boardId}"]`);
+
+    if (!cell) {
+      resolve();
+      return;
+    }
+
+    const popup = document.createElement("div");
+    popup.className = "cell-points-popup";
+    popup.textContent = `+${awardedPoints}P`;
+
+    cell.appendChild(popup);
+
+    setTimeout(() => {
+      popup.remove();
+      resolve();
+    }, 3000);
+  });
+}
+
+function setScoreDisplay(value) {
+  if (scoreValue) {
+    scoreValue.textContent = value;
+  } else {
+    scoreDisplay.textContent = `Score: ${value}`;
+  }
 }
 
 // =======================
@@ -280,24 +672,385 @@ async function renderLeaderboard() {
 }
 
 // =======================
+// Statistik
+// =======================
+
+async function renderPlayerProfileStats() {
+  const completedCount = gameState.completed.length;
+  const totalCount = challenges.length;
+  const firstSolverCount = gameState.firstSolved.length;
+  const bingoCount = gameState.bingos.length;
+  const score = gameState.score;
+
+  // Bilder
+  const imageCount = currentPlayerProfileGallery.length;
+
+  // Rang berechnen
+  let rankText = "-";
+
+  try {
+    const leaderboard = await loadLeaderboard();
+
+    const index = leaderboard.findIndex(
+      entry => entry.playerId === currentPlayer.id
+    );
+
+    if (index >= 0) {
+      rankText = `${index + 1} / ${leaderboard.length}`;
+    }
+  } catch (err) {
+    console.error("Fehler beim Laden des Leaderboards:", err);
+  }
+
+  playerProfileStats.innerHTML = `
+    <div class="profile-stats-grid">
+      <div class="profile-stat-card">
+        <div class="profile-stat-label">Punkte</div>
+        <div class="profile-stat-value">${score}</div>
+      </div>
+
+      <div class="profile-stat-card">
+        <div class="profile-stat-label">Aufgaben</div>
+        <div class="profile-stat-value">${completedCount} / ${totalCount}</div>
+      </div>
+
+      <div class="profile-stat-card">
+        <div class="profile-stat-label">First Solver</div>
+        <div class="profile-stat-value">${firstSolverCount}</div>
+      </div>
+
+      <div class="profile-stat-card">
+        <div class="profile-stat-label">Bingos</div>
+        <div class="profile-stat-value">${bingoCount}</div>
+      </div>
+
+      <div class="profile-stat-card">
+        <div class="profile-stat-label">Bilder</div>
+        <div class="profile-stat-value">${imageCount}</div>
+      </div>
+
+      <div class="profile-stat-card">
+        <div class="profile-stat-label">Rang</div>
+        <div class="profile-stat-value">${rankText}</div>
+      </div>
+    </div>
+  `;
+}
+
+
+async function loadCompletedChallengesForCurrentPlayer(playerId) {
+  const { data, error } = await supabaseClient
+    .from("player_challenges")
+    .select("challenge_id, completed_at, was_first_solver, points_awarded, proof_image_path")
+    .eq("player_id", playerId)
+    .eq("game_id", currentGameId)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false });
+
+  if (error) {
+    console.error("Fehler beim Laden der abgeschlossenen Aufgaben:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+function renderPlayerProfileGallery() {
+  if (!playerProfileGallery) return;
+
+  if (!currentPlayerProfileGallery.length) {
+    playerProfileGallery.innerHTML = `<p>Noch keine Bilder vorhanden.</p>`;
+    return;
+  }
+
+  const entry = currentPlayerProfileGallery[currentPlayerProfileGalleryIndex];
+
+  const { data } = supabaseClient.storage
+    .from("proof-photos")
+    .getPublicUrl(entry.proofImagePath);
+
+  const imageUrl = data.publicUrl;
+
+  playerProfileGallery.innerHTML = `
+    <div class="gallery-wrapper gallery-fade-in">
+      <p class="gallery-caption">
+        <strong>${entry.challengeTitle}</strong>, ${formatCompletedDateTime(entry.completedAt)}
+      </p>
+
+      <div class="gallery-image-container">
+        ${currentPlayerProfileGalleryIndex > 0 ? `<div class="gallery-arrow left" id="prevPlayerProfileGalleryBtn">‹</div>` : ""}
+        <img src="${imageUrl}" class="gallery-image" />
+        ${currentPlayerProfileGalleryIndex < currentPlayerProfileGallery.length - 1 ? `<div class="gallery-arrow right" id="nextPlayerProfileGalleryBtn">›</div>` : ""}
+      </div>
+    </div>
+  `;
+
+  const prevBtn = document.getElementById("prevPlayerProfileGalleryBtn");
+  const nextBtn = document.getElementById("nextPlayerProfileGalleryBtn");
+
+  if (prevBtn) {
+    prevBtn.onclick = () => {
+      if (currentPlayerProfileGalleryIndex > 0) {
+        currentPlayerProfileGalleryIndex--;
+        renderPlayerProfileGallery();
+      }
+    };
+  }
+
+  if (nextBtn) {
+    nextBtn.onclick = () => {
+      if (currentPlayerProfileGalleryIndex < currentPlayerProfileGallery.length - 1) {
+        currentPlayerProfileGalleryIndex++;
+        renderPlayerProfileGallery();
+      }
+    };
+  }
+}
+
+function setPlayerProfileGalleryToChallenge(challengeId) {
+  const index = currentPlayerProfileGallery.findIndex(
+    entry => entry.challengeId === challengeId
+  );
+
+  if (index >= 0) {
+    currentPlayerProfileGalleryIndex = index;
+    renderPlayerProfileGallery();
+  }
+}
+
+async function renderPlayerProfileCompletedList() {
+  if (!currentPlayer) return;
+
+  const completedRows = await loadCompletedChallengesForCurrentPlayer(currentPlayer.id);
+
+  if (!completedRows.length) {
+    playerProfileCompletedList.innerHTML = `<p>Noch keine Aufgaben abgeschlossen.</p>`;
+    return;
+  }
+
+  let html = `<div class="completion-list">`;
+
+  completedRows.forEach((row, index) => {
+    const challenge = getChallengeByDbId(row.challenge_id);
+    if (!challenge) return;
+
+    const isClickable = !!row.proof_image_path;
+
+    html += `
+      <div class="completion-row">
+        <div 
+          class="completion-name ${isClickable ? "clickable" : ""}"
+          data-challenge-id="${row.challenge_id}"
+        >
+          ${index + 1}. ${challenge.title}, ${formatCompletedDateTime(row.completed_at)}
+          ${row.was_first_solver ? `<span class="completion-star">⭐</span>` : ""}
+        </div>
+
+        <div class="completion-points">
+          ${row.points_awarded}P
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+
+  playerProfileCompletedList.innerHTML = html;
+
+  const clickableEntries = playerProfileCompletedList.querySelectorAll(".completion-name.clickable");
+
+  clickableEntries.forEach(el => {
+    el.addEventListener("click", () => {
+      const challengeId = Number(el.dataset.challengeId);
+      if (!challengeId) return;
+
+      setPlayerProfileGalleryToChallenge(challengeId);
+    });
+  });
+}
+
+// =======================
+// ZURÜCKSETZEN UND LÖSCHEN
+// =======================
+
+
+
+async function resetAllCompletedChallengesForPlayer(playerId) {
+  const { error } = await supabaseClient
+    .from("player_challenges")
+    .update({
+      status: "hidden",
+      completed_at: null,
+      was_first_solver: false,
+      points_awarded: null,
+      proof_image_path: null
+    })
+    .eq("player_id", playerId)
+    .eq("game_id", currentGameId)
+    .eq("status", "completed");
+
+  if (error) {
+    console.error("Fehler beim Zurücksetzen aller Challenges:", error);
+    return false;
+  }
+
+  return true;
+}
+
+
+async function deleteAllPlayerBingos(playerId) {
+  const { error } = await supabaseClient
+    .from("player_bingos")
+    .delete()
+    .eq("player_id", playerId)
+    .eq("game_id", currentGameId);
+
+  if (error) {
+    console.error("Fehler beim Löschen der Bingos:", error);
+    return false;
+  }
+
+  return true;
+}
+
+async function resetCurrentGameProgress() {
+  if (!currentPlayer) return;
+
+  const confirmed = confirm(
+    "Willst du wirklich deinen gesamten Fortschritt in diesem Spiel zurücksetzen?"
+  );
+
+  if (!confirmed) return;
+
+  const playerId = currentPlayer.id;
+
+  const resetChallengesOk = await resetAllCompletedChallengesForPlayer(playerId);
+  if (!resetChallengesOk) {
+    alert("Die abgeschlossenen Aufgaben konnten nicht zurückgesetzt werden.");
+    return;
+  }
+
+  const deleteBingosOk = await deleteAllPlayerBingos(playerId);
+  if (!deleteBingosOk) {
+    alert("Die Bingos konnten nicht zurückgesetzt werden.");
+    return;
+  }
+
+  const updateStateOk = await updatePlayerGameState(playerId, {
+    score: 0,
+    active_challenge_id: null,
+    cooldown_until: null
+  });
+
+  if (!updateStateOk) {
+    alert("Der Spielstand konnte nicht aktualisiert werden.");
+    return;
+  }
+
+  // Lokalen State zurücksetzen
+  gameState.score = 0;
+  gameState.completed = [];
+  gameState.firstSolved = [];
+  gameState.activeChallengeId = null;
+  gameState.cooldownUntil = null;
+  gameState.bingos = [];
+  gameState.bingoCells = [];
+
+  await loadGlobalChallengeStats();
+  await renderLeaderboard();
+  renderGrid();
+
+  // Profilansicht neu aufbauen, damit Stats/Liste/Galerie sofort stimmen
+  await renderPlayerProfileStats();
+renderPlayerProfileGallery();
+await renderPlayerProfileCompletedList();
+}
+
+async function deleteCurrentPlayerProfile() {
+  if (!currentPlayer) return;
+
+  const confirmed = confirm(
+    "ACHTUNG!\n\nDein gesamtes Profil wird gelöscht.\nAlle Fortschritte in ALLEN Spielen gehen verloren.\n\nDiese Aktion kann NICHT rückgängig gemacht werden.\n\nWirklich löschen?"
+  );
+
+  if (!confirmed) return;
+
+  const playerId = currentPlayer.id;
+
+  const success = await deletePlayerProfile(playerId);
+
+  if (!success) {
+    alert("Profil konnte nicht gelöscht werden.");
+    return;
+  }
+
+  // LocalStorage löschen
+  localStorage.removeItem("festival_bingo_player");
+
+  // Lokalen Zustand komplett zurücksetzen
+  currentPlayer = null;
+
+  gameState = {
+    score: 0,
+    completed: [],
+    firstSolved: [],
+    activeChallengeId: null,
+    cooldownUntil: null,
+    bingos: [],
+    bingoCells: []
+  };
+
+  currentPlayerProfileGallery = [];
+  currentPlayerProfileGalleryIndex = 0;
+
+  // Alle offenen Overlays schließen
+  closePlayerProfileModal();
+  closeModal();
+  closeUploadModal();
+  closePhotoViewer();
+  closeRulesModal();
+  closeDetailsModal();
+  closeFinalOverlay();
+
+  // UI sofort neutral setzen
+  displayedScore = 0;
+  setScoreDisplay(0);
+  playerDisplay.textContent = "Eingeloggt als: -";
+
+  renderGrid();
+  await renderLeaderboard();
+
+  // Jetzt explizit Login anzeigen
+  showLoginOverlay();
+
+}
+
+// =======================
 // GRID RENDERN
 // =======================
 
-function renderGrid() {
+function renderGrid(updateScore = true) {
   grid.innerHTML = "";
 
-scoreDisplay.textContent = `Score: ${gameState.score}`;
+  updateCooldownDisplay();
 
-if (currentPlayer) {
-  playerDisplay.textContent = `Eingeloggt als: ${currentPlayer.username}`;
-} else {
-  playerDisplay.textContent = "Eingeloggt als: -";
-}
+  if (updateScore && !freezeScoreDisplay) {
+    displayedScore = gameState.score;
+  }
+
+  setScoreDisplay(displayedScore);
+
+  if (currentPlayer) {
+    playerDisplay.textContent = `Eingeloggt als: ${currentPlayer.username}`;
+  } else {
+    playerDisplay.textContent = "Eingeloggt als: -";
+  }
 
   const cooldown = isCooldownActive();
 
   for (const challenge of challenges) {
     const cell = document.createElement("div");
+    cell.dataset.boardId = challenge.boardId;
     cell.className = "cell";
 
     const isCompleted = gameState.completed.includes(challenge.boardId);
@@ -305,9 +1058,7 @@ if (currentPlayer) {
     const isActive = gameState.activeChallengeId === challenge.boardId;
     const isBingoCell = gameState.bingoCells.includes(challenge.boardId);
     const isFirstSolverCell = gameState.firstSolved.includes(challenge.boardId);
-    const activeByOthers = challenge.activeCount > 0;
 
-    // Style immer sauber neu setzen
     cell.style.background = "";
     cell.style.border = "";
     cell.style.opacity = "";
@@ -315,34 +1066,35 @@ if (currentPlayer) {
 
     if (isCompleted) {
       cell.style.background = "#16a34a";
+      cell.style.opacity = "1";
     } else if (isActive) {
       cell.style.border = "2px solid #3b82f6";
     }
 
     if (isBingoCell) {
-    cell.style.boxShadow = "0 0 0 3px gold inset";
+      cell.style.boxShadow = "0 0 0 3px gold inset";
     }
 
-
-    if (cooldown) {
+    if (cooldown && !isCompleted) {
       cell.style.opacity = "0.3";
     } else if (isLocked && !isActive && !isCompleted) {
       cell.style.opacity = "0.5";
     }
 
-cell.innerHTML = `
-  ${challenge.activeCount > 0 ? `<div class="cell-active-banner">Wird versucht (${challenge.activeCount})</div>` : ""}
-  ${isFirstSolverCell ? `<div class="cell-first-solver">⭐</div>` : ""}
-  ${challenge.categoryIcon ? `<div class="cell-category-icon">${challenge.categoryIcon}</div>` : ""}
+    cell.innerHTML = `
+      ${challenge.activeCount > 0 ? `<div class="cell-active-banner">Wird versucht (${challenge.activeCount})</div>` : ""}
+      ${isFirstSolverCell ? `<div class="cell-first-solver">⭐</div>` : ""}
+      ${challenge.categoryIcon ? `<div class="cell-category-icon">${challenge.categoryIcon}</div>` : ""}
+      ${isCooldownActive() && !isCompleted && !isActive ? `<div class="cell-lock-icon">🔒</div>` : ""}
 
-  <div class="cell-title">${challenge.title}</div>
-  <div class="cell-points">${challenge.points}P</div>
-  <div class="cell-solved-count">${challenge.solvedCount}</div>
-`;
+      <div class="cell-title">${challenge.title}</div>
+      <div class="cell-points">${challenge.points}P</div>
+      <div class="cell-solved-count">${challenge.solvedCount}</div>
+    `;
 
-        cell.addEventListener("click", async () => {
+    cell.addEventListener("click", async () => {
       if (isCompleted) {
-        openCompletedChallengeModal(challenge);
+        await openCompletedChallengeModal(challenge);
         return;
       }
 
@@ -357,15 +1109,157 @@ cell.innerHTML = `
 }
 
 // =======================
-// Buttons
+// Foto-Viewer
 // =======================
 
-logoutBtn.addEventListener("click", logoutPlayer);
+
+function openPhotoViewer(username, imagePath) {
+  const { data } = supabaseClient.storage
+    .from("proof-photos")
+    .getPublicUrl(imagePath);
+
+  const imageUrl = data.publicUrl;
+
+  photoViewerTitle.textContent = `Beweisfoto von ${username}`;
+
+  photoViewerContent.innerHTML = `
+    <img src="${imageUrl}" style="width: 100%; border-radius: 12px;" />
+  `;
+
+  photoViewerOverlay.classList.remove("hidden");
+}
+
+function closePhotoViewer() {
+  photoViewerOverlay.classList.add("hidden");
+  photoViewerContent.innerHTML = "";
+}
+
+
+// =======================
+// Hilfsfunktionen Spielende
+// =======================
+
+function getFinalSeenStorageKey() {
+  if (!currentPlayer) return null;
+  return `festival_bingo_final_seen_${currentGameId}_${currentPlayer.id}`;
+}
+
+function markFinalAsSeen() {
+  const key = getFinalSeenStorageKey();
+  if (!key) return;
+  localStorage.setItem(key, "true");
+}
+
+function hasSeenFinal() {
+  const key = getFinalSeenStorageKey();
+  if (!key) return false;
+  return localStorage.getItem(key) === "true";
+}
+
+function clearFinalSeenIfNeeded() {
+  const key = getFinalSeenStorageKey();
+  if (!key) return;
+
+  if (gameState.completed.length < challenges.length) {
+    localStorage.removeItem(key);
+  }
+}
+
+function launchFinalConfetti() {
+  for (let i = 0; i < 10; i++) { // mehr Wellen
+    setTimeout(() => {
+      for (let j = 0; j < 20; j++) {
+        const piece = document.createElement("div");
+        piece.textContent = ["🎉", "✨", "🎊", "⭐"][Math.floor(Math.random() * 4)];
+
+        piece.style.position = "fixed";
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.top = "-20px";
+        piece.style.fontSize = `${18 + Math.random() * 18}px`;
+        piece.style.pointerEvents = "none";
+        piece.style.zIndex = "5000";
+
+        piece.style.transition = "transform 5s linear, opacity 5s ease";
+        piece.style.opacity = "1";
+
+        document.body.appendChild(piece);
+
+        requestAnimationFrame(() => {
+          piece.style.transform = `translateY(${window.innerHeight + 100}px) rotate(${Math.random() * 720 - 360}deg)`;
+          piece.style.opacity = "0";
+        });
+
+        setTimeout(() => piece.remove(), 8200);
+      }
+    }, i * 250); // längerer Abstand
+  }
+}
+
+function openFinalOverlay(finalScore) {
+  finalScoreText.innerHTML = `<strong>Dein finaler Punktestand:</strong> ${finalScore}`;
+  lockBodyScroll();
+  finalOverlay.classList.remove("hidden");
+  launchFinalConfetti();
+  markFinalAsSeen();
+}
+
+function closeFinalOverlay() {
+  finalOverlay.classList.add("hidden");
+  unlockBodyScroll();
+}
+
+
+
+// =======================
+// BUTTONS - ALLGEMEIN
+// =======================
+
+
 rulesBtn.addEventListener("click", openRulesModal);
 closeRulesBtn.addEventListener("click", closeRulesModal);
 closeDetailsBtn.addEventListener("click", closeDetailsModal);
+closePhotoViewerBtn.addEventListener("click", closePhotoViewer);
+modalCloseBtn.addEventListener("click", closeModal);
+closeFinalBtn.addEventListener("click", closeFinalOverlay);
+playerDisplay.addEventListener("click", openPlayerProfileModal);
+closePlayerProfileBtn.addEventListener("click", closePlayerProfileModal);
 
-// Foto-Upload:
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", logoutPlayer);
+
+  if (playerProfileLogoutBtn) {
+  playerProfileLogoutBtn.addEventListener("click", () => {
+    closePlayerProfileModal();
+    logoutPlayer();
+  });
+}
+}
+
+if (resetProgressBtn) {
+  resetProgressBtn.addEventListener("click", async () => {
+    await resetCurrentGameProgress();
+  });
+}
+
+if (deletePlayerBtn) {
+  deletePlayerBtn.addEventListener("click", async () => {
+    await deleteCurrentPlayerProfile();
+  });
+}
+
+cancelFailBtn.addEventListener("click", () => {
+  closeFailConfirmModal();
+});
+
+confirmFailBtn.addEventListener("click", async () => {
+  closeFailConfirmModal();
+  await failChallenge();
+});
+
+// =======================
+// FOTO-UPLOAD - ABBRECHEN
+// =======================
+
 cancelUploadBtn.addEventListener("click", () => {
   const challenge = pendingUploadChallenge;
 
@@ -375,6 +1269,11 @@ cancelUploadBtn.addEventListener("click", () => {
     openChallengeModal(challenge);
   }
 });
+
+
+// =======================
+// FOTO-UPLOAD - STARTEN
+// =======================
 
 doUploadBtn.addEventListener("click", async () => {
   if (!pendingUploadChallenge) return;
@@ -386,27 +1285,63 @@ doUploadBtn.addEventListener("click", async () => {
     return;
   }
 
-  uploadStatusText.textContent = "Lade Bild hoch...";
-
   const challenge = pendingUploadChallenge;
 
   if (!challenge || !currentPlayer) return;
 
-  const fileExt = file.name.split(".").pop();
-  const fileName = `game-${currentGameId}/player-${currentPlayer.id}/challenge-${challenge.boardId}-${Date.now()}.${fileExt}`;
+  setUploadButtonsDisabled(true);
+  doUploadBtn.textContent = "Lädt...";
+  uploadStatusText.textContent = "Lade Bild hoch...";
 
-  const { error } = await supabaseClient.storage
-    .from("proof-photos")
-    .upload(fileName, file);
+  try {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `game-${currentGameId}/player-${currentPlayer.id}/challenge-${challenge.boardId}-${Date.now()}.${fileExt}`;
 
-  if (error) {
-    console.error("Upload Fehler:", error);
-    uploadStatusText.textContent = "Upload fehlgeschlagen.";
+    const { error } = await supabaseClient.storage
+      .from("proof-photos")
+      .upload(fileName, file);
+
+    if (error) {
+      console.error("Upload Fehler:", error);
+      uploadStatusText.textContent = "Upload fehlgeschlagen.";
+      setUploadButtonsDisabled(false);
+      doUploadBtn.textContent = "Hochladen";
+      return;
+    }
+
+    uploadStatusText.textContent = "Upload erfolgreich. Aufgabe wird abgeschlossen...";
+
+    closeUploadModal();
+    await completeChallenge(challenge.boardId, fileName);
+
+  } catch (error) {
+    console.error("Unerwarteter Upload-Fehler:", error);
+    uploadStatusText.textContent = "Ein unerwarteter Fehler ist aufgetreten.";
+    setUploadButtonsDisabled(false);
+    doUploadBtn.textContent = "Hochladen";
+  }
+});
+
+
+// =======================
+// FOTO-UPLOAD - VORSCHAU
+// =======================
+
+uploadPhotoInput.addEventListener("change", () => {
+  const file = uploadPhotoInput.files[0];
+
+  resetUploadPreview();
+  uploadStatusText.textContent = "";
+
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    uploadStatusText.textContent = "Bitte nur Bilddateien auswählen.";
+    uploadPhotoInput.value = "";
     return;
   }
 
-  uploadStatusText.textContent = "Upload erfolgreich!";
-
-  closeUploadModal();
-  await completeChallenge(challenge.boardId, fileName);
+  const objectUrl = URL.createObjectURL(file);
+  uploadPreviewImage.src = objectUrl;
+  uploadPreviewContainer.classList.remove("hidden");
 });

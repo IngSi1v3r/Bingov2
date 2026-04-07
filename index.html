@@ -12,14 +12,18 @@
 
     <p id="gameName" class="game-name clickable">Lade Spiel...</p>
 
-    <div id="scoreDisplay">Score: 0</div>
+    <div id="scoreDisplay">Score: <span id="scoreValue">0</span></div>
 
     <div class="top-bar">
   <div id="playerDisplay">Eingeloggt als: -</div>
 
+  <div id="cooldownDisplay" class="cooldown-display hidden">
+    <span class="cooldown-label">Cooldown</span>
+    <span id="cooldownTimerText" class="cooldown-timer-text">00:00</span>
+  </div>
+
   <div class="top-bar-actions">
     <button id="rulesBtn" class="secondary-btn">Regeln</button>
-    <button id="logoutBtn" class="logout-btn">Logout</button>
   </div>
 </div>
 
@@ -36,13 +40,14 @@
   <!-- MODAL (CHALLENGE) -->
   <!-- ===================== -->
   <div id="modalOverlay" class="modal-overlay hidden">
-    <div class="modal">
-      <h2 id="modalTitle">Titel</h2>
-      <p id="modalTask">Aufgabe</p>
-      <p id="modalPoints">Punkte</p>
-      <div class="modal-actions"></div>
-    </div>
+  <div class="modal">
+    <button id="modalCloseBtn" class="modal-close-btn" type="button">×</button>
+    <h2 id="modalTitle">Titel</h2>
+    <p id="modalTask">Aufgabe</p>
+    <p id="modalPoints">Punkte</p>
+    <div class="modal-actions"></div>
   </div>
+</div>
 
   <!-- ===================== -->
   <!-- LOGIN OVERLAY -->
@@ -148,6 +153,41 @@
 </div>
 
   <!-- ===================== -->
+  <!-- PLAYER PROFILE -->
+  <!-- ===================== -->
+  <div id="playerProfileOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Dein Profil</h2>
+
+      <p id="playerProfileName"><strong>Spieler:</strong> -</p>
+
+      <div class="rules-content">
+        <h3>Statistik</h3>
+        <div id="playerProfileStats">
+          <p>Noch keine Statistik eingebaut.</p>
+        </div>
+
+        <h3>Galerie</h3>
+        <div id="playerProfileGallery">
+          <p>Noch keine Galerie eingebaut.</p>
+        </div>
+      </div>
+
+      <h3>Abgeschlossene Aufgaben</h3>
+      <div id="playerProfileCompletedList">
+        <p>Noch keine Aufgaben abgeschlossen.</p>
+      </div>
+
+      <div class="modal-actions">
+  <button id="closePlayerProfileBtn" type="button">Zurück</button>
+  <button id="playerProfileLogoutBtn" class="secondary-btn">Logout</button>
+  <button id="resetProgressBtn" class="danger-btn-soft">Fortschritt zurücksetzen</button>
+  <button id="deletePlayerBtn" class="danger-btn">Profil löschen</button>
+</div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
   <!-- Hinweise-->
   <!-- ===================== -->
 
@@ -180,24 +220,44 @@
   <!-- ===================== -->
 
   <div id="uploadOverlay" class="modal-overlay hidden">
-    <div class="modal">
-      <h2>Beweisfoto hochladen</h2>
+  <div class="modal">
+    <h2>Beweisfoto hochladen</h2>
 
-      <div class="rules-content">
-        <p id="uploadChallengeTitle"><strong>Aufgabe:</strong> -</p>
-        <p>Bitte lade ein Beweisfoto hoch, um die Aufgabe abzuschließen.</p>
+    <div class="rules-content">
+      <p id="uploadChallengeTitle"><strong>Aufgabe:</strong> -</p>
+      <p>Bitte lade ein Beweisfoto hoch, um die Aufgabe abzuschließen.</p>
 
-        <input id="uploadPhotoInput" type="file" accept="image/*" />
+      <input id="uploadPhotoInput" type="file" accept="image/*" />
 
-        <p id="uploadStatusText" style="margin-top: 12px;"></p>
+      <div id="uploadPreviewContainer" class="upload-preview-container hidden">
+        <img id="uploadPreviewImage" class="upload-preview-image" alt="Bildvorschau" />
       </div>
 
-      <div class="modal-actions">
-        <button id="doUploadBtn">Hochladen</button>
-        <button id="cancelUploadBtn" type="button">Zurück</button>
-      </div>
+      <p id="uploadStatusText" style="margin-top: 12px;"></p>
+    </div>
+
+    <div class="modal-actions">
+      <button id="doUploadBtn">Hochladen</button>
+      <button id="cancelUploadBtn" type="button">Zurück</button>
     </div>
   </div>
+</div>
+
+  <!-- ===================== -->
+<!-- FOTO VIEWER -->
+<!-- ===================== -->
+
+<div id="photoViewerOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h2 id="photoViewerTitle">Beweisfoto</h2>
+
+    <div id="photoViewerContent"></div>
+
+    <div class="modal-actions">
+      <button id="closePhotoViewerBtn">Schließen</button>
+    </div>
+  </div>
+</div>
 
   <!-- ===================== -->
   <!-- FIRST SOLVER BANNER -->
@@ -209,6 +269,45 @@
     </div>
   </div>
 
+
+<!-- ===================== -->
+<!-- FINALE OVERLAY -->
+<!-- ===================== -->
+
+<div id="finalOverlay" class="modal-overlay hidden">
+  <div class="modal final-modal">
+    <h2>🎉 Geschafft! 🎉</h2>
+    <p>Du hast alle Aufgaben dieses Spiels abgeschlossen.</p>
+    <p id="finalScoreText"><strong>Dein finaler Punktestand:</strong> 0</p>
+
+    <div class="modal-actions">
+      <button id="closeFinalBtn">Nice</button>
+    </div>
+  </div>
+</div>
+
+  <!-- ===================== -->
+  <!-- FAIL CONFIRM OVERLAY -->
+  <!-- ===================== -->
+  <div id="failConfirmOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Challenge aufgeben?</h2>
+
+      <div class="rules-content">
+        <p id="failConfirmText">
+          Bist du sicher, dass du diese Challenge aufgeben willst?
+        </p>
+      </div>
+
+      <div class="modal-actions">
+        <button id="cancelFailBtn" type="button" class="secondary-btn">Zurück</button>
+        <button id="confirmFailBtn" type="button" class="danger-btn-soft">Wirklich aufgeben</button>
+      </div>
+    </div>
+  </div>
+
+
+
   <!-- ===================== -->
   <!-- SCRIPTS -->
   <!-- ===================== -->
@@ -219,5 +318,9 @@
   <script src="game.js"></script>
   <script src="app.js"></script>
   <script src="main.js"></script>
+
+
+
+
 </body>
 </html>

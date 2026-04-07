@@ -320,6 +320,21 @@ function calculateBingoResult(completedBoardIds, existingBingos, baseScore) {
   };
 }
 
+async function deleteAllPlayerBingos(playerId) {
+  const { error } = await supabaseClient
+    .from("player_bingos")
+    .delete()
+    .eq("player_id", playerId)
+    .eq("game_id", currentGameId);
+
+  if (error) {
+    console.error("Fehler beim Löschen von player_bingos:", error);
+    return false;
+  }
+
+  return true;
+}
+
 
 // =======================
 // GLOBALE CHALLENGE STATS
@@ -360,9 +375,7 @@ async function loadGlobalChallengeStats() {
   return true;
 }
 
-// =======================
-// LEADERBOARD
-// =======================
+
 
 // =======================
 // LEADERBOARD
@@ -401,4 +414,103 @@ async function loadLeaderboard() {
       cooldownUntil: cooldownUntilMs
     };
   });
+}
+
+// =======================
+// LISTE INNERHALB AUFGABE
+// =======================
+
+
+async function loadChallengeCompletions(challengeDbId) {
+  const { data, error } = await supabaseClient
+    .from("player_challenges")
+    .select(`
+      player_id,
+      completed_at,
+      was_first_solver,
+      proof_image_path,
+      players (
+        username
+      )
+    `)
+    .eq("game_id", currentGameId)
+    .eq("challenge_id", challengeDbId)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: true });
+
+  if (error) {
+    console.error("Fehler beim Laden der Challenge-Abschlüsse:", error);
+    return [];
+  }
+
+  return (data || []).map(row => ({
+  playerId: row.player_id,
+  username: row.players?.username || "Unbekannt",
+  completedAt: row.completed_at,
+  wasFirstSolver: row.was_first_solver === true,
+  proofImagePath: row.proof_image_path || null
+}));
+}
+
+// =======================
+// ABGESCHLOSSENE AUFGABEN
+// =======================
+
+async function loadCompletedChallengesForCurrentPlayer(playerId) {
+  const { data, error } = await supabaseClient
+    .from("player_challenges")
+    .select("challenge_id, completed_at, was_first_solver, points_awarded, proof_image_path")
+    .eq("player_id", playerId)
+    .eq("game_id", currentGameId)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: true });
+
+  if (error) {
+    console.error("Fehler beim Laden der abgeschlossenen Aufgaben:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+// =======================
+// PROFIL LÖSCHEN
+// =======================
+
+async function deletePlayerProfile(playerId) {
+  try {
+    // 1. Bingos löschen
+    await supabaseClient
+      .from("player_bingos")
+      .delete()
+      .eq("player_id", playerId);
+
+    // 2. Challenges löschen
+    await supabaseClient
+      .from("player_challenges")
+      .delete()
+      .eq("player_id", playerId);
+
+    // 3. Game State löschen
+    await supabaseClient
+      .from("player_game_state")
+      .delete()
+      .eq("player_id", playerId);
+
+    // 4. Player löschen
+    const { error } = await supabaseClient
+      .from("players")
+      .delete()
+      .eq("id", playerId);
+
+    if (error) {
+      console.error("Fehler beim Löschen des Players:", error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Fehler beim Profil löschen:", err);
+    return false;
+  }
 }

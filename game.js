@@ -198,6 +198,7 @@ async function initializePlayerStateFromDatabase() {
     ? new Date(dbGameState.cooldown_until).getTime()
     : null;
   gameState.score = dbGameState.score || 0;
+  displayedScore = gameState.score;
   gameState.bingos = bingoIndexes;
   gameState.bingoCells = [];
 
@@ -370,10 +371,12 @@ if (proofImagePath) {
   }
 
   await loadGlobalChallengeStats();
-  await renderLeaderboard();
+await renderLeaderboard();
 
-  closeModal();
-  renderGrid();
+freezeScoreDisplay = true;
+
+closeModal();
+renderGrid(false);
 
   if (isFirstSolver) {
     await showFirstSolverAnimation();
@@ -381,6 +384,19 @@ if (proofImagePath) {
 
   if (newBingoIndexes.length > 0) {
     await showBingoAnimation();
+  }
+
+ await showPointsPopup(boardId, awardedPoints);
+
+freezeScoreDisplay = false;
+await animateScoreDisplay(nextScore);
+
+    const hasCompletedEverything = nextCompleted.length === challenges.length;
+
+  if (hasCompletedEverything && !hasSeenFinal()) {
+    setTimeout(() => {
+      openFinalOverlay(nextScore);
+    }, 250);
   }
 }
 
@@ -429,9 +445,11 @@ async function failChallenge() {
   await loadGlobalChallengeStats();
   await renderLeaderboard();
 
-  openCooldownModal();
-  startCooldownLoop();
-  renderGrid();
+  closeModal();
+updateCooldownDisplay();
+startCooldownLoop();
+renderGrid();
+await renderLeaderboard();
 }
 
 // =======================
@@ -444,18 +462,9 @@ function startCooldownLoop() {
   }
 
   cooldownInterval = setInterval(async () => {
-    const remaining = getRemainingCooldownSeconds();
-    const timerNumber = document.getElementById("timerNumber");
-
-    if (timerNumber) {
-      timerNumber.textContent = formatCooldownTime(remaining);
-    }
-
     if (!isCooldownActive()) {
       clearInterval(cooldownInterval);
       cooldownInterval = null;
-
-      gameState.cooldownUntil = null;
 
       if (currentPlayer) {
         await updatePlayerGameState(currentPlayer.id, {
@@ -463,11 +472,132 @@ function startCooldownLoop() {
         });
       }
 
-      closeModal();
+      gameState.cooldownUntil = null;
+      updateCooldownDisplay();
       renderGrid();
+      await renderLeaderboard();
       return;
     }
 
+    updateCooldownDisplay();
+    await renderLeaderboard();
     renderGrid();
-  }, 200);
+  }, 1000);
+}
+
+// =======================
+// Aufgabe zurücksetzen
+// =======================
+
+async function resetCompletedChallenge(boardId) {
+  if (!currentPlayer) return;
+
+  const challenge = getChallengeByBoardId(boardId);
+  if (!challenge) return;
+
+  const playerId = currentPlayer.id;
+
+  const isCompleted = gameState.completed.includes(boardId);
+  if (!isCompleted) return;
+
+  const confirmed = confirm(
+    `Möchtest du "${challenge.title}" wirklich zurücksetzen?`
+  );
+
+  if (!confirmed) return;
+
+  // 1) Challenge zurücksetzen
+  const resetRow = await upsertPlayerChallenge(playerId, challenge.dbId, {
+    status: "hidden",
+    completed_at: null,
+    was_first_solver: false,
+    points_awarded: null,
+    proof_image_path: null
+  });
+
+  if (!resetRow) {
+    alert("Challenge konnte nicht zurückgesetzt werden.");
+    return;
+  }
+
+  // 2) Verbleibende Challenges neu laden
+  const dbPlayerChallenges = await loadPlayerChallenges(playerId);
+  if (!dbPlayerChallenges) {
+    alert("Spielstand konnte nicht neu geladen werden.");
+    return;
+  }
+
+  const remainingCompletedRows = dbPlayerChallenges.filter(
+    row => row.status === "completed"
+  );
+
+  const completedBoardIds = remainingCompletedRows
+    .map(row => {
+      const c = getChallengeByDbId(row.challenge_id);
+      return c ? c.boardId : null;
+    })
+    .filter(Boolean);
+
+  const firstSolvedBoardIds = remainingCompletedRows
+    .filter(row => row.was_first_solver === true)
+    .map(row => {
+      const c = getChallengeByDbId(row.challenge_id);
+      return c ? c.boardId : null;
+    })
+    .filter(Boolean);
+
+  // 3) Basisscore aus remaining completed rows
+  let rebuiltScore = remainingCompletedRows.reduce((sum, row) => {
+    return sum + (row.points_awarded || 0);
+  }, 0);
+
+  // 4) Bingos komplett neu berechnen
+  const bingoResult = calculateBingoResult(
+    completedBoardIds,
+    [],
+    rebuiltScore
+  );
+
+  rebuiltScore = bingoResult.score;
+
+  // 5) Alte Bingos löschen
+  const deletedBingos = await deleteAllPlayerBingos(playerId);
+  if (!deletedBingos) {
+    alert("Bingos konnten nicht neu aufgebaut werden.");
+    return;
+  }
+
+  // 6) Neue Bingos speichern
+  const bingoBonus = currentGame?.bingo_bonus_points ?? 5;
+
+  for (const lineIndex of bingoResult.bingos) {
+    await insertPlayerBingo(playerId, String(lineIndex), bingoBonus);
+  }
+
+  // 7) Score im player_game_state aktualisieren
+  const updatedGameState = await updatePlayerGameState(playerId, {
+    score: rebuiltScore,
+    active_challenge_id: null,
+    cooldown_until: null
+  });
+
+  if (!updatedGameState) {
+    alert("Spielstand konnte nicht aktualisiert werden.");
+    return;
+  }
+
+  // 8) Lokalen State aktualisieren
+  gameState.completed = completedBoardIds;
+  gameState.firstSolved = firstSolvedBoardIds;
+  gameState.score = rebuiltScore;
+  gameState.activeChallengeId = null;
+  gameState.cooldownUntil = null;
+  gameState.bingos = bingoResult.bingos;
+  gameState.bingoCells = bingoResult.bingoCells;
+
+  await loadGlobalChallengeStats();
+  await renderLeaderboard();
+
+  closeModal();
+  renderGrid();
 }

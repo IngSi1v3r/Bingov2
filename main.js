@@ -159,11 +159,12 @@ async function loadCurrentGameIntoApp() {
   }
 
   renderGrid();
+  clearFinalSeenIfNeeded();
   await renderLeaderboard();
   startGlobalStatsPolling();
 
   if (isCooldownActive()) {
-    openCooldownModal();
+    updateCooldownDisplay();
     startCooldownLoop();
   } else if (gameState.activeChallengeId !== null) {
     const activeChallenge = getChallengeByBoardId(gameState.activeChallengeId);
