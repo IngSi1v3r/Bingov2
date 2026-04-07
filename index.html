@@ -49,15 +49,16 @@
   </div>
 </div>
 
-  <!-- ===================== -->
-  <!-- LOGIN OVERLAY -->
-  <!-- ===================== -->
-  <div id="loginOverlay" class="modal-overlay hidden">
+<!-- ===================== -->
+<!-- LOGIN OVERLAY -->
+<!-- ===================== -->
+<div id="loginOverlay" class="modal-overlay hidden">
   <div class="modal">
-    <h2>Willkommen</h2>
 
     <div id="authChoiceView">
-      <p>Wie möchtest du weitermachen?</p>
+      <h2>Willkommen bei Flo's Party Bingo</h2>
+      <p id="loginTagline" class="auth-subtext"></p>
+
       <div class="modal-actions auth-choice-actions">
         <button id="showLoginBtn">Anmelden</button>
         <button id="showRegisterBtn">Neuen Spieler anlegen</button>
@@ -65,9 +66,15 @@
     </div>
 
     <div id="loginView" class="hidden">
-      <p>Mit bestehendem Spieler anmelden</p>
+      <h2>Willkommen zurück</h2>
+      <p class="auth-subtext">Schön, dass du wieder da bist. Bereit für die nächsten Punkte?</p>
+
       <input id="loginNameInput" type="text" placeholder="Name" />
-      <input id="loginPinInput" type="password" placeholder="PIN" />
+      <input id="loginPinInput" type="password" inputmode="numeric" placeholder="PIN" />
+
+      <div class="auth-hint">
+        Melde dich mit deinem bestehenden Spielernamen und deiner PIN an.
+      </div>
 
       <div class="modal-actions auth-actions">
         <button id="doLoginBtn">Login</button>
@@ -76,15 +83,23 @@
     </div>
 
     <div id="registerView" class="hidden">
-      <p>Neuen Spieler erstellen</p>
+      <h2>Neuen Spieler anlegen</h2>
+      <p class="auth-subtext">Bist du bereit einzusteigen?</p>
+
+      <div class="auth-hint">
+        Wähle einen einfachen Namen ohne Leerzeichen oder Sonderzeichen.<br>
+        Die PIN sollte aus 4 Ziffern bestehen.
+      </div>
+
       <input id="registerNameInput" type="text" placeholder="Name" />
-      <input id="registerPinInput" type="password" placeholder="PIN" />
+      <input id="registerPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="4-stellige PIN" />
 
       <div class="modal-actions auth-actions">
         <button id="doRegisterBtn">Erstellen</button>
         <button id="backToChoiceFromRegisterBtn" type="button">Zurück</button>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -101,49 +116,16 @@
     </div>
   </div>
 
-  <!-- ===================== -->
-  <!-- Regeln -->
-  <!-- ===================== -->
+<!-- ===================== -->
+<!-- Regeln -->
+<!-- ===================== -->
 
-  <div id="rulesOverlay" class="modal-overlay hidden">
+<div id="rulesOverlay" class="modal-overlay hidden">
   <div class="modal">
-    <h2>Regeln & Punkte</h2>
+    <h2 id="rulesTitle">Regeln & Punkte</h2>
 
-    <div class="rules-content">
-      <p><strong>Ziel:</strong> Löse Aufgaben auf dem Spielfeld und sammle möglichst viele Punkte.</p>
-
-      <p><strong>So funktioniert's:</strong></p>
-      <ul>
-        <li>Alle Spieler sehen dasselbe Spielfeld.</li>
-        <li>Du kannst immer nur eine Aufgabe gleichzeitig aktiv haben.</li>
-        <li>Nach dem Anklicken eines Feldes musst du dich entscheiden: <strong>Bestanden</strong> oder <strong>Aufgeben</strong>.</li>
-      </ul>
-
-      <p><strong>Punkte:</strong></p>
-      <ul>
-        <li>Jede Aufgabe bringt 1, 2 oder 3 Punkte.</li>
-        <li>Wer eine Aufgabe als Erster löst, bekommt <strong>doppelte Punkte</strong>.</li>
-      </ul>
-
-      <p><strong>Bingo:</strong></p>
-      <ul>
-        <li>5 gelöste Felder in einer Reihe ergeben ein <strong>Bingo</strong>.</li>
-        <li>Ein Bingo bringt <strong>+5 Bonuspunkte</strong>.</li>
-        <li>Bingos zählen horizontal, vertikal und diagonal.</li>
-      </ul>
-
-      <p><strong>Cooldown:</strong></p>
-      <ul>
-        <li>Wenn du aufgibst, bekommst du eine kurze Strafzeit.</li>
-        <li>Währenddessen kannst du keine neue Aufgabe starten.</li>
-      </ul>
-
-      <p><strong>Hinweise im Spielfeld:</strong></p>
-      <ul>
-        <li>Die Zahl unten links zeigt, wie viele Spieler das Feld bereits gelöst haben.</li>
-        <li>Der Banner oben im Feld zeigt, wenn andere Spieler gerade an dieser Aufgabe arbeiten.</li>
-        <li>Ein Stern bedeutet, dass du diese Aufgabe als Erster gelöst hast.</li>
-      </ul>
+    <div id="rulesContent" class="rules-content">
+      <!-- wird dynamisch gefüllt -->
     </div>
 
     <div class="modal-actions">

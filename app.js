@@ -186,7 +186,7 @@ function renderCompletionGallery() {
   galleryContainer.innerHTML = `
     <div class="gallery-wrapper gallery-fade-in">
       <p class="gallery-caption">
-        <strong>Foto von:</strong> ${entry.username}
+        <strong>Foto von:</strong> ${entry.display_name || entry.username}
         <span class="gallery-time">(${formatCompletedDateTime(entry.completedAt)})</span>
       </p>
 
@@ -272,7 +272,7 @@ async function openCompletedChallengeModal(challenge) {
             class="completion-name ${isClickable ? "clickable" : ""}"
             data-player-id="${entry.playerId}"
           >
-            ${index + 1}. ${entry.username}${index === 0 ? `<span class="completion-star">⭐</span>` : ""}
+            ${index + 1}. ${entry.display_name || entry.username}${index === 0 ? `<span class="completion-star">⭐</span>` : ""}
           </div>
           <div class="completion-time">
             ${formatCompletedDateTime(entry.completedAt)}
@@ -353,6 +353,7 @@ function closeModal() {
 }
 
 function openRulesModal() {
+    renderRulesContent();
     modalCloseBtn.classList.remove("hidden");
   rulesOverlay.classList.remove("hidden");
 }
@@ -412,7 +413,7 @@ function setUploadButtonsDisabled(disabled) {
 async function openPlayerProfileModal() {
   if (!currentPlayer) return;
 
-  playerProfileName.innerHTML = `<strong>Spieler:</strong> ${currentPlayer.username}`;
+  playerProfileName.innerHTML = `<strong>Spieler:</strong> ${currentPlayer.display_name || currentPlayer.username}`;
 
   const completedRows = await loadCompletedChallengesForCurrentPlayer(currentPlayer.id);
 
@@ -651,7 +652,7 @@ async function renderLeaderboard() {
       row.classList.add("player-cooldown");
     }
 
-    let nameText = entry.username;
+    let nameText = entry.display_name || entry.username;
 
     if (isCooldownActive) {
       const remainingSeconds = Math.max(
@@ -1032,6 +1033,14 @@ async function deleteCurrentPlayerProfile() {
 function renderGrid(updateScore = true) {
   grid.innerHTML = "";
 
+  const gridSize = currentGame?.grid_size || 5;
+  grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+
+    const expectedCount = gridSize * gridSize;
+  if (challenges.length !== expectedCount) {
+    console.warn(`⚠️ Challenge-Anzahl stimmt nicht: ${challenges.length} statt ${expectedCount}`);
+  }
+
   updateCooldownDisplay();
 
   if (updateScore && !freezeScoreDisplay) {
@@ -1041,7 +1050,7 @@ function renderGrid(updateScore = true) {
   setScoreDisplay(displayedScore);
 
   if (currentPlayer) {
-    playerDisplay.textContent = `Eingeloggt als: ${currentPlayer.username}`;
+    playerDisplay.textContent = `Eingeloggt als: ${currentPlayer.display_name || currentPlayer.username}`;
   } else {
     playerDisplay.textContent = "Eingeloggt als: -";
   }

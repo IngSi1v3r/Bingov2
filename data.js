@@ -56,6 +56,11 @@ async function loadGame() {
   }
 
   currentGame = data;
+  bingoLines = generateBingoLines(currentGame?.grid_size || 5);
+
+  console.log("Aktuelles Spiel:", currentGame);
+  console.log("Bingo-Linien:", bingoLines);
+
   return true;
 }
 
@@ -390,8 +395,9 @@ async function loadLeaderboard() {
       active_challenge_id,
       cooldown_until,
       players (
-        username
-      )
+        username,
+        display_name
+        )
     `)
     .eq("game_id", currentGameId)
     .order("score", { ascending: false });
@@ -409,6 +415,7 @@ async function loadLeaderboard() {
     return {
       playerId: row.player_id,
       username: row.players?.username || "Unbekannt",
+      display_name: row.players?.display_name || null,
       score: row.score || 0,
       activeChallengeId: row.active_challenge_id,
       cooldownUntil: cooldownUntilMs
@@ -430,8 +437,9 @@ async function loadChallengeCompletions(challengeDbId) {
       was_first_solver,
       proof_image_path,
       players (
-        username
-      )
+        username,
+        display_name
+        )
     `)
     .eq("game_id", currentGameId)
     .eq("challenge_id", challengeDbId)
@@ -446,6 +454,7 @@ async function loadChallengeCompletions(challengeDbId) {
   return (data || []).map(row => ({
   playerId: row.player_id,
   username: row.players?.username || "Unbekannt",
+  display_name: row.players?.display_name || null,
   completedAt: row.completed_at,
   wasFirstSolver: row.was_first_solver === true,
   proofImagePath: row.proof_image_path || null
@@ -513,4 +522,61 @@ async function deletePlayerProfile(playerId) {
     console.error("Fehler beim Profil löschen:", err);
     return false;
   }
+}
+
+// =======================
+// REGELN
+// =======================
+
+function renderRulesContent() {
+  const rulesContent = document.getElementById("rulesContent");
+  const rulesTitle = document.getElementById("rulesTitle");
+
+  if (!rulesContent || !rulesTitle) return;
+
+  const gameName = currentGame?.name || "Unbekanntes Spiel";
+  const gridSize = currentGame?.grid_size || 5;
+  const cooldownSeconds = currentGame?.cooldown_seconds ?? 60;
+  const bingoBonus = currentGame?.bingo_bonus_points ?? 5;
+
+  // Titel mit Spielname
+  rulesTitle.textContent = `Regeln & Punkte – ${gameName}`;
+
+  rulesContent.innerHTML = `
+    <p><strong>Ziel:</strong> Löse Aufgaben auf dem Spielfeld und sammle möglichst viele Punkte.</p>
+
+    <p><strong>So funktioniert's:</strong></p>
+    <ul>
+      <li>Alle Spieler sehen dasselbe Spielfeld.</li>
+      <li>Das Spielfeld hat ${gridSize}x${gridSize} Felder.</li>
+      <li>Du kannst immer nur eine Aufgabe gleichzeitig aktiv haben.</li>
+      <li>Nach dem Anklicken eines Feldes musst du dich entscheiden: <strong>Bestanden</strong> oder <strong>Aufgeben</strong>.</li>
+    </ul>
+
+    <p><strong>Punkte:</strong></p>
+    <ul>
+      <li>Jede Aufgabe bringt 1 bis 3 Punkte.</li>
+      <li>Wer eine Aufgabe als Erster löst, bekommt <strong>doppelte Punkte</strong>.</li>
+    </ul>
+
+    <p><strong>Bingo:</strong></p>
+    <ul>
+      <li>${gridSize} gelöste Felder in einer Reihe ergeben ein <strong>Bingo</strong>.</li>
+      <li>Ein Bingo bringt <strong>+${bingoBonus} Bonuspunkte</strong>.</li>
+      <li>Bingos zählen horizontal, vertikal und diagonal.</li>
+    </ul>
+
+    <p><strong>Cooldown:</strong></p>
+    <ul>
+      <li>Wenn du aufgibst, bekommst du eine Sperrzeit von ${cooldownSeconds} Sekunden.</li>
+      <li>Währenddessen kannst du keine neue Aufgabe starten.</li>
+    </ul>
+
+    <p><strong>Hinweise im Spielfeld:</strong></p>
+    <ul>
+      <li>Die Zahl unten zeigt, wie viele Spieler das Feld bereits gelöst haben.</li>
+      <li>Der Banner oben zeigt, wenn andere Spieler gerade daran arbeiten.</li>
+      <li>Ein ⭐ bedeutet, dass du diese Aufgabe als Erster gelöst hast.</li>
+    </ul>
+  `;
 }

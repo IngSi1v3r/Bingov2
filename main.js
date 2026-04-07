@@ -24,6 +24,7 @@ const backToChoiceFromRegisterBtn = document.getElementById("backToChoiceFromReg
 function openLoginOverlay() {
   loginOverlay.classList.remove("hidden");
   showAuthChoiceView();
+  setRandomLoginTagline(); // 🔥
 }
 
 function closeLoginOverlay() {
@@ -54,6 +55,27 @@ function showRegisterView() {
   registerNameInput.value = "";
   registerPinInput.value = "";
   registerNameInput.focus();
+}
+
+const loginTaglines = [
+  "Heute wird eskaliert.",
+  "Wer holt sich das erste Bingo?",
+  "Ehre oder Untergang.",
+  "Alles oder nichts.",
+  "Bier in der einen, Punkte in der anderen Hand.",
+  "Möge das Chaos beginnen.",
+  "Freunde werden zu Rivalen.",
+  "Nur einer wird dominieren.",
+  "Level: Festival-Gott.",
+  "Mal schauen, wer heute carried."
+];
+
+function setRandomLoginTagline() {
+  const el = document.getElementById("loginTagline");
+  if (!el) return;
+
+  const randomIndex = Math.floor(Math.random() * loginTaglines.length);
+  el.textContent = loginTaglines[randomIndex];
 }
 
 // =======================

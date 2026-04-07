@@ -38,15 +38,20 @@ function normalizeUsername(username) {
   return username.trim().toLowerCase();
 }
 
+function cleanDisplayName(username) {
+  return username.trim();
+}
+
 // =======================
 // LOGIN
 // =======================
 
 async function loginPlayer(username, pin) {
+  const displayName = cleanDisplayName(username);
   const cleanUsername = normalizeUsername(username);
   const cleanPin = pin.trim();
 
-  if (!cleanUsername) {
+  if (!displayName) {
     alert("Bitte einen gültigen Namen eingeben.");
     return null;
   }
@@ -88,7 +93,7 @@ async function loginPlayer(username, pin) {
   currentPlayer = player;
   savePlayerToLocalStorage(currentPlayer);
 
-  console.log("Spieler erfolgreich eingeloggt:", currentPlayer.username);
+  console.log("Spieler erfolgreich eingeloggt:", currentPlayer.display_name || currentPlayer.username);
   return currentPlayer;
 }
 
@@ -97,10 +102,11 @@ async function loginPlayer(username, pin) {
 // =======================
 
 async function registerPlayer(username, pin) {
+  const displayName = cleanDisplayName(username);
   const cleanUsername = normalizeUsername(username);
   const cleanPin = pin.trim();
 
-  if (!cleanUsername) {
+  if (!displayName) {
     alert("Bitte einen gültigen Namen eingeben.");
     return null;
   }
@@ -133,6 +139,7 @@ async function registerPlayer(username, pin) {
     .from("players")
     .insert({
       username: cleanUsername,
+      display_name: displayName,
       pin_hash: cleanPin
     })
     .select()
@@ -147,7 +154,7 @@ async function registerPlayer(username, pin) {
   currentPlayer = newPlayer;
   savePlayerToLocalStorage(currentPlayer);
 
-  console.log("Neuer Spieler erstellt:", currentPlayer.username);
+  console.log("Neuer Spieler erstellt:", currentPlayer.display_name || currentPlayer.username);
   return currentPlayer;
 }
 

@@ -45,22 +45,45 @@ function formatCooldownTime(totalSeconds) {
 // BINGOLOGIK
 // =======================
 
-const bingoLines = [
-  [1, 2, 3, 4, 5],
-  [6, 7, 8, 9, 10],
-  [11, 12, 13, 14, 15],
-  [16, 17, 18, 19, 20],
-  [21, 22, 23, 24, 25],
+let bingoLines = [];
 
-  [1, 6, 11, 16, 21],
-  [2, 7, 12, 17, 22],
-  [3, 8, 13, 18, 23],
-  [4, 9, 14, 19, 24],
-  [5, 10, 15, 20, 25],
+function generateBingoLines(size) {
+  const lines = [];
 
-  [1, 7, 13, 19, 25],
-  [5, 9, 13, 17, 21]
-];
+  // horizontale Linien
+  for (let row = 0; row < size; row++) {
+    const line = [];
+    for (let col = 0; col < size; col++) {
+      line.push(row * size + col + 1);
+    }
+    lines.push(line);
+  }
+
+  // vertikale Linien
+  for (let col = 0; col < size; col++) {
+    const line = [];
+    for (let row = 0; row < size; row++) {
+      line.push(row * size + col + 1);
+    }
+    lines.push(line);
+  }
+
+  // Hauptdiagonale
+  const diagonal1 = [];
+  for (let i = 0; i < size; i++) {
+    diagonal1.push(i * size + i + 1);
+  }
+  lines.push(diagonal1);
+
+  // Gegendiagonale
+  const diagonal2 = [];
+  for (let i = 0; i < size; i++) {
+    diagonal2.push(i * size + (size - 1 - i) + 1);
+  }
+  lines.push(diagonal2);
+
+  return lines;
+}
 
 function rebuildBingoCellsFromBingos() {
   gameState.bingoCells = [];

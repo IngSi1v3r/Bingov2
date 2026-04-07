@@ -875,3 +875,67 @@ transition: transform 0.15s ease, background 0.15s ease;
     transform: scale(1);
   }
 }
+
+/* ===================== */
+/* AUTH / LOGIN */
+/* ===================== */
+
+.auth-subtext {
+  font-size: 0.95rem;
+  opacity: 0.85;
+  margin: 10px 0 20px;
+  font-style: italic;
+  text-align: left;
+}
+
+.auth-hint {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-bottom: 12px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.auth-choice-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.auth-choice-actions button {
+  flex: 1;
+}
+
+.auth-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.auth-actions button {
+  flex: 1;
+}
+
+/* Inputs schöner machen */
+#loginView input,
+#registerView input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: none;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+/* optional: leichter Fokus-Effekt */
+#loginView input:focus,
+#registerView input:focus {
+  outline: 2px solid #3b82f6;
+}
+
+/* Buttons im Login etwas größer */
+.auth-actions button,
+.auth-choice-actions button {
+  width: 100%;
+}
+
