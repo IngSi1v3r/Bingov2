@@ -16,6 +16,17 @@ const completeLiveChallengeBtn = document.getElementById("completeLiveChallengeB
 const testLiveChallengeBtn = document.getElementById("testLiveChallengeBtn");
 const endLiveChallengeBtn = document.getElementById("endLiveChallengeBtn");
 
+const createLiveChallengeOverlay = document.getElementById("createLiveChallengeOverlay");
+const closeCreateLiveChallengeBtn = document.getElementById("closeCreateLiveChallengeBtn");
+const cancelCreateLiveChallengeBtn = document.getElementById("cancelCreateLiveChallengeBtn");
+const confirmCreateLiveChallengeBtn = document.getElementById("confirmCreateLiveChallengeBtn");
+
+const createLiveChallengeTitleInput = document.getElementById("createLiveChallengeTitleInput");
+const createLiveChallengeDescriptionInput = document.getElementById("createLiveChallengeDescriptionInput");
+const createLiveChallengePointsInput = document.getElementById("createLiveChallengePointsInput");
+const createLiveChallengeDurationInput = document.getElementById("createLiveChallengeDurationInput");
+const createLiveChallengePhotoInput = document.getElementById("createLiveChallengePhotoInput");
+const createLiveChallengeStatusText = document.getElementById("createLiveChallengeStatusText");
 
 
 
@@ -48,6 +59,39 @@ function dismissLiveChallenge(challengeId) {
     dismissedLiveChallengeIds.push(challengeId);
   }
 }
+
+
+// =======================
+// CREATE LIVE CHALLENGES
+// =======================
+
+function openCreateLiveChallengeModal() {
+  if (!createLiveChallengeOverlay) return;
+
+  createLiveChallengeTitleInput.value = "";
+  createLiveChallengeDescriptionInput.value = "";
+  createLiveChallengePointsInput.value = "5";
+  createLiveChallengeDurationInput.value = "";
+  createLiveChallengePhotoInput.checked = false;
+  createLiveChallengeStatusText.textContent = "";
+
+  lockBodyScroll();
+  createLiveChallengeOverlay.classList.remove("hidden");
+
+  setTimeout(() => {
+    createLiveChallengeTitleInput?.focus();
+  }, 0);
+}
+
+function closeCreateLiveChallengeModal() {
+  if (!createLiveChallengeOverlay) return;
+
+  createLiveChallengeOverlay.classList.add("hidden");
+  unlockBodyScroll();
+}
+
+
+
 
 // =======================
 // DB - LIVE CHALLENGES
@@ -289,35 +333,68 @@ function closeLiveChallengeOverlay() {
 function renderLiveChallengeModal(challenge) {
   if (!challenge) return;
 
+  const titleEl = document.getElementById("liveChallengeTitle");
+  const contentEl = document.getElementById("liveChallengeContent");
+  const actionsEl = document.getElementById("liveChallengeActions");
+
+  if (!titleEl || !contentEl || !actionsEl) return;
+
   const requiresPhoto =
     challenge.requires_photo_proof === true ||
     challenge.requiresPhotoProof === true;
 
-  liveChallengeTitle.textContent = "Spontanchallenge";
-  liveChallengeIntro.textContent = "Eine spontane Zusatzaufgabe wurde gestartet.";
-  liveChallengeTaskTitle.textContent = challenge.title || "Ohne Titel";
-  liveChallengeTaskDescription.textContent = challenge.description || "";
-
   const remainingSeconds = getLiveChallengeRemainingSeconds(challenge);
-const hasTimer = remainingSeconds !== null;
+  const timeText =
+    remainingSeconds !== null
+      ? formatLiveChallengeRemainingTime(remainingSeconds)
+      : "Unbegrenzt";
 
-liveChallengeMeta.innerHTML = `
-  Nur der erste Spieler bekommt <strong>${challenge.points ?? 5} Punkte</strong>.
-  ${requiresPhoto ? "<br>Für diese Aufgabe ist ein Foto erforderlich." : ""}
-  ${hasTimer ? `<br>Verbleibende Zeit: <strong>${formatLiveChallengeRemainingTime(remainingSeconds)}</strong>` : ""}
-`;
+  titleEl.innerHTML = `
+    <span style="opacity: 0.7;">Spontanchallenge:</span>
+    <strong>${challenge.title || "Ohne Titel"}</strong>
+  `;
 
-  liveChallengeActions.innerHTML = `
-    <button id="dismissLiveChallengeBtn" type="button">Nicht interessiert</button>
+  contentEl.innerHTML = `
+    <p style="font-weight: 600; margin-bottom: 12px;">
+      ${challenge.description || ""}
+    </p>
+
+    <div class="live-challenge-hint-text">
+      Das ist eine Spontanchallenge. Sei schnell – nur der erste Spieler bekommt die Punkte.
+    </div>
+
+    ${requiresPhoto ? `
+      <div class="live-challenge-photo">
+        📷 Foto erforderlich
+      </div>
+    ` : ""}
+
+    <div class="live-challenge-stats">
+      <div class="live-stat-box">
+        <div class="live-stat-label">Punkte</div>
+        <div class="live-stat-value">${challenge.points ?? 5}</div>
+      </div>
+
+      <div class="live-stat-box">
+        <div class="live-stat-label">Restzeit</div>
+        <div class="live-stat-value">${timeText}</div>
+      </div>
+    </div>
+  `;
+
+  actionsEl.innerHTML = `
+    <button id="dismissLiveChallengeBtn" type="button" class="secondary-btn">
+      Nicht interessiert
+    </button>
+
     <button id="completeLiveChallengeBtn" type="button">
-      ${requiresPhoto ? "Mit Foto abschließen" : "Aufgabe bestanden"}
+      ${requiresPhoto ? "Mit Foto abschließen" : "Aufgabe abschließen"}
     </button>
   `;
 
   const dismissBtn = document.getElementById("dismissLiveChallengeBtn");
   const completeBtn = document.getElementById("completeLiveChallengeBtn");
 
-  // 👉 NICHT INTERESSIERT = START GESEHEN
   if (dismissBtn) {
     dismissBtn.onclick = async () => {
       if (currentPlayer && challenge.id) {
@@ -329,22 +406,21 @@ liveChallengeMeta.innerHTML = `
     };
   }
 
-  // 👉 ABSCHLIESSEN
   if (completeBtn) {
-  completeBtn.onclick = async () => {
-    if (requiresPhoto) {
-      if (currentPlayer && challenge.id) {
-        await markLiveChallengeStartSeen(currentPlayer.id, challenge.id);
+    completeBtn.onclick = async () => {
+      if (requiresPhoto) {
+        if (currentPlayer && challenge.id) {
+          await markLiveChallengeStartSeen(currentPlayer.id, challenge.id);
+        }
+
+        closeLiveChallengeOverlay();
+        openUploadModal(challenge, "live");
+        return;
       }
 
-      closeLiveChallengeOverlay();
-      openUploadModal(challenge, "live");
-      return;
-    }
-
-    await handleCompleteLiveChallenge(challenge);
-  };
-}
+      await handleCompleteLiveChallenge(challenge);
+    };
+  }
 }
 
 
@@ -354,6 +430,8 @@ liveChallengeMeta.innerHTML = `
 // =======================
 
 async function renderCompletedLiveChallengeModal(challenge) {
+  if (!challenge) return;
+
   const winner = await loadLiveChallengeWinner(challenge.id);
 
   const imageUrl = winner?.imagePath
@@ -362,33 +440,34 @@ async function renderCompletedLiveChallengeModal(challenge) {
         .getPublicUrl(winner.imagePath).data.publicUrl
     : null;
 
-  liveChallengeTitle.textContent = "Spontanchallenge beendet";
+  liveChallengeTitle.innerHTML = `
+    <span style="opacity: 0.7;">Spontanchallenge</span>
+    <strong>${challenge.title || "Ohne Titel"}</strong>
+    <span style="opacity: 0.7;">beendet</span>
+  `;
 
-  if (winner) {
-    liveChallengeIntro.innerHTML = `
-      <strong>${winner.name}</strong> hat die Aufgabe gelöst!
-    `;
-  } else {
-    liveChallengeIntro.innerHTML = `
-      Niemand hat die Aufgabe geschafft.
-    `;
-  }
+  liveChallengeContent.innerHTML = `
+    <p style="font-weight: 600; margin-bottom: 12px;">
+      ${challenge.description || ""}
+    </p>
 
-  liveChallengeTaskTitle.textContent = challenge.title;
-  liveChallengeTaskDescription.textContent = challenge.description || "";
+    <div class="live-challenge-result ${winner ? "success" : "neutral"}">
+      ${
+        winner
+          ? `<strong>${winner.name}</strong> war am schnellsten und hat <strong>${challenge.points ?? 5} Punkte</strong> bekommen.`
+          : `Niemand war schnell genug. Es wurden keine Punkte vergeben.`
+      }
+    </div>
 
-  liveChallengeMeta.innerHTML = `
-    ${winner ? `Gewinner erhält <strong>${challenge.points ?? 5} Punkte</strong>` : ""}
+    ${imageUrl ? `<img src="${imageUrl}" class="live-challenge-winner-image" />` : ""}
   `;
 
   liveChallengeActions.innerHTML = `
-    ${imageUrl ? `<img src="${imageUrl}" class="live-challenge-winner-image" />` : ""}
-    <button id="closeLiveChallengeEndBtn">Schließen</button>
+    <button id="closeLiveChallengeEndBtn" type="button">Schließen</button>
   `;
 
   const closeBtn = document.getElementById("closeLiveChallengeEndBtn");
 
-  // 👉 END GESEHEN markieren
   if (closeBtn) {
     closeBtn.onclick = async () => {
       if (currentPlayer && challenge.id) {
@@ -404,30 +483,50 @@ async function renderCompletedLiveChallengeModal(challenge) {
 
 
 // =======================
-// TEST BUTTON
+// TEST BUTTON / CREATE MODAL EVENTS
 // =======================
 
 if (testLiveChallengeBtn) {
-  testLiveChallengeBtn.addEventListener("click", async () => {
-    const title = prompt("Name der Spontanchallenge:");
-    if (!title) return;
+  testLiveChallengeBtn.addEventListener("click", () => {
+    openCreateLiveChallengeModal();
+  });
+}
 
-    const description = prompt("Beschreibung:");
-    if (!description) return;
+if (closeCreateLiveChallengeBtn) {
+  closeCreateLiveChallengeBtn.addEventListener("click", () => {
+    closeCreateLiveChallengeModal();
+  });
+}
 
-    const requiresPhotoAnswer = prompt("Foto erforderlich? (ja/nein)", "nein");
-    const requiresPhotoProof =
-      requiresPhotoAnswer &&
-      ["ja", "j", "yes", "y"].includes(requiresPhotoAnswer.trim().toLowerCase());
+if (cancelCreateLiveChallengeBtn) {
+  cancelCreateLiveChallengeBtn.addEventListener("click", () => {
+    closeCreateLiveChallengeModal();
+  });
+}
 
-    const pointsAnswer = prompt("Punkte für diese Spontanchallenge?", "5");
-    const points = Math.max(1, Number(pointsAnswer) || 5);
+if (confirmCreateLiveChallengeBtn) {
+  confirmCreateLiveChallengeBtn.addEventListener("click", async () => {
+    const title = createLiveChallengeTitleInput.value.trim();
+    const description = createLiveChallengeDescriptionInput.value.trim();
+    const points = Math.max(1, Number(createLiveChallengePointsInput.value) || 5);
 
-    const durationAnswer = prompt("Zeitlimit in Minuten? Leer lassen = unbegrenzt", "");
+    const durationRaw = createLiveChallengeDurationInput.value.trim();
     const durationMinutes =
-      durationAnswer && durationAnswer.trim() !== ""
-        ? Math.max(1, Number(durationAnswer) || 0)
-        : null;
+      durationRaw !== "" ? Math.max(1, Number(durationRaw) || 0) : null;
+
+    const requiresPhotoProof = createLiveChallengePhotoInput.checked;
+
+    if (!title) {
+      createLiveChallengeStatusText.textContent = "Bitte einen Namen eingeben.";
+      return;
+    }
+
+    if (!description) {
+      createLiveChallengeStatusText.textContent = "Bitte eine Beschreibung eingeben.";
+      return;
+    }
+
+    createLiveChallengeStatusText.textContent = "Spontanchallenge wird erstellt...";
 
     const created = await createLiveChallenge({
       title,
@@ -438,15 +537,21 @@ if (testLiveChallengeBtn) {
     });
 
     if (!created) {
-      alert("Spontanchallenge konnte nicht erstellt werden.");
+      createLiveChallengeStatusText.textContent = "Spontanchallenge konnte nicht erstellt werden.";
       return;
     }
+
+    closeCreateLiveChallengeModal();
 
     currentLiveChallenge = created;
     renderLiveChallengeModal(created);
     openLiveChallengeOverlay();
   });
 }
+
+// =======================
+// LIVE CHALLENGE ZEIT
+// =======================
 
 function getLiveChallengeRemainingSeconds(challenge) {
   if (!challenge?.expires_at) return null;
@@ -466,6 +571,10 @@ function formatLiveChallengeRemainingTime(totalSeconds) {
 
   return `${String(minutes).padStart(2, "0")}:${String(restSeconds).padStart(2, "0")}`;
 }
+
+// =======================
+// LIVE CHALLENGE MANUELL BEENDEN
+// =======================
 
 if (endLiveChallengeBtn) {
   endLiveChallengeBtn.addEventListener("click", async () => {

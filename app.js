@@ -126,12 +126,20 @@ function formatCompletedDateTime(isoString) {
 function openChallengeModal(challenge) {
   modalCloseBtn.classList.add("hidden");
 
-  modalTitle.innerHTML = `
-    ${challenge.title}
-    ${challenge.requiresPhotoProof ? '<span class="photo-required-icon">📷</span>' : ''}
+  modalTitle.textContent = challenge.title;
+
+  modalTask.innerHTML = `
+    <div class="challenge-description-wrapper">
+      <div class="challenge-description-text">
+        ${challenge.task}
+      </div>
+
+      ${challenge.requiresPhotoProof ? `
+        <div class="challenge-photo-icon">📷</div>
+      ` : ""}
+    </div>
   `;
 
-  modalTask.textContent = challenge.task;
   modalPoints.textContent = `Punkte: ${challenge.points}`;
 
   const hasDetails = challenge.details && challenge.details.trim() !== "";
@@ -160,7 +168,7 @@ function openChallengeModal(challenge) {
     await completeChallenge(challenge.boardId);
   };
 
-    document.getElementById("failBtn").onclick = () => {
+  document.getElementById("failBtn").onclick = () => {
     openFailConfirmModal();
   };
 

@@ -8,158 +8,149 @@
 </head>
 <body>
 
+  <div class="app">
+    <div class="header-card">
+      <h1>Flos Party Bingo</h1>
 
-<div class="app">
+      <div class="header-controls">
+        <div class="header-item">
+          <div class="header-label">Aktives Spiel</div>
+          <button id="gameSelectBtn" class="secondary-btn header-button">
+            <span id="gameNameInline">Lade...</span>
+          </button>
+        </div>
 
-  <div class="header-card">
-    <h1>Flos Party Bingo</h1>
-
-    <div class="header-controls">
-      <div class="header-item">
-        <div class="header-label">Aktives Spiel</div>
-        <button id="gameSelectBtn" class="secondary-btn header-button">
-          <span id="gameNameInline">Lade...</span>
-        </button>
+        <div class="header-item">
+          <div class="header-label">Eingeloggt als</div>
+          <button id="playerProfileBtn" class="secondary-btn header-button">
+            <span id="playerNameInline">-</span>
+          </button>
+        </div>
       </div>
 
-      <div class="header-item">
-        <div class="header-label">Eingeloggt als</div>
-        <button id="playerProfileBtn" class="secondary-btn header-button">
-          <span id="playerNameInline">-</span>
-        </button>
+      <div id="scoreDisplay" class="score-card">
+        <div class="score-label">Score</div>
+        <div class="score-number"><span id="scoreValue">0</span></div>
+      </div>
+
+      <div id="cooldownDisplay" class="cooldown-display hidden">
+        <span class="cooldown-label">Cooldown</span>
+        <span id="cooldownTimerText" class="cooldown-timer-text">00:00</span>
       </div>
     </div>
 
-    <div id="scoreDisplay" class="score-card">
-      <div class="score-label">Score</div>
-      <div class="score-number"><span id="scoreValue">0</span></div>
+    <div id="grid" class="grid"></div>
+
+    <!-- LEADERBOARD -->
+    <div class="leaderboard">
+      <h2>Leaderboard</h2>
+      <div id="leaderboardList" class="leaderboard-list"></div>
     </div>
 
-    <div id="cooldownDisplay" class="cooldown-display hidden">
-      <span class="cooldown-label">Cooldown</span>
-      <span id="cooldownTimerText" class="cooldown-timer-text">00:00</span>
+    <!-- BOTTOM ACTIONS -->
+    <div class="bottom-actions">
+      <button id="rulesBtn" class="secondary-btn">Regeln anzeigen</button>
+      <button id="testLiveChallengeBtn" type="button">Spontanchallenge starten</button>
+      <button id="endLiveChallengeBtn" type="button">Spontanchallenge beenden</button>
     </div>
   </div>
-
-  <div id="grid" class="grid"></div>
-
-  <!-- LEADERBOARD -->
-  <div class="leaderboard">
-    <h2>Leaderboard</h2>
-    <div id="leaderboardList" class="leaderboard-list"></div>
-  </div>
-
-  <!-- BOTTOM ACTIONS -->
-  <div class="bottom-actions">
-    <button id="rulesBtn" class="secondary-btn">Regeln anzeigen</button>
-    <button id="testLiveChallengeBtn" type="button">Spontanchallenge starten</button>
-    <button id="endLiveChallengeBtn" type="button">Spontanchallenge beenden</button>
-  </div>
-</div>
 
   <!-- ===================== -->
   <!-- MODAL (CHALLENGE) -->
   <!-- ===================== -->
   <div id="modalOverlay" class="modal-overlay hidden">
-  <div class="modal">
-    <button id="modalCloseBtn" class="modal-close-btn" type="button">×</button>
-    <h2 id="modalTitle">Titel</h2>
-    <p id="modalTask">Aufgabe</p>
-    <p id="modalPoints">Punkte</p>
-    <div class="modal-actions"></div>
+    <div class="modal">
+      <button id="modalCloseBtn" class="modal-close-btn" type="button">×</button>
+      <h2 id="modalTitle">Titel</h2>
+      <p id="modalTask">Aufgabe</p>
+      <p id="modalPoints">Punkte</p>
+      <div class="modal-actions"></div>
+    </div>
   </div>
-</div>
 
-<!-- ===================== -->
-<!-- LOGIN OVERLAY -->
-<!-- ===================== -->
-<div id="loginOverlay" class="modal-overlay hidden">
-  <div class="modal">
+  <!-- ===================== -->
+  <!-- LOGIN OVERLAY -->
+  <!-- ===================== -->
+  <div id="loginOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div id="authChoiceView">
+        <h2>Willkommen bei Flo's Party Bingo</h2>
+        <p id="loginTagline" class="auth-subtext"></p>
 
-    <div id="authChoiceView">
-      <h2>Willkommen bei Flo's Party Bingo</h2>
-      <p id="loginTagline" class="auth-subtext"></p>
+        <div class="modal-actions auth-choice-actions">
+          <button id="showLoginBtn">Anmelden</button>
+          <button id="showRegisterBtn">Neuen Spieler anlegen</button>
+        </div>
+      </div>
 
-      <div class="modal-actions auth-choice-actions">
-        <button id="showLoginBtn">Anmelden</button>
-        <button id="showRegisterBtn">Neuen Spieler anlegen</button>
+      <div id="loginView" class="hidden">
+        <h2>Willkommen zurück</h2>
+        <p class="auth-subtext">Schön, dass du wieder da bist. Bereit für die nächsten Punkte?</p>
+
+        <input id="loginNameInput" type="text" placeholder="Name" />
+        <input id="loginPinInput" type="password" inputmode="numeric" placeholder="PIN" />
+
+        <div class="auth-hint">
+          Melde dich mit deinem bestehenden Spielernamen und deiner PIN an.
+        </div>
+
+        <div class="modal-actions auth-actions">
+          <button id="doLoginBtn">Login</button>
+          <button id="backToChoiceFromLoginBtn" type="button">Zurück</button>
+        </div>
+      </div>
+
+      <div id="registerView" class="hidden">
+        <h2>Neuen Spieler anlegen</h2>
+        <p class="auth-subtext">Bist du bereit einzusteigen?</p>
+
+        <div class="auth-hint">
+          Wähle einen einfachen Namen ohne Leerzeichen oder Sonderzeichen.<br>
+          Die PIN sollte aus 4 Ziffern bestehen.
+        </div>
+
+        <input id="registerNameInput" type="text" placeholder="Name" />
+        <input id="registerPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="4-stellige PIN" />
+
+        <div class="modal-actions auth-actions">
+          <button id="doRegisterBtn">Erstellen</button>
+          <button id="backToChoiceFromRegisterBtn" type="button">Zurück</button>
+        </div>
       </div>
     </div>
-
-    <div id="loginView" class="hidden">
-      <h2>Willkommen zurück</h2>
-      <p class="auth-subtext">Schön, dass du wieder da bist. Bereit für die nächsten Punkte?</p>
-
-      <input id="loginNameInput" type="text" placeholder="Name" />
-      <input id="loginPinInput" type="password" inputmode="numeric" placeholder="PIN" />
-
-      <div class="auth-hint">
-        Melde dich mit deinem bestehenden Spielernamen und deiner PIN an.
-      </div>
-
-      <div class="modal-actions auth-actions">
-        <button id="doLoginBtn">Login</button>
-        <button id="backToChoiceFromLoginBtn" type="button">Zurück</button>
-      </div>
-    </div>
-
-    <div id="registerView" class="hidden">
-      <h2>Neuen Spieler anlegen</h2>
-      <p class="auth-subtext">Bist du bereit einzusteigen?</p>
-
-      <div class="auth-hint">
-        Wähle einen einfachen Namen ohne Leerzeichen oder Sonderzeichen.<br>
-        Die PIN sollte aus 4 Ziffern bestehen.
-      </div>
-
-      <input id="registerNameInput" type="text" placeholder="Name" />
-      <input id="registerPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="4-stellige PIN" />
-
-      <div class="modal-actions auth-actions">
-        <button id="doRegisterBtn">Erstellen</button>
-        <button id="backToChoiceFromRegisterBtn" type="button">Zurück</button>
-      </div>
-    </div>
-
   </div>
-</div>
 
   <!-- ===================== -->
   <!-- GAME SELECT OVERLAY -->
   <!-- ===================== -->
   <div id="gameSelectOverlay" class="modal-overlay hidden">
     <div class="modal">
+      <button id="closeGameSelectBtn" class="modal-close-btn" type="button">×</button>
       <h2>Spiel auswählen</h2>
       <div id="gameList" class="game-list"></div>
-      <div class="modal-actions">
-        <button id="closeGameSelectBtn">Schließen</button>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- REGELN -->
+  <!-- ===================== -->
+  <div id="rulesOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <button id="closeRulesBtn" class="modal-close-btn" type="button">×</button>
+      <h2 id="rulesTitle">Regeln & Punkte</h2>
+
+      <div id="rulesContent" class="rules-content">
+        <!-- wird dynamisch gefüllt -->
       </div>
     </div>
   </div>
-
-<!-- ===================== -->
-<!-- Regeln -->
-<!-- ===================== -->
-
-<div id="rulesOverlay" class="modal-overlay hidden">
-  <div class="modal">
-    <h2 id="rulesTitle">Regeln & Punkte</h2>
-
-    <div id="rulesContent" class="rules-content">
-      <!-- wird dynamisch gefüllt -->
-    </div>
-
-    <div class="modal-actions">
-      <button id="closeRulesBtn">Schließen</button>
-    </div>
-  </div>
-</div>
 
   <!-- ===================== -->
   <!-- PLAYER PROFILE -->
   <!-- ===================== -->
   <div id="playerProfileOverlay" class="modal-overlay hidden">
     <div class="modal">
+      <button id="closePlayerProfileBtn" class="modal-close-btn" type="button">×</button>
       <h2>Dein Profil</h2>
 
       <p id="playerProfileName"><strong>Spieler:</strong> -</p>
@@ -182,31 +173,26 @@
       </div>
 
       <div class="modal-actions">
-  <button id="closePlayerProfileBtn" type="button">Zurück</button>
-  <button id="playerProfileLogoutBtn" class="secondary-btn">Logout</button>
-  <button id="resetProgressBtn" class="danger-btn-soft">Fortschritt zurücksetzen</button>
-  <button id="deletePlayerBtn" class="danger-btn">Profil löschen</button>
-</div>
+        <button id="playerProfileLogoutBtn" class="secondary-btn">Logout</button>
+        <button id="resetProgressBtn" class="danger-btn-soft">Fortschritt zurücksetzen</button>
+        <button id="deletePlayerBtn" class="danger-btn">Profil löschen</button>
+      </div>
     </div>
   </div>
 
   <!-- ===================== -->
-  <!-- Hinweise-->
+  <!-- HINWEISE -->
   <!-- ===================== -->
+  <div id="detailsOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <button id="closeDetailsBtn" class="modal-close-btn" type="button">×</button>
+      <h2>Hinweise</h2>
 
-<div id="detailsOverlay" class="modal-overlay hidden">
-  <div class="modal">
-    <h2>Hinweise</h2>
-
-    <div id="detailsContent" class="rules-content">
-      <!-- wird dynamisch gefüllt -->
-    </div>
-
-    <div class="modal-actions">
-      <button id="closeDetailsBtn">Schließen</button>
+      <div id="detailsContent" class="rules-content">
+        <!-- wird dynamisch gefüllt -->
+      </div>
     </div>
   </div>
-</div>
 
   <!-- ===================== -->
   <!-- BINGO BANNER -->
@@ -218,49 +204,44 @@
     </div>
   </div>
 
-    <!-- ===================== -->
+  <!-- ===================== -->
   <!-- FOTO UPLOAD -->
   <!-- ===================== -->
-
   <div id="uploadOverlay" class="modal-overlay hidden">
-  <div class="modal">
-    <h2>Beweisfoto hochladen</h2>
+    <div class="modal">
+      <h2>Beweisfoto hochladen</h2>
 
-    <div class="rules-content">
-      <p id="uploadChallengeTitle"><strong>Aufgabe:</strong> -</p>
-      <p>Bitte lade ein Beweisfoto hoch, um die Aufgabe abzuschließen.</p>
+      <div class="rules-content">
+        <p id="uploadChallengeTitle"><strong>Aufgabe:</strong> -</p>
+        <p>Bitte lade ein Beweisfoto hoch, um die Aufgabe abzuschließen.</p>
 
-      <input id="uploadPhotoInput" type="file" accept="image/*" />
+        <input id="uploadPhotoInput" type="file" accept="image/*" />
 
-      <div id="uploadPreviewContainer" class="upload-preview-container hidden">
-        <img id="uploadPreviewImage" class="upload-preview-image" alt="Bildvorschau" />
+        <div id="uploadPreviewContainer" class="upload-preview-container hidden">
+          <img id="uploadPreviewImage" class="upload-preview-image" alt="Bildvorschau" />
+        </div>
+
+        <p id="uploadStatusText" style="margin-top: 12px;"></p>
       </div>
 
-      <p id="uploadStatusText" style="margin-top: 12px;"></p>
-    </div>
-
-    <div class="modal-actions">
-      <button id="doUploadBtn">Hochladen</button>
-      <button id="cancelUploadBtn" type="button">Zurück</button>
+      <div class="modal-actions">
+        <button id="doUploadBtn">Hochladen</button>
+        <button id="cancelUploadBtn" type="button">Zurück</button>
+      </div>
     </div>
   </div>
-</div>
 
   <!-- ===================== -->
-<!-- FOTO VIEWER -->
-<!-- ===================== -->
+  <!-- FOTO VIEWER -->
+  <!-- ===================== -->
+  <div id="photoViewerOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <button id="closePhotoViewerBtn" class="modal-close-btn" type="button">×</button>
+      <h2 id="photoViewerTitle">Beweisfoto</h2>
 
-<div id="photoViewerOverlay" class="modal-overlay hidden">
-  <div class="modal">
-    <h2 id="photoViewerTitle">Beweisfoto</h2>
-
-    <div id="photoViewerContent"></div>
-
-    <div class="modal-actions">
-      <button id="closePhotoViewerBtn">Schließen</button>
+      <div id="photoViewerContent"></div>
     </div>
   </div>
-</div>
 
   <!-- ===================== -->
   <!-- FIRST SOLVER BANNER -->
@@ -272,22 +253,20 @@
     </div>
   </div>
 
+  <!-- ===================== -->
+  <!-- FINALE OVERLAY -->
+  <!-- ===================== -->
+  <div id="finalOverlay" class="modal-overlay hidden">
+    <div class="modal final-modal">
+      <h2>🎉 Geschafft! 🎉</h2>
+      <p>Du hast alle Aufgaben dieses Spiels abgeschlossen.</p>
+      <p id="finalScoreText"><strong>Dein finaler Punktestand:</strong> 0</p>
 
-<!-- ===================== -->
-<!-- FINALE OVERLAY -->
-<!-- ===================== -->
-
-<div id="finalOverlay" class="modal-overlay hidden">
-  <div class="modal final-modal">
-    <h2>🎉 Geschafft! 🎉</h2>
-    <p>Du hast alle Aufgaben dieses Spiels abgeschlossen.</p>
-    <p id="finalScoreText"><strong>Dein finaler Punktestand:</strong> 0</p>
-
-    <div class="modal-actions">
-      <button id="closeFinalBtn">Nice</button>
+      <div class="modal-actions">
+        <button id="closeFinalBtn">Nice</button>
+      </div>
     </div>
   </div>
-</div>
 
   <!-- ===================== -->
   <!-- FAIL CONFIRM OVERLAY -->
@@ -309,102 +288,145 @@
     </div>
   </div>
 
-<!-- ===================== -->
-<!-- LIVE CHALLENGE -->
-<!-- ===================== -->
-<div id="liveChallengeOverlay" class="modal-overlay hidden">
-  <div class="modal">
-    <h2 id="liveChallengeTitle">Spontanchallenge</h2>
+  <!-- ===================== -->
+  <!-- LIVE CHALLENGE -->
+  <!-- ===================== -->
+  <div id="liveChallengeOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="liveChallengeTitle">Spontanchallenge</h2>
 
-    <div id="liveChallengeContent" class="rules-content">
-      <p id="liveChallengeIntro">
-        Eine spontane Zusatzaufgabe wurde gestartet.
-      </p>
+      <div id="liveChallengeContent" class="rules-content">
+        <p id="liveChallengeIntro">
+          Eine spontane Zusatzaufgabe wurde gestartet.
+        </p>
 
-      <p>
-        <strong id="liveChallengeTaskTitle">Titel der Aufgabe</strong>
-      </p>
+        <p>
+          <strong id="liveChallengeTaskTitle">Titel der Aufgabe</strong>
+        </p>
 
-      <p id="liveChallengeTaskDescription">
-        Beschreibung der Aufgabe
-      </p>
+        <p id="liveChallengeTaskDescription">
+          Beschreibung der Aufgabe
+        </p>
 
-      <div id="liveChallengeMeta" class="auth-hint">
-        Nur der erste Spieler bekommt die Punkte.
+        <div id="liveChallengeMeta" class="auth-hint">
+          Nur der erste Spieler bekommt die Punkte.
+        </div>
       </div>
-    </div>
 
-    <div id="liveChallengeActions" class="modal-actions auth-actions">
-      <button id="dismissLiveChallengeBtn" type="button">Nicht interessiert</button>
-      <button id="completeLiveChallengeBtn" type="button">Aufgabe bestanden</button>
+      <div id="liveChallengeActions" class="modal-actions auth-actions">
+        <button id="dismissLiveChallengeBtn" type="button">Nicht interessiert</button>
+        <button id="completeLiveChallengeBtn" type="button">Aufgabe bestanden</button>
+      </div>
     </div>
   </div>
-</div>
 
-
+  <!-- ===================== -->
+<!-- LIVE CHALLENGE CREATE -->
 <!-- ===================== -->
-<!-- WELCOME OVERLAY -->
-<!-- ===================== -->
-<div id="welcomeOverlay" class="modal-overlay hidden">
-  <div class="modal welcome-modal">
-    <h2>Willkommen beim Festival Bingo 🎉</h2>
+<div id="createLiveChallengeOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <button id="closeCreateLiveChallengeBtn" class="modal-close-btn" type="button">×</button>
 
-    <div class="rules-content welcome-content">
-      <p>
-        Schön, dass du dabei bist. Hier kommt die Kurzfassung, damit du direkt loslegen kannst:
-      </p>
+    <h2>Spontanchallenge erstellen</h2>
 
-      <div class="welcome-steps">
-        <div class="welcome-step">
-          <div class="welcome-step-icon">🎯</div>
-          <div>
-            <strong>Ein Feld antippen</strong><br>
-            Wähle eine Aufgabe aus dem Bingo-Feld.
-          </div>
+    <div class="rules-content">
+      <label for="createLiveChallengeTitleInput"><strong>Name</strong></label>
+      <input id="createLiveChallengeTitleInput" type="text" placeholder="z. B. Selfie mit 3 Fremden" />
+
+      <label for="createLiveChallengeDescriptionInput"><strong>Beschreibung</strong></label>
+      <textarea
+        id="createLiveChallengeDescriptionInput"
+        rows="4"
+        placeholder="Kurze Beschreibung der Aufgabe"
+      ></textarea>
+
+      <div class="live-create-grid">
+        <div>
+          <label for="createLiveChallengePointsInput"><strong>Punkte</strong></label>
+          <input id="createLiveChallengePointsInput" type="number" min="1" value="5" />
         </div>
 
-        <div class="welcome-step">
-          <div class="welcome-step-icon">⚠️</div>
-          <div>
-            <strong>Immer nur eine aktive Aufgabe</strong><br>
-            Du kannst nie mehrere Aufgaben gleichzeitig offen haben.
-          </div>
-        </div>
-
-        <div class="welcome-step">
-          <div class="welcome-step-icon">📷</div>
-          <div>
-            <strong>Manche Aufgaben brauchen ein Foto</strong><br>
-            Dann musst du zum Abschließen ein Beweisfoto hochladen.
-          </div>
-        </div>
-
-        <div class="welcome-step">
-          <div class="welcome-step-icon">⭐</div>
-          <div>
-            <strong>First Solver lohnt sich</strong><br>
-            Wer eine Aufgabe als Erster löst, bekommt doppelte Punkte.
-          </div>
-        </div>
-
-        <div class="welcome-step">
-          <div class="welcome-step-icon">⚡</div>
-          <div>
-            <strong>Spontanchallenges poppen live auf</strong><br>
-            Schnell sein lohnt sich: Nur der erste Spieler bekommt die Punkte.
-          </div>
+        <div>
+          <label for="createLiveChallengeDurationInput"><strong>Zeitlimit (Min.)</strong></label>
+          <input id="createLiveChallengeDurationInput" type="number" min="1" placeholder="leer = unbegrenzt" />
         </div>
       </div>
+
+      <label class="live-create-checkbox">
+        <input id="createLiveChallengePhotoInput" type="checkbox" />
+        <span>Foto erforderlich</span>
+      </label>
+
+      <p id="createLiveChallengeStatusText" class="auth-hint"></p>
     </div>
 
     <div class="modal-actions">
-      <button id="welcomeStartBtn" type="button">Los geht’s</button>
+      <button id="cancelCreateLiveChallengeBtn" type="button" class="secondary-btn">Abbrechen</button>
+      <button id="confirmCreateLiveChallengeBtn" type="button">Spontanchallenge starten</button>
     </div>
   </div>
 </div>
 
+  <!-- ===================== -->
+  <!-- WELCOME OVERLAY -->
+  <!-- ===================== -->
+  <div id="welcomeOverlay" class="modal-overlay hidden">
+    <div class="modal welcome-modal">
+      <h2>Willkommen beim Festival Bingo 🎉</h2>
 
+      <div class="rules-content welcome-content">
+        <p>
+          Schön, dass du dabei bist. Hier kommt die Kurzfassung, damit du direkt loslegen kannst:
+        </p>
 
+        <div class="welcome-steps">
+          <div class="welcome-step">
+            <div class="welcome-step-icon">🎯</div>
+            <div>
+              <strong>Ein Feld antippen</strong><br>
+              Wähle eine Aufgabe aus dem Bingo-Feld.
+            </div>
+          </div>
+
+          <div class="welcome-step">
+            <div class="welcome-step-icon">⚠️</div>
+            <div>
+              <strong>Immer nur eine aktive Aufgabe</strong><br>
+              Du kannst nie mehrere Aufgaben gleichzeitig offen haben.
+            </div>
+          </div>
+
+          <div class="welcome-step">
+            <div class="welcome-step-icon">📷</div>
+            <div>
+              <strong>Manche Aufgaben brauchen ein Foto</strong><br>
+              Dann musst du zum Abschließen ein Beweisfoto hochladen.
+            </div>
+          </div>
+
+          <div class="welcome-step">
+            <div class="welcome-step-icon">⭐</div>
+            <div>
+              <strong>First Solver lohnt sich</strong><br>
+              Wer eine Aufgabe als Erster löst, bekommt doppelte Punkte.
+            </div>
+          </div>
+
+          <div class="welcome-step">
+            <div class="welcome-step-icon">⚡</div>
+            <div>
+              <strong>Spontanchallenges poppen live auf</strong><br>
+              Schnell sein lohnt sich: Nur der erste Spieler bekommt die Punkte.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="welcomeStartBtn" type="button">Los geht’s</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ===================== -->
   <!-- SCRIPTS -->
@@ -417,9 +439,6 @@
   <script src="app.js"></script>
   <script src="live-challenges.js"></script>
   <script src="main.js"></script>
-
-
-
 
 </body>
 </html>
