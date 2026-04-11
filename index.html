@@ -8,31 +8,37 @@
 </head>
 <body>
   <div class="app">
+<!-- HEADER -->
+<h1>Flos Party Bingo</h1>
 
-    <!-- HEADER -->
-    <h1>Flos Party Bingo</h1>
+<div class="header-controls">
 
-    <!-- GAME + PLAYER -->
-    <div class="header-controls">
-      <button id="gameSelectBtn" class="secondary-btn">
-        🎯 Spiel: <span id="gameNameInline">Lade...</span>
-      </button>
+  <div class="header-item">
+    <span class="header-label">Aktives Spiel:</span>
+    <button id="gameSelectBtn" class="secondary-btn">
+      <span id="gameNameInline">Lade...</span>
+    </button>
+  </div>
 
-      <button id="playerProfileBtn" class="secondary-btn">
-        👤 Spieler: <span id="playerNameInline">-</span>
-      </button>
-    </div>
+  <div class="header-item">
+    <span class="header-label">Eingeloggt als:</span>
+    <button id="playerProfileBtn" class="secondary-btn">
+      <span id="playerNameInline">-</span>
+    </button>
+  </div>
 
-    <!-- SCORE -->
-    <div id="scoreDisplay" class="score-display">
-      Score: <span id="scoreValue">0</span>
-    </div>
+</div>
 
-    <!-- COOLDOWN -->
-    <div id="cooldownDisplay" class="cooldown-display hidden">
-      <span class="cooldown-label">Cooldown</span>
-      <span id="cooldownTimerText" class="cooldown-timer-text">00:00</span>
-    </div>
+<!-- SCORE -->
+<div id="scoreDisplay" class="score-display">
+  Score: <span id="scoreValue">0</span>
+</div>
+
+<!-- COOLDOWN -->
+<div id="cooldownDisplay" class="cooldown-display hidden">
+  <span class="cooldown-label">Cooldown</span>
+  <span id="cooldownTimerText" class="cooldown-timer-text">00:00</span>
+</div>
 
     <!-- GRID -->
     <div id="grid" class="grid"></div>
