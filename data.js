@@ -158,6 +158,12 @@ async function ensurePlayerGameState(playerId) {
     return null;
   }
 
+  const liveViewsInitialized = await initializeLiveChallengeViewsForNewPlayerInGame(playerId);
+
+  if (!liveViewsInitialized) {
+    console.warn("Live-Challenge-Views konnten nicht initialisiert werden.");
+  }
+
   return inserted;
 }
 
@@ -486,6 +492,8 @@ async function loadCompletedChallengesForCurrentPlayer(playerId) {
 // PROFIL LÖSCHEN
 // =======================
 
+
+
 async function deletePlayerProfile(playerId) {
   try {
     // 1. Bingos löschen
@@ -494,19 +502,31 @@ async function deletePlayerProfile(playerId) {
       .delete()
       .eq("player_id", playerId);
 
-    // 2. Challenges löschen
+    // 2. Normale Challenges löschen
     await supabaseClient
       .from("player_challenges")
       .delete()
       .eq("player_id", playerId);
 
-    // 3. Game State löschen
+    // 3. Live-Challenges des Spielers löschen
+    await supabaseClient
+      .from("player_live_challenges")
+      .delete()
+      .eq("player_id", playerId);
+
+    // 4. Live-Challenge-Views löschen
+    await supabaseClient
+      .from("player_live_challenge_views")
+      .delete()
+      .eq("player_id", playerId);
+
+    // 5. Game State löschen
     await supabaseClient
       .from("player_game_state")
       .delete()
       .eq("player_id", playerId);
 
-    // 4. Player löschen
+    // 6. Player löschen
     const { error } = await supabaseClient
       .from("players")
       .delete()

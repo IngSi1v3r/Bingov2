@@ -95,6 +95,10 @@ async function loginPlayer(username, pin) {
 
   console.log("Spieler erfolgreich eingeloggt:", currentPlayer.display_name || currentPlayer.username);
   return currentPlayer;
+
+  // Hinweise zum Pin: Der Pin wird absichtlich nicht als Hash abgespeichert. 
+  // Es handelt sich um ein kleines privates Spiel. Ich möchte als Admin den Pin einfach nachsehen können
+  // sollte ihn ein Spieler vergessen. Außerdem wesentlich einfachere Logik.
 }
 
 // =======================

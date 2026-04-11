@@ -58,6 +58,7 @@ const scoreValue = document.getElementById("scoreValue");
 // =======================
 
 let pendingUploadChallenge = null;
+let pendingUploadType = null; // 🔥 NEU ("normal" | "live")
 
 let currentCompletionGallery = [];
 let currentGalleryIndex = 0;
@@ -67,6 +68,8 @@ let currentPlayerProfileGalleryIndex = 0;
 
 let displayedScore = 0;
 let freezeScoreDisplay = false;
+
+
 
 // =======================
 // MODAL FUNKTIONEN
@@ -375,8 +378,9 @@ function closeDetailsModal() {
 
 
 
-function openUploadModal(challenge) {
+function openUploadModal(challenge, type = "normal") {
   pendingUploadChallenge = challenge;
+  pendingUploadType = type;
 
   uploadChallengeTitle.innerHTML = `<strong>Aufgabe:</strong> ${challenge.title}`;
   uploadPhotoInput.value = "";
@@ -392,6 +396,7 @@ function openUploadModal(challenge) {
 function closeUploadModal() {
   uploadOverlay.classList.add("hidden");
   pendingUploadChallenge = null;
+  pendingUploadType = null;
   uploadPhotoInput.value = "";
   uploadStatusText.textContent = "";
   doUploadBtn.textContent = "Hochladen";
@@ -416,13 +421,15 @@ async function openPlayerProfileModal() {
   playerProfileName.innerHTML = `<strong>Spieler:</strong> ${currentPlayer.display_name || currentPlayer.username}`;
 
   const completedRows = await loadCompletedChallengesForCurrentPlayer(currentPlayer.id);
+  const liveRows = await loadCompletedLiveChallengesForPlayer(currentPlayer.id);
 
-  currentPlayerProfileGallery = completedRows
+  const normalGalleryEntries = completedRows
     .filter(row => row.proof_image_path)
     .map(row => {
       const challenge = getChallengeByDbId(row.challenge_id);
       return challenge
         ? {
+            type: "normal",
             challengeId: row.challenge_id,
             challengeTitle: challenge.title,
             completedAt: row.completed_at,
@@ -434,20 +441,35 @@ async function openPlayerProfileModal() {
     })
     .filter(Boolean);
 
+  const liveGalleryEntries = liveRows
+    .filter(row => row.proofImagePath)
+    .map(row => ({
+      type: "live",
+      challengeId: row.challengeId,
+      challengeTitle: row.title,
+      completedAt: row.completedAt,
+      proofImagePath: row.proofImagePath,
+      wasFirstSolver: false,
+      pointsAwarded: row.points || 0
+    }));
+
+  currentPlayerProfileGallery = [
+    ...normalGalleryEntries,
+    ...liveGalleryEntries
+  ].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
   const logoutBtn = document.getElementById("playerProfileLogoutBtn");
 
-    if (logoutBtn) {
+  if (logoutBtn) {
     logoutBtn.onclick = () => {
-    closePlayerProfileModal();
-    logoutPlayer();
+      closePlayerProfileModal();
+      logoutPlayer();
     };
-    }
+  }
 
   currentPlayerProfileGalleryIndex = 0;
 
-  // 👉 jetzt erst Stats (weil Bilderanzahl gebraucht wird)
   await renderPlayerProfileStats();
-
   renderPlayerProfileGallery();
   await renderPlayerProfileCompletedList();
 
@@ -677,6 +699,7 @@ async function renderLeaderboard() {
 // =======================
 
 async function renderPlayerProfileStats() {
+  const liveStats = await loadLiveChallengeStatsForPlayer(currentPlayer.id);
   const completedCount = gameState.completed.length;
   const totalCount = challenges.length;
   const firstSolverCount = gameState.firstSolved.length;
@@ -704,38 +727,49 @@ async function renderPlayerProfileStats() {
   }
 
   playerProfileStats.innerHTML = `
-    <div class="profile-stats-grid">
-      <div class="profile-stat-card">
-        <div class="profile-stat-label">Punkte</div>
-        <div class="profile-stat-value">${score}</div>
-      </div>
-
-      <div class="profile-stat-card">
-        <div class="profile-stat-label">Aufgaben</div>
-        <div class="profile-stat-value">${completedCount} / ${totalCount}</div>
-      </div>
-
-      <div class="profile-stat-card">
-        <div class="profile-stat-label">First Solver</div>
-        <div class="profile-stat-value">${firstSolverCount}</div>
-      </div>
-
-      <div class="profile-stat-card">
-        <div class="profile-stat-label">Bingos</div>
-        <div class="profile-stat-value">${bingoCount}</div>
-      </div>
-
-      <div class="profile-stat-card">
-        <div class="profile-stat-label">Bilder</div>
-        <div class="profile-stat-value">${imageCount}</div>
-      </div>
-
-      <div class="profile-stat-card">
-        <div class="profile-stat-label">Rang</div>
-        <div class="profile-stat-value">${rankText}</div>
-      </div>
+  <div class="profile-stats-grid">
+    <div class="profile-stat-card">
+      <div class="profile-stat-label">Punkte</div>
+      <div class="profile-stat-value">${score}</div>
     </div>
-  `;
+
+    <div class="profile-stat-card">
+      <div class="profile-stat-label">Aufgaben</div>
+      <div class="profile-stat-value">${completedCount} / ${totalCount}</div>
+    </div>
+
+    <div class="profile-stat-card">
+      <div class="profile-stat-label">First Solver</div>
+      <div class="profile-stat-value">${firstSolverCount}</div>
+    </div>
+
+    <div class="profile-stat-card">
+      <div class="profile-stat-label">Bingos</div>
+      <div class="profile-stat-value">${bingoCount}</div>
+    </div>
+
+    <div class="profile-stat-card">
+      <div class="profile-stat-label">Bilder</div>
+      <div class="profile-stat-value">${imageCount}</div>
+    </div>
+
+    <div class="profile-stat-card">
+      <div class="profile-stat-label">Rang</div>
+      <div class="profile-stat-value">${rankText}</div>
+    </div>
+
+    <!-- NEU -->
+    <div class="profile-stat-card">
+      <div class="profile-stat-label">⚡ Live Challenges</div>
+      <div class="profile-stat-value">${liveStats.won} / ${liveStats.total}</div>
+    </div>
+
+    <div class="profile-stat-card">
+      <div class="profile-stat-label">⚡ Punkte</div>
+      <div class="profile-stat-value">${liveStats.points}</div>
+    </div>
+  </div>
+`;
 }
 
 
@@ -808,9 +842,9 @@ function renderPlayerProfileGallery() {
   }
 }
 
-function setPlayerProfileGalleryToChallenge(challengeId) {
+function setPlayerProfileGalleryToChallenge(challengeId, type = "normal") {
   const index = currentPlayerProfileGallery.findIndex(
-    entry => entry.challengeId === challengeId
+    entry => entry.challengeId === challengeId && entry.type === type
   );
 
   if (index >= 0) {
@@ -822,33 +856,70 @@ function setPlayerProfileGalleryToChallenge(challengeId) {
 async function renderPlayerProfileCompletedList() {
   if (!currentPlayer) return;
 
-  const completedRows = await loadCompletedChallengesForCurrentPlayer(currentPlayer.id);
+  const normalRows = await loadCompletedChallengesForCurrentPlayer(currentPlayer.id);
+  const liveRows = await loadCompletedLiveChallengesForPlayer(currentPlayer.id);
 
-  if (!completedRows.length) {
+  const combined = [];
+
+  // Normale Challenges
+  normalRows.forEach(row => {
+    const challenge = getChallengeByDbId(row.challenge_id);
+    if (!challenge) return;
+
+    combined.push({
+      type: "normal",
+      challengeId: row.challenge_id,
+      title: challenge.title,
+      completedAt: row.completed_at,
+      points: row.points_awarded || 0,
+      wasFirstSolver: row.was_first_solver === true,
+      proofImagePath: row.proof_image_path || null
+    });
+  });
+
+  // Live-Challenges
+  liveRows.forEach(row => {
+    combined.push({
+      type: "live",
+      challengeId: row.challengeId,
+      title: row.title,
+      completedAt: row.completedAt,
+      points: row.points || 0,
+      wasFirstSolver: false,
+      proofImagePath: row.proofImagePath || null
+    });
+  });
+
+  // Nach Datum sortieren, neueste zuerst
+  combined.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+  if (!combined.length) {
     playerProfileCompletedList.innerHTML = `<p>Noch keine Aufgaben abgeschlossen.</p>`;
     return;
   }
 
   let html = `<div class="completion-list">`;
+  const total = combined.length;
 
-  completedRows.forEach((row, index) => {
-    const challenge = getChallengeByDbId(row.challenge_id);
-    if (!challenge) return;
-
-    const isClickable = !!row.proof_image_path;
+  combined.forEach((entry, index) => {
+    const isClickable = !!entry.proofImagePath;
+    const icon = entry.type === "live" ? `<span class="completion-live">⚡</span>` : "";
+    const number = total - index;
 
     html += `
       <div class="completion-row">
         <div 
           class="completion-name ${isClickable ? "clickable" : ""}"
-          data-challenge-id="${row.challenge_id}"
+          data-challenge-id="${entry.challengeId}"
+          data-challenge-type="${entry.type}"
         >
-          ${index + 1}. ${challenge.title}, ${formatCompletedDateTime(row.completed_at)}
-          ${row.was_first_solver ? `<span class="completion-star">⭐</span>` : ""}
+          ${number}. ${entry.title}, ${formatCompletedDateTime(entry.completedAt)}
+          ${entry.wasFirstSolver ? `<span class="completion-star">⭐</span>` : ""}
+          ${icon}
         </div>
 
         <div class="completion-points">
-          ${row.points_awarded}P
+          ${entry.points}P
         </div>
       </div>
     `;
@@ -863,12 +934,15 @@ async function renderPlayerProfileCompletedList() {
   clickableEntries.forEach(el => {
     el.addEventListener("click", () => {
       const challengeId = Number(el.dataset.challengeId);
+      const challengeType = el.dataset.challengeType || "normal";
+
       if (!challengeId) return;
 
-      setPlayerProfileGalleryToChallenge(challengeId);
+      setPlayerProfileGalleryToChallenge(challengeId, challengeType);
     });
   });
 }
+
 
 // =======================
 // ZURÜCKSETZEN UND LÖSCHEN
@@ -937,6 +1011,24 @@ async function resetCurrentGameProgress() {
     return;
   }
 
+  const deleteLiveChallengesOk = await deleteAllPlayerLiveChallengesForCurrentGame(playerId);
+  if (!deleteLiveChallengesOk) {
+    alert("Die Spontanchallenges konnten nicht zurückgesetzt werden.");
+    return;
+  }
+
+  const deleteLiveChallengeViewsOk = await deleteAllPlayerLiveChallengeViewsForCurrentGame(playerId);
+  if (!deleteLiveChallengeViewsOk) {
+    alert("Die Ansichtsdaten der Spontanchallenges konnten nicht zurückgesetzt werden.");
+    return;
+  }
+
+  const initLiveViewsOk = await initializeLiveChallengeViewsForNewPlayerInGame(playerId);
+  if (!initLiveViewsOk) {
+    alert("Die Ansichtsdaten der Spontanchallenges konnten nicht neu initialisiert werden.");
+    return;
+  }
+
   const updateStateOk = await updatePlayerGameState(playerId, {
     score: 0,
     active_challenge_id: null,
@@ -957,14 +1049,16 @@ async function resetCurrentGameProgress() {
   gameState.bingos = [];
   gameState.bingoCells = [];
 
+  currentPlayerProfileGallery = [];
+  currentPlayerProfileGalleryIndex = 0;
+
   await loadGlobalChallengeStats();
   await renderLeaderboard();
   renderGrid();
 
-  // Profilansicht neu aufbauen, damit Stats/Liste/Galerie sofort stimmen
   await renderPlayerProfileStats();
-renderPlayerProfileGallery();
-await renderPlayerProfileCompletedList();
+  renderPlayerProfileGallery();
+  await renderPlayerProfileCompletedList();
 }
 
 async function deleteCurrentPlayerProfile() {
@@ -1026,6 +1120,56 @@ async function deleteCurrentPlayerProfile() {
 
 }
 
+async function deleteAllPlayerLiveChallengesForCurrentGame(playerId) {
+  const { error } = await supabaseClient
+    .from("player_live_challenges")
+    .delete()
+    .eq("player_id", playerId)
+    .eq("game_id", currentGameId);
+
+  if (error) {
+    console.error("Fehler beim Löschen der Live-Challenges des Spielers:", error);
+    return false;
+  }
+
+  return true;
+}
+
+async function deleteAllPlayerLiveChallengeViewsForCurrentGame(playerId) {
+  const { data: liveChallenges, error: loadError } = await supabaseClient
+    .from("live_challenges")
+    .select("id")
+    .eq("game_id", currentGameId);
+
+  if (loadError) {
+    console.error("Fehler beim Laden der Live-Challenges für View-Reset:", loadError);
+    return false;
+  }
+
+  const liveChallengeIds = (liveChallenges || []).map(row => row.id);
+
+  if (!liveChallengeIds.length) {
+    return true;
+  }
+
+  const { error } = await supabaseClient
+    .from("player_live_challenge_views")
+    .delete()
+    .eq("player_id", playerId)
+    .in("live_challenge_id", liveChallengeIds);
+
+  if (error) {
+    console.error("Fehler beim Löschen der Live-Challenge-Views des Spielers:", error);
+    return false;
+  }
+
+  return true;
+}
+
+// =======================
+// GRID RENDERN
+// =======================
+
 // =======================
 // GRID RENDERN
 // =======================
@@ -1036,7 +1180,7 @@ function renderGrid(updateScore = true) {
   const gridSize = currentGame?.grid_size || 5;
   grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
 
-    const expectedCount = gridSize * gridSize;
+  const expectedCount = gridSize * gridSize;
   if (challenges.length !== expectedCount) {
     console.warn(`⚠️ Challenge-Anzahl stimmt nicht: ${challenges.length} statt ${expectedCount}`);
   }
@@ -1049,13 +1193,21 @@ function renderGrid(updateScore = true) {
 
   setScoreDisplay(displayedScore);
 
-  if (currentPlayer) {
-    playerDisplay.textContent = `Eingeloggt als: ${currentPlayer.display_name || currentPlayer.username}`;
-  } else {
-    playerDisplay.textContent = "Eingeloggt als: -";
+  const gameNameInline = document.getElementById("gameNameInline");
+  const playerNameInline = document.getElementById("playerNameInline");
+
+  if (gameNameInline) {
+    gameNameInline.textContent = currentGame?.name || "-";
+  }
+
+  if (playerNameInline) {
+    playerNameInline.textContent = currentPlayer
+      ? (currentPlayer.display_name || currentPlayer.username)
+      : "-";
   }
 
   const cooldown = isCooldownActive();
+  const hasActiveChallenge = gameState.activeChallengeId !== null;
 
   for (const challenge of challenges) {
     const cell = document.createElement("div");
@@ -1063,7 +1215,6 @@ function renderGrid(updateScore = true) {
     cell.className = "cell";
 
     const isCompleted = gameState.completed.includes(challenge.boardId);
-    const isLocked = gameState.activeChallengeId !== null;
     const isActive = gameState.activeChallengeId === challenge.boardId;
     const isBingoCell = gameState.bingoCells.includes(challenge.boardId);
     const isFirstSolverCell = gameState.firstSolved.includes(challenge.boardId);
@@ -1086,7 +1237,7 @@ function renderGrid(updateScore = true) {
 
     if (cooldown && !isCompleted) {
       cell.style.opacity = "0.3";
-    } else if (isLocked && !isActive && !isCompleted) {
+    } else if (hasActiveChallenge && !isActive && !isCompleted) {
       cell.style.opacity = "0.5";
     }
 
@@ -1094,7 +1245,7 @@ function renderGrid(updateScore = true) {
       ${challenge.activeCount > 0 ? `<div class="cell-active-banner">Wird versucht (${challenge.activeCount})</div>` : ""}
       ${isFirstSolverCell ? `<div class="cell-first-solver">⭐</div>` : ""}
       ${challenge.categoryIcon ? `<div class="cell-category-icon">${challenge.categoryIcon}</div>` : ""}
-      ${isCooldownActive() && !isCompleted && !isActive ? `<div class="cell-lock-icon">🔒</div>` : ""}
+      ${cooldown && !isCompleted && !isActive ? `<div class="cell-lock-icon">🔒</div>` : ""}
 
       <div class="cell-title">${challenge.title}</div>
       <div class="cell-points">${challenge.points}P</div>
@@ -1230,8 +1381,14 @@ closeDetailsBtn.addEventListener("click", closeDetailsModal);
 closePhotoViewerBtn.addEventListener("click", closePhotoViewer);
 modalCloseBtn.addEventListener("click", closeModal);
 closeFinalBtn.addEventListener("click", closeFinalOverlay);
-playerDisplay.addEventListener("click", openPlayerProfileModal);
+
 closePlayerProfileBtn.addEventListener("click", closePlayerProfileModal);
+
+const playerProfileBtn = document.getElementById("playerProfileBtn");
+
+if (playerProfileBtn) {
+  playerProfileBtn.addEventListener("click", openPlayerProfileModal);
+}
 
 if (logoutBtn) {
   logoutBtn.addEventListener("click", logoutPlayer);
@@ -1271,10 +1428,17 @@ confirmFailBtn.addEventListener("click", async () => {
 
 cancelUploadBtn.addEventListener("click", () => {
   const challenge = pendingUploadChallenge;
+  const uploadType = pendingUploadType;
 
   closeUploadModal();
 
-  if (challenge) {
+  if (!challenge) return;
+
+  if (uploadType === "live") {
+    currentLiveChallenge = challenge;
+    renderLiveChallengeModal(challenge);
+    openLiveChallengeOverlay();
+  } else {
     openChallengeModal(challenge);
   }
 });
@@ -1295,6 +1459,7 @@ doUploadBtn.addEventListener("click", async () => {
   }
 
   const challenge = pendingUploadChallenge;
+  const uploadType = pendingUploadType;
 
   if (!challenge || !currentPlayer) return;
 
@@ -1304,7 +1469,11 @@ doUploadBtn.addEventListener("click", async () => {
 
   try {
     const fileExt = file.name.split(".").pop();
-    const fileName = `game-${currentGameId}/player-${currentPlayer.id}/challenge-${challenge.boardId}-${Date.now()}.${fileExt}`;
+
+    const fileName =
+      uploadType === "live"
+        ? `game-${currentGameId}/live/player-${currentPlayer.id}/challenge-${challenge.id}-${Date.now()}.${fileExt}`
+        : `game-${currentGameId}/player-${currentPlayer.id}/challenge-${challenge.boardId}-${Date.now()}.${fileExt}`;
 
     const { error } = await supabaseClient.storage
       .from("proof-photos")
@@ -1320,8 +1489,20 @@ doUploadBtn.addEventListener("click", async () => {
 
     uploadStatusText.textContent = "Upload erfolgreich. Aufgabe wird abgeschlossen...";
 
-    closeUploadModal();
-    await completeChallenge(challenge.boardId, fileName);
+    // Erst lokale Werte benutzen, dann Modal schließen
+    if (uploadType === "live") {
+      const latest = await loadLatestLiveChallenge();
+      if (!latest) {
+        closeUploadModal();
+        return;
+      }
+
+      closeUploadModal();
+      await handleCompleteLiveChallenge(latest, fileName);
+    } else {
+      closeUploadModal();
+      await completeChallenge(challenge.boardId, fileName);
+    }
 
   } catch (error) {
     console.error("Unerwarteter Upload-Fehler:", error);

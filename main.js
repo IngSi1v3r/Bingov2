@@ -21,6 +21,9 @@ const registerPinInput = document.getElementById("registerPinInput");
 const doRegisterBtn = document.getElementById("doRegisterBtn");
 const backToChoiceFromRegisterBtn = document.getElementById("backToChoiceFromRegisterBtn");
 
+const welcomeOverlay = document.getElementById("welcomeOverlay");
+const welcomeStartBtn = document.getElementById("welcomeStartBtn");
+
 function openLoginOverlay() {
   loginOverlay.classList.remove("hidden");
   showAuthChoiceView();
@@ -78,6 +81,32 @@ function setRandomLoginTagline() {
   el.textContent = loginTaglines[randomIndex];
 }
 
+
+// =======================
+// FIRST GAME START
+// =======================
+
+
+function openWelcomeOverlay() {
+  if (!welcomeOverlay) return;
+  welcomeOverlay.classList.remove("hidden");
+}
+
+function closeWelcomeOverlay() {
+  if (!welcomeOverlay) return;
+  welcomeOverlay.classList.add("hidden");
+}
+
+if (welcomeStartBtn) {
+  welcomeStartBtn.addEventListener("click", () => {
+    closeWelcomeOverlay();
+  });
+}
+
+
+
+
+
 // =======================
 // GAME SELECT OVERLAY
 // =======================
@@ -131,14 +160,18 @@ function startGlobalStatsPolling() {
   stopGlobalStatsPolling();
 
   globalStatsInterval = setInterval(async () => {
-    const loaded = await loadGlobalChallengeStats();
+  await expireOverdueLiveChallenges();
 
-    if (loaded) {
-      renderGrid();
-    }
+  const loaded = await loadGlobalChallengeStats();
 
-    await renderLeaderboard();
-  }, 1000);
+  if (loaded) {
+    renderGrid();
+  }
+
+  await renderLeaderboard();
+
+  await checkLiveChallengeStatus();
+}, 1000);
 }
 
 // =======================
@@ -211,12 +244,10 @@ async function openAuthFlow() {
 
       const player = await loginPlayer(username, pin);
 
-      if (!player) {
-        return;
-      }
+      if (!player) return;
 
       closeLoginOverlay();
-      resolve();
+      resolve({ mode: "login" });
     }
 
     async function handleRegister() {
@@ -225,12 +256,10 @@ async function openAuthFlow() {
 
       const player = await registerPlayer(username, pin);
 
-      if (!player) {
-        return;
-      }
+      if (!player) return;
 
       closeLoginOverlay();
-      resolve();
+      resolve({ mode: "register" });
     }
 
     showLoginBtn.onclick = () => {
@@ -253,27 +282,19 @@ async function openAuthFlow() {
     doRegisterBtn.onclick = handleRegister;
 
     loginNameInput.onkeydown = (event) => {
-      if (event.key === "Enter") {
-        handleLogin();
-      }
+      if (event.key === "Enter") handleLogin();
     };
 
     loginPinInput.onkeydown = (event) => {
-      if (event.key === "Enter") {
-        handleLogin();
-      }
+      if (event.key === "Enter") handleLogin();
     };
 
     registerNameInput.onkeydown = (event) => {
-      if (event.key === "Enter") {
-        handleRegister();
-      }
+      if (event.key === "Enter") handleRegister();
     };
 
     registerPinInput.onkeydown = (event) => {
-      if (event.key === "Enter") {
-        handleRegister();
-      }
+      if (event.key === "Enter") handleRegister();
     };
   });
 }
@@ -286,25 +307,35 @@ async function startApp() {
   console.log("App startet...");
 
   const savedPlayer = loadPlayerFromLocalStorage();
+  let justRegistered = false;
 
   if (savedPlayer) {
     currentPlayer = savedPlayer;
     console.log("Spieler aus Local Storage geladen:", currentPlayer.username);
   } else {
-    await openAuthFlow();
+    const authResult = await openAuthFlow();
+    justRegistered = authResult?.mode === "register";
   }
 
   await loadCurrentGameIntoApp();
+
+  if (justRegistered) {
+    openWelcomeOverlay();
+  }
 }
 
 // =======================
 // EVENTS
 // =======================
 
-gameNameEl.addEventListener("click", async () => {
-  await renderGameList();
-  openGameSelectOverlay();
-});
+const gameSelectBtn = document.getElementById("gameSelectBtn");
+
+if (gameSelectBtn) {
+  gameSelectBtn.addEventListener("click", async () => {
+    await renderGameList();
+    openGameSelectOverlay();
+  });
+}
 
 closeGameSelectBtn.addEventListener("click", () => {
   closeGameSelectOverlay();

@@ -8,25 +8,33 @@
 </head>
 <body>
   <div class="app">
-    <h1>Festival Bingo</h1>
 
-    <p id="gameName" class="game-name clickable">Lade Spiel...</p>
+    <!-- HEADER -->
+    <h1>Flos Party Bingo</h1>
 
-    <div id="scoreDisplay">Score: <span id="scoreValue">0</span></div>
+    <!-- GAME + PLAYER -->
+    <div class="header-controls">
+      <button id="gameSelectBtn" class="secondary-btn">
+        🎯 Spiel: <span id="gameNameInline">Lade...</span>
+      </button>
 
-    <div class="top-bar">
-  <div id="playerDisplay">Eingeloggt als: -</div>
+      <button id="playerProfileBtn" class="secondary-btn">
+        👤 Spieler: <span id="playerNameInline">-</span>
+      </button>
+    </div>
 
-  <div id="cooldownDisplay" class="cooldown-display hidden">
-    <span class="cooldown-label">Cooldown</span>
-    <span id="cooldownTimerText" class="cooldown-timer-text">00:00</span>
-  </div>
+    <!-- SCORE -->
+    <div id="scoreDisplay" class="score-display">
+      Score: <span id="scoreValue">0</span>
+    </div>
 
-  <div class="top-bar-actions">
-    <button id="rulesBtn" class="secondary-btn">Regeln</button>
-  </div>
-</div>
+    <!-- COOLDOWN -->
+    <div id="cooldownDisplay" class="cooldown-display hidden">
+      <span class="cooldown-label">Cooldown</span>
+      <span id="cooldownTimerText" class="cooldown-timer-text">00:00</span>
+    </div>
 
+    <!-- GRID -->
     <div id="grid" class="grid"></div>
 
     <!-- LEADERBOARD -->
@@ -34,6 +42,16 @@
       <h2>Leaderboard</h2>
       <div id="leaderboardList" class="leaderboard-list"></div>
     </div>
+
+    <!-- BOTTOM ACTIONS -->
+    <div class="bottom-actions">
+      <button id="rulesBtn" class="secondary-btn">Regeln anzeigen</button>
+
+      <!-- DEV / ADMIN (kann später raus) -->
+      <button id="testLiveChallengeBtn" type="button">Spontanchallenge starten</button>
+      <button id="endLiveChallengeBtn" type="button">Spontanchallenge beenden</button>
+    </div>
+
   </div>
 
   <!-- ===================== -->
@@ -288,6 +306,101 @@
     </div>
   </div>
 
+<!-- ===================== -->
+<!-- LIVE CHALLENGE -->
+<!-- ===================== -->
+<div id="liveChallengeOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h2 id="liveChallengeTitle">Spontanchallenge</h2>
+
+    <div id="liveChallengeContent" class="rules-content">
+      <p id="liveChallengeIntro">
+        Eine spontane Zusatzaufgabe wurde gestartet.
+      </p>
+
+      <p>
+        <strong id="liveChallengeTaskTitle">Titel der Aufgabe</strong>
+      </p>
+
+      <p id="liveChallengeTaskDescription">
+        Beschreibung der Aufgabe
+      </p>
+
+      <div id="liveChallengeMeta" class="auth-hint">
+        Nur der erste Spieler bekommt die Punkte.
+      </div>
+    </div>
+
+    <div id="liveChallengeActions" class="modal-actions auth-actions">
+      <button id="dismissLiveChallengeBtn" type="button">Nicht interessiert</button>
+      <button id="completeLiveChallengeBtn" type="button">Aufgabe bestanden</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================== -->
+<!-- WELCOME OVERLAY -->
+<!-- ===================== -->
+<div id="welcomeOverlay" class="modal-overlay hidden">
+  <div class="modal welcome-modal">
+    <h2>Willkommen beim Festival Bingo 🎉</h2>
+
+    <div class="rules-content welcome-content">
+      <p>
+        Schön, dass du dabei bist. Hier kommt die Kurzfassung, damit du direkt loslegen kannst:
+      </p>
+
+      <div class="welcome-steps">
+        <div class="welcome-step">
+          <div class="welcome-step-icon">🎯</div>
+          <div>
+            <strong>Ein Feld antippen</strong><br>
+            Wähle eine Aufgabe aus dem Bingo-Feld.
+          </div>
+        </div>
+
+        <div class="welcome-step">
+          <div class="welcome-step-icon">⚠️</div>
+          <div>
+            <strong>Immer nur eine aktive Aufgabe</strong><br>
+            Du kannst nie mehrere Aufgaben gleichzeitig offen haben.
+          </div>
+        </div>
+
+        <div class="welcome-step">
+          <div class="welcome-step-icon">📷</div>
+          <div>
+            <strong>Manche Aufgaben brauchen ein Foto</strong><br>
+            Dann musst du zum Abschließen ein Beweisfoto hochladen.
+          </div>
+        </div>
+
+        <div class="welcome-step">
+          <div class="welcome-step-icon">⭐</div>
+          <div>
+            <strong>First Solver lohnt sich</strong><br>
+            Wer eine Aufgabe als Erster löst, bekommt doppelte Punkte.
+          </div>
+        </div>
+
+        <div class="welcome-step">
+          <div class="welcome-step-icon">⚡</div>
+          <div>
+            <strong>Spontanchallenges poppen live auf</strong><br>
+            Schnell sein lohnt sich: Nur der erste Spieler bekommt die Punkte.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button id="welcomeStartBtn" type="button">Los geht’s</button>
+    </div>
+  </div>
+</div>
+
+
 
 
   <!-- ===================== -->
@@ -299,6 +412,7 @@
   <script src="data.js"></script>
   <script src="game.js"></script>
   <script src="app.js"></script>
+  <script src="live-challenges.js"></script>
   <script src="main.js"></script>
 
 
