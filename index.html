@@ -12,8 +12,11 @@
   OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
       appId: "3acff41e-8a47-46b0-8d38-7bfab5cc583a",
-      serviceWorkerPath: "Bingov2/OneSignalSDKWorker.js",
-      serviceWorkerParam: { scope: "/Bingov2/" }
+      serviceWorkerPath: "OneSignalSDKWorker.js",
+      serviceWorkerParam: { scope: "/Bingov2/" },
+      welcomeNotification: {
+        disable: true
+      }
     });
   });
 </script>
