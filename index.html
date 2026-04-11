@@ -1,11 +1,26 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Festival Bingo</title>
   <link rel="stylesheet" href="style.css" />
+
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "3acff41e-8a47-46b0-8d38-7bfab5cc583a",
+      serviceWorkerPath: "Bingov2/OneSignalSDKWorker.js",
+      serviceWorkerParam: { scope: "/Bingov2/" }
+    });
+  });
+</script>
 </head>
+
+
 <body>
 
   <div class="app">
@@ -431,6 +446,8 @@
   <!-- ===================== -->
   <!-- SCRIPTS -->
   <!-- ===================== -->
+
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="auth.js"></script>
