@@ -363,6 +363,20 @@ function closeModal() {
   unlockBodyScroll();
 }
 
+function isChallengeModalOpen() {
+  return modalOverlay && !modalOverlay.classList.contains("hidden");
+}
+
+function getOpenChallengeBoardIdFromModal() {
+  if (!isChallengeModalOpen()) return null;
+
+  const title = modalTitle?.textContent?.trim();
+  if (!title) return null;
+
+  const challenge = challenges.find(c => (c.title || "").trim() === title);
+  return challenge ? challenge.boardId : null;
+}
+
 function openRulesModal() {
     renderRulesContent();
     modalCloseBtn.classList.remove("hidden");
@@ -1174,9 +1188,6 @@ async function deleteAllPlayerLiveChallengeViewsForCurrentGame(playerId) {
   return true;
 }
 
-// =======================
-// GRID RENDERN
-// =======================
 
 // =======================
 // GRID RENDERN
@@ -1226,6 +1237,7 @@ function renderGrid(updateScore = true) {
     const isActive = gameState.activeChallengeId === challenge.boardId;
     const isBingoCell = gameState.bingoCells.includes(challenge.boardId);
     const isFirstSolverCell = gameState.firstSolved.includes(challenge.boardId);
+    const isChallengeDisabled = challenge.isActive === false;
 
     cell.style.background = "";
     cell.style.border = "";
@@ -1243,31 +1255,53 @@ function renderGrid(updateScore = true) {
       cell.style.boxShadow = "0 0 0 3px gold inset";
     }
 
+    if (isChallengeDisabled && !isCompleted) {
+      cell.style.opacity = "0.28";
+      cell.style.background = "#1f2937";
+      cell.style.cursor = "not-allowed";
+    } else if (cooldown && !isCompleted) {
+      cell.style.opacity = "0.3";
+    } else if (hasActiveChallenge && !isActive && !isCompleted) {
+      cell.style.opacity = "0.5";
+    }
+
     if (cooldown && !isCompleted) {
       cell.style.opacity = "0.3";
     } else if (hasActiveChallenge && !isActive && !isCompleted) {
       cell.style.opacity = "0.5";
     }
 
-    cell.innerHTML = `
+        cell.innerHTML = `
       ${challenge.activeCount > 0 ? `<div class="cell-active-banner">Wird versucht (${challenge.activeCount})</div>` : ""}
       ${isFirstSolverCell ? `<div class="cell-first-solver">⭐</div>` : ""}
       ${challenge.categoryIcon ? `<div class="cell-category-icon">${challenge.categoryIcon}</div>` : ""}
       ${cooldown && !isCompleted && !isActive ? `<div class="cell-lock-icon">🔒</div>` : ""}
+      ${isChallengeDisabled && !isCompleted ? `<div class="cell-lock-icon">🚫</div>` : ""}
 
       <div class="cell-title">${challenge.title}</div>
       <div class="cell-points">${challenge.points}P</div>
       <div class="cell-solved-count">${challenge.solvedCount}</div>
     `;
 
-    cell.addEventListener("click", async () => {
+           cell.addEventListener("click", async () => {
       if (isCompleted) {
         await openCompletedChallengeModal(challenge);
         return;
       }
 
+      if (isChallengeDisabled) return;
       if (isCooldownActive()) return;
-      if (gameState.activeChallengeId !== null) return;
+
+      // Wenn bereits irgendeine Aufgabe aktiv ist, keine zweite öffnen
+      if (gameState.activeChallengeId !== null) {
+        const activeChallenge = getChallengeByBoardId(gameState.activeChallengeId);
+        if (activeChallenge) {
+          if (!isChallengeModalOpen()) {
+            openChallengeModal(activeChallenge);
+          }
+        }
+        return;
+      }
 
       await activateChallenge(challenge.boardId);
     });

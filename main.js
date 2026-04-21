@@ -160,18 +160,85 @@ function startGlobalStatsPolling() {
   stopGlobalStatsPolling();
 
   globalStatsInterval = setInterval(async () => {
-  await expireOverdueLiveChallenges();
+    if (!currentPlayer) return;
 
-  const loaded = await loadGlobalChallengeStats();
+    const stillAllowed = await checkCurrentPlayerStillAllowed();
+    if (!stillAllowed) return;
 
-  if (loaded) {
+    const gameStillActive = await checkCurrentGameStillActive();
+    if (!gameStillActive) return;
+
+    await expireOverdueLiveChallenges();
+
+    // Wichtig: Spiel + Challenges + eigener State live nachziehen
+    const challengesLoaded = await loadChallengesFromDatabase();
+    if (!challengesLoaded) return;
+
+    const stateSynced = await syncPlayerStateFromDatabase();
+    if (!stateSynced) return;
+
+    const statsLoaded = await loadGlobalChallengeStats();
+    if (!statsLoaded) return;
+
     renderGrid();
+    await renderLeaderboard();
+    await checkLiveChallengeStatus();
+  }, 1000);
+}
+
+let inactiveGameHandled = false;
+
+function handleInactiveCurrentGame(message = "Dieses Spiel wurde deaktiviert.") {
+  if (inactiveGameHandled) return;
+  inactiveGameHandled = true;
+
+  console.log("Aktuelles Spiel ist nicht mehr aktiv:", message);
+
+  try {
+    if (typeof closeModal === "function") closeModal();
+    if (typeof closeUploadModal === "function") closeUploadModal();
+    if (typeof closePhotoViewer === "function") closePhotoViewer();
+    if (typeof closeRulesModal === "function") closeRulesModal();
+    if (typeof closeDetailsModal === "function") closeDetailsModal();
+    if (typeof closeFinalOverlay === "function") closeFinalOverlay();
+    if (typeof closePlayerProfileModal === "function") closePlayerProfileModal();
+    if (typeof closeFailConfirmModal === "function") closeFailConfirmModal();
+    if (typeof closeLiveChallengeOverlay === "function") closeLiveChallengeOverlay();
+    if (typeof closeWelcomeOverlay === "function") closeWelcomeOverlay();
+  } catch (err) {
+    console.warn("Fehler beim Schließen der Overlays:", err);
   }
 
-  await renderLeaderboard();
+  stopGlobalStatsPolling();
 
-  await checkLiveChallengeStatus();
-}, 1000);
+  if (typeof cooldownInterval !== "undefined" && cooldownInterval) {
+    clearInterval(cooldownInterval);
+    cooldownInterval = null;
+  }
+
+  alert(message);
+
+  openGameSelectOverlay();
+  renderGameList();
+}
+
+async function checkCurrentGameStillActive() {
+  if (!currentPlayer || !currentGameId || inactiveGameHandled) return true;
+
+  const freshGame = await loadCurrentGameFresh();
+
+  if (!freshGame) {
+    handleInactiveCurrentGame("Das aktuell geöffnete Spiel ist nicht mehr verfügbar.");
+    return false;
+  }
+
+  if (freshGame.is_active !== true) {
+    handleInactiveCurrentGame("Dieses Spiel wurde soeben deaktiviert. Bitte wähle ein anderes Spiel aus.");
+    return false;
+  }
+
+  currentGame = freshGame;
+  return true;
 }
 
 // =======================
@@ -180,6 +247,7 @@ function startGlobalStatsPolling() {
 
 async function loadCurrentGameIntoApp() {
   stopGlobalStatsPolling();
+  inactiveGameHandled = false;
 
   const gameLoaded = await loadGame();
 

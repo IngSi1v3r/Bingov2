@@ -69,6 +69,25 @@ function setCurrentGameId(gameId) {
   saveGameIdToLocalStorage(currentGameId);
 }
 
+
+async function loadCurrentGameFresh() {
+  if (!currentGameId) return null;
+
+  const { data, error } = await supabaseClient
+    .from("games")
+    .select("*")
+    .eq("id", currentGameId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Fehler beim Nachladen des aktuellen Spiels:", error);
+    return null;
+  }
+
+  return data || null;
+}
+
+
 // =======================
 // CHALLENGES LADEN
 // =======================
@@ -80,7 +99,6 @@ async function loadChallengesFromDatabase() {
     .from("challenges")
     .select("id, game_id, position, title, task, points, is_active, category_icon, details, success_text, requires_photo_proof")
     .eq("game_id", currentGameId)
-    .eq("is_active", true)
     .order("position", { ascending: true });
 
   console.log("Supabase Antwort:", data, error);
@@ -90,7 +108,7 @@ async function loadChallengesFromDatabase() {
     return false;
   }
 
-  challenges = data.map(row => ({
+  challenges = (data || []).map(row => ({
     boardId: Number(row.position),
     dbId: row.id,
     title: row.title,
@@ -100,7 +118,9 @@ async function loadChallengesFromDatabase() {
     details: row.details || "",
     successText: row.success_text || "",
     requiresPhotoProof: row.requires_photo_proof === true,
-    solvedCount: 0
+    isActive: row.is_active === true,
+    solvedCount: 0,
+    activeCount: 0
   }));
 
   console.log("Challenges nach Mapping:", challenges);
@@ -263,22 +283,51 @@ async function loadPlayerBingos(playerId) {
 }
 
 async function insertPlayerBingo(playerId, lineKey, bonusPoints) {
+  const lineKeyString = String(lineKey);
+
+  // 1. Prüfen, ob dieser Bingo-Eintrag schon existiert
+  const { data: existing, error: selectError } = await supabaseClient
+    .from("player_bingos")
+    .select("id")
+    .eq("player_id", playerId)
+    .eq("game_id", currentGameId)
+    .eq("line_key", lineKeyString)
+    .maybeSingle();
+
+  if (selectError) {
+    console.error("Fehler beim Prüfen bestehender player_bingos:", selectError, {
+      playerId,
+      currentGameId,
+      lineKey: lineKeyString
+    });
+    throw selectError;
+  }
+
+  // Schon vorhanden -> nichts neu speichern
+  if (existing) {
+    return existing;
+  }
+
+  // 2. Neu anlegen
   const { data, error } = await supabaseClient
     .from("player_bingos")
-    .upsert({
+    .insert({
       player_id: playerId,
       game_id: currentGameId,
-      line_key: String(lineKey),
+      line_key: lineKeyString,
       bonus_points: bonusPoints
-    }, {
-      onConflict: "player_id,game_id,line_key"
     })
     .select()
     .single();
 
   if (error) {
-    console.error("Fehler beim Speichern von player_bingos:", error);
-    return null;
+    console.error("Fehler beim Speichern von player_bingos:", error, {
+      playerId,
+      currentGameId,
+      lineKey: lineKeyString,
+      bonusPoints
+    });
+    throw error;
   }
 
   return data;

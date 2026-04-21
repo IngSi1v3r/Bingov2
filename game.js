@@ -230,6 +230,164 @@ async function initializePlayerStateFromDatabase() {
   return true;
 }
 
+async function syncPlayerStateFromDatabase() {
+  if (!currentPlayer) return false;
+
+  const previousActiveChallengeId = gameState.activeChallengeId;
+  const playerId = currentPlayer.id;
+
+  const [dbGameState, dbPlayerChallenges, dbPlayerBingos] = await Promise.all([
+    loadPlayerGameState(playerId),
+    loadPlayerChallenges(playerId),
+    loadPlayerBingos(playerId)
+  ]);
+
+  if (!dbGameState) {
+    return false;
+  }
+
+  let activeBoardId = null;
+
+  if (dbGameState.active_challenge_id) {
+    const activeChallenge = getChallengeByDbId(dbGameState.active_challenge_id);
+    if (activeChallenge) {
+      activeBoardId = activeChallenge.boardId;
+    }
+  }
+
+  const completedBoardIds = dbPlayerChallenges
+    .filter(row => row.status === "completed")
+    .map(row => {
+      const challenge = getChallengeByDbId(row.challenge_id);
+      return challenge ? challenge.boardId : null;
+    })
+    .filter(Boolean);
+
+  const completedAtMap = {};
+  const proofImagePathMap = {};
+
+  dbPlayerChallenges
+    .filter(row => row.status === "completed")
+    .forEach(row => {
+      const challenge = getChallengeByDbId(row.challenge_id);
+      if (!challenge) return;
+
+      completedAtMap[challenge.boardId] = row.completed_at || null;
+
+      if (row.proof_image_path) {
+        proofImagePathMap[challenge.boardId] = row.proof_image_path;
+      }
+    });
+
+  const firstSolvedBoardIds = dbPlayerChallenges
+    .filter(row => row.status === "completed" && row.was_first_solver === true)
+    .map(row => {
+      const challenge = getChallengeByDbId(row.challenge_id);
+      return challenge ? challenge.boardId : null;
+    })
+    .filter(Boolean);
+
+  const bingoIndexes = dbPlayerBingos
+    .map(row => Number(row.line_key))
+    .filter(Number.isInteger);
+
+  gameState.activeChallengeId = activeBoardId;
+  gameState.completed = completedBoardIds;
+  gameState.firstSolved = firstSolvedBoardIds;
+  gameState.completedAt = completedAtMap;
+  gameState.proofImagePaths = proofImagePathMap;
+  gameState.cooldownUntil = dbGameState.cooldown_until
+    ? new Date(dbGameState.cooldown_until).getTime()
+    : null;
+  gameState.score = dbGameState.score || 0;
+  gameState.bingos = bingoIndexes;
+  gameState.bingoCells = [];
+
+  rebuildBingoCellsFromBingos();
+
+  if (!freezeScoreDisplay) {
+    displayedScore = gameState.score;
+  }
+
+    await syncChallengeModalWithGameState(previousActiveChallengeId);
+
+  return true;
+}
+
+
+
+async function syncChallengeModalWithGameState(previousActiveChallengeId) {
+  const currentActiveChallengeId = gameState.activeChallengeId;
+  const modalOpen = typeof isChallengeModalOpen === "function" && isChallengeModalOpen();
+  const openModalBoardId =
+    typeof getOpenChallengeBoardIdFromModal === "function"
+      ? getOpenChallengeBoardIdFromModal()
+      : null;
+
+  // Fall 1:
+  // Vorher aktiv, jetzt nicht mehr aktiv -> Modal schließen
+  if (previousActiveChallengeId !== null && currentActiveChallengeId === null) {
+    if (modalOpen) {
+      closeModal();
+    }
+    return;
+  }
+
+  // Fall 2:
+  // Vorher nichts aktiv, jetzt aktiv -> Modal öffnen
+  if (previousActiveChallengeId === null && currentActiveChallengeId !== null) {
+    const activeChallenge = getChallengeByBoardId(currentActiveChallengeId);
+    if (activeChallenge) {
+      if (modalOpen) {
+        closeModal();
+      }
+      openChallengeModal(activeChallenge);
+    }
+    return;
+  }
+
+  // Fall 3:
+  // Andere aktive Aufgabe als vorher -> Modal auf richtige Aufgabe umstellen
+  if (
+    previousActiveChallengeId !== null &&
+    currentActiveChallengeId !== null &&
+    previousActiveChallengeId !== currentActiveChallengeId
+  ) {
+    const activeChallenge = getChallengeByBoardId(currentActiveChallengeId);
+    if (activeChallenge) {
+      if (modalOpen) {
+        closeModal();
+      }
+      openChallengeModal(activeChallenge);
+    }
+    return;
+  }
+
+  // Fall 4:
+  // Es gibt eine aktive Aufgabe, aber Modal ist nicht offen -> öffnen
+  if (currentActiveChallengeId !== null && !modalOpen) {
+    const activeChallenge = getChallengeByBoardId(currentActiveChallengeId);
+    if (activeChallenge) {
+      openChallengeModal(activeChallenge);
+    }
+    return;
+  }
+
+  // Fall 5:
+  // Modal ist offen, aber zeigt nicht die aktive Aufgabe -> korrigieren
+  if (
+    currentActiveChallengeId !== null &&
+    modalOpen &&
+    openModalBoardId !== currentActiveChallengeId
+  ) {
+    const activeChallenge = getChallengeByBoardId(currentActiveChallengeId);
+    if (activeChallenge) {
+      closeModal();
+      openChallengeModal(activeChallenge);
+    }
+  }
+}
+
 // =======================
 // CHALLENGE AKTIVIEREN
 // =======================
@@ -242,6 +400,7 @@ async function activateChallenge(boardId) {
 
   const challenge = getChallengeByBoardId(boardId);
   if (!challenge) return;
+  if (challenge.isActive === false) return;
 
   const playerId = currentPlayer.id;
 
@@ -271,6 +430,17 @@ async function activateChallenge(boardId) {
   }
 
   gameState.activeChallengeId = boardId;
+
+    await logChallengeStarted({
+    gameId: currentGameId,
+    playerId: playerId,
+    challengeId: challenge.dbId,
+    metadata: {
+      challenge_title: challenge.title || null,
+      position: challenge.boardId,
+      points: challenge.points || 0
+    }
+  });
 
   await loadGlobalChallengeStats();
   openChallengeModal(challenge);
@@ -387,7 +557,52 @@ if (proofImagePath) {
   gameState.bingos = nextBingos;
   gameState.bingoCells = nextBingoCells;
 
+    if (proofImagePath) {
+    await logPhotoUploaded({
+      gameId: currentGameId,
+      playerId: playerId,
+      challengeId: challenge.dbId,
+      metadata: {
+        challenge_title: challenge.title || null,
+        position: challenge.boardId,
+        proof_image_path: proofImagePath
+      }
+    });
+  }
+
+  try {
+  await logChallengeCompleted({
+    gameId: currentGameId,
+    playerId: playerId,
+    challengeId: challenge.dbId,
+    pointsDelta: awardedPoints,
+    metadata: {
+      challenge_title: challenge.title || null,
+      position: challenge.boardId,
+      was_first_solver: isFirstSolver,
+      proof_image_path: proofImagePath || null
+    }
+  });
+
   const bingoBonus = currentGame?.bingo_bonus_points ?? 5;
+
+  for (const lineIndex of newBingoIndexes) {
+    await logBingoAwarded({
+      gameId: currentGameId,
+      playerId: playerId,
+      pointsDelta: bingoBonus,
+      metadata: {
+        line_index: lineIndex,
+        challenge_title: challenge.title || null,
+        trigger_position: challenge.boardId
+      }
+    });
+  }
+} catch (error) {
+  console.error("Fehler beim Schreiben der Activity-Logs:", error);
+}
+
+    const bingoBonus = currentGame?.bingo_bonus_points ?? 5;
 
   for (const lineIndex of newBingoIndexes) {
     await insertPlayerBingo(playerId, String(lineIndex), bingoBonus);
@@ -464,6 +679,19 @@ async function failChallenge() {
 
   gameState.activeChallengeId = null;
   gameState.cooldownUntil = cooldownUntilDate.getTime();
+
+    if (activeChallenge) {
+    await logChallengeFailed({
+      gameId: currentGameId,
+      playerId: playerId,
+      challengeId: activeChallenge.dbId,
+      metadata: {
+        challenge_title: activeChallenge.title || null,
+        position: activeChallenge.boardId,
+        cooldown_seconds: cooldownSeconds
+      }
+    });
+  }
 
   await loadGlobalChallengeStats();
   await renderLeaderboard();
@@ -542,6 +770,17 @@ async function resetCompletedChallenge(boardId) {
     alert("Challenge konnte nicht zurückgesetzt werden.");
     return;
   }
+
+    await logChallengeReset({
+    gameId: currentGameId,
+    playerId: playerId,
+    challengeId: challenge.dbId,
+    metadata: {
+      challenge_title: challenge.title || null,
+      position: challenge.boardId,
+      action: "player_reset_completed_challenge"
+    }
+  });
 
   // 2) Verbleibende Challenges neu laden
   const dbPlayerChallenges = await loadPlayerChallenges(playerId);

@@ -1,102 +1,71 @@
+/**
+ * ============================================================
+ * live-challenges.js
+ * ============================================================
+ *
+ * Zweck:
+ * Verwaltung aller Live-/Spontanchallenges im normalen Spielermodus.
+ *
+ * Diese Datei kümmert sich um:
+ * 1) Laden und Prüfen des aktuellen Live-Challenge-Status
+ * 2) Anzeigen der Start-, End- und Expired-Modals
+ * 3) Abschlusslogik für Spieler inklusive Punktevergabe
+ * 4) Tracking der Sichtbarkeit:
+ *    - seen_start_at
+ *    - dismissed_at
+ *    - seen_end_at
+ * 5) Auswertung für Profil / Statistiken
+ * 6) Ablauf von zeitlich begrenzten Live-Challenges
+ *
+ * Nicht mehr enthalten:
+ * - manuelles Erstellen von Live-Challenges im Spielermodus
+ * - manuelles Beenden von Live-Challenges im Spielermodus
+ * Diese Logik liegt jetzt im Adminpanel.
+ */
 
-// =======================
-// LIVE CHALLENGE DOM
-// =======================
+/* ============================================================
+ * DOM
+ * ============================================================
+ */
 
 const liveChallengeOverlay = document.getElementById("liveChallengeOverlay");
 const liveChallengeTitle = document.getElementById("liveChallengeTitle");
-const liveChallengeIntro = document.getElementById("liveChallengeIntro");
-const liveChallengeTaskTitle = document.getElementById("liveChallengeTaskTitle");
-const liveChallengeTaskDescription = document.getElementById("liveChallengeTaskDescription");
-const liveChallengeMeta = document.getElementById("liveChallengeMeta");
+const liveChallengeContent = document.getElementById("liveChallengeContent");
 const liveChallengeActions = document.getElementById("liveChallengeActions");
 
-const dismissLiveChallengeBtn = document.getElementById("dismissLiveChallengeBtn");
-const completeLiveChallengeBtn = document.getElementById("completeLiveChallengeBtn");
-const testLiveChallengeBtn = document.getElementById("testLiveChallengeBtn");
-const endLiveChallengeBtn = document.getElementById("endLiveChallengeBtn");
-
-const createLiveChallengeOverlay = document.getElementById("createLiveChallengeOverlay");
-const closeCreateLiveChallengeBtn = document.getElementById("closeCreateLiveChallengeBtn");
-const cancelCreateLiveChallengeBtn = document.getElementById("cancelCreateLiveChallengeBtn");
-const confirmCreateLiveChallengeBtn = document.getElementById("confirmCreateLiveChallengeBtn");
-
-const createLiveChallengeTitleInput = document.getElementById("createLiveChallengeTitleInput");
-const createLiveChallengeDescriptionInput = document.getElementById("createLiveChallengeDescriptionInput");
-const createLiveChallengePointsInput = document.getElementById("createLiveChallengePointsInput");
-const createLiveChallengeDurationInput = document.getElementById("createLiveChallengeDurationInput");
-const createLiveChallengePhotoInput = document.getElementById("createLiveChallengePhotoInput");
-const createLiveChallengeStatusText = document.getElementById("createLiveChallengeStatusText");
-
-
-
-
-
-// =======================
-// LIVE CHALLENGES / STATE
-// =======================
+/* ============================================================
+ * STATE
+ * ============================================================
+ */
 
 let currentLiveChallenge = null;
 let currentLiveChallengeModalOpen = false;
-let dismissedLiveChallengeIds = [];
 
-// =======================
-// HILFSFUNKTIONEN
-// =======================
+let liveChallengeCountdownInterval = null;
 
+/* ============================================================
+ * STATE HELPERS
+ * ============================================================
+ */
+
+/**
+ * Setzt den lokalen UI-State für Live-Challenges zurück.
+ * Wird z. B. nach Game-Wechsel oder Logout nützlich.
+ */
 function resetLiveChallengeState() {
   currentLiveChallenge = null;
   currentLiveChallengeModalOpen = false;
 }
 
-function hasDismissedLiveChallenge(challengeId) {
-  return dismissedLiveChallengeIds.includes(challengeId);
-}
+/* ============================================================
+ * DB LOAD - LIVE CHALLENGES
+ * ============================================================
+ */
 
-function dismissLiveChallenge(challengeId) {
-  if (!challengeId) return;
-  if (!dismissedLiveChallengeIds.includes(challengeId)) {
-    dismissedLiveChallengeIds.push(challengeId);
-  }
-}
-
-
-// =======================
-// CREATE LIVE CHALLENGES
-// =======================
-
-function openCreateLiveChallengeModal() {
-  if (!createLiveChallengeOverlay) return;
-
-  createLiveChallengeTitleInput.value = "";
-  createLiveChallengeDescriptionInput.value = "";
-  createLiveChallengePointsInput.value = "5";
-  createLiveChallengeDurationInput.value = "";
-  createLiveChallengePhotoInput.checked = false;
-  createLiveChallengeStatusText.textContent = "";
-
-  lockBodyScroll();
-  createLiveChallengeOverlay.classList.remove("hidden");
-
-  setTimeout(() => {
-    createLiveChallengeTitleInput?.focus();
-  }, 0);
-}
-
-function closeCreateLiveChallengeModal() {
-  if (!createLiveChallengeOverlay) return;
-
-  createLiveChallengeOverlay.classList.add("hidden");
-  unlockBodyScroll();
-}
-
-
-
-
-// =======================
-// DB - LIVE CHALLENGES
-// =======================
-
+/**
+ * Lädt die aktuell aktive Live-Challenge des aktuellen Spiels.
+ * Es kann maximal eine aktive geben.
+ */
 async function loadActiveLiveChallenge() {
   const { data, error } = await supabaseClient
     .from("live_challenges")
@@ -115,6 +84,10 @@ async function loadActiveLiveChallenge() {
   return data || null;
 }
 
+/**
+ * Lädt die zuletzt erstellte Live-Challenge des aktuellen Spiels,
+ * inklusive Gewinner-Player-Relation.
+ */
 async function loadLatestLiveChallenge() {
   const { data, error } = await supabaseClient
     .from("live_challenges")
@@ -138,70 +111,12 @@ async function loadLatestLiveChallenge() {
   return data || null;
 }
 
-async function createLiveChallenge({
-  title,
-  description,
-  points = 5,
-  requiresPhotoProof = false,
-  durationMinutes = null
-}) {
-  try {
-    const existing = await loadActiveLiveChallenge();
-
-    if (existing) {
-      console.log("Beende alte Challenge:", existing.id);
-
-      const expired = await expireLiveChallenge(existing.id);
-      console.log("Expire Ergebnis:", expired);
-    }
-
-    const expiresAt =
-      durationMinutes && Number(durationMinutes) > 0
-        ? new Date(Date.now() + Number(durationMinutes) * 60 * 1000).toISOString()
-        : null;
-
-    console.log("Erstelle neue Challenge...", {
-      game_id: currentGameId,
-      title,
-      description,
-      points,
-      requires_photo_proof: requiresPhotoProof,
-      status: "active",
-      expires_at: expiresAt
-    });
-
-    const { data, error } = await supabaseClient
-      .from("live_challenges")
-      .insert({
-        game_id: currentGameId,
-        title,
-        description,
-        points,
-        requires_photo_proof: requiresPhotoProof,
-        status: "active",
-        expires_at: expiresAt
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Fehler beim Erstellen der Spontanchallenge:", error);
-      alert("Fehler beim Erstellen der Spontanchallenge.");
-      return null;
-    }
-
-    console.log("Neue Challenge erstellt:", data);
-    return data;
-  } catch (err) {
-    console.error("Unerwarteter Fehler in createLiveChallenge:", err);
-    alert("Unerwarteter Fehler beim Erstellen der Spontanchallenge.");
-    return null;
-  }
-}
-
+/**
+ * Speichert einen Abschlussversuch eines Spielers für eine Live-Challenge.
+ * Die Punkte werden zunächst mit 0 gespeichert und erst bei Gewinnerlogik gesetzt.
+ */
 async function completeLiveChallengeForPlayer(liveChallengeId, proofImagePath = null) {
-  if (!currentPlayer) return null;
-  if (!liveChallengeId) return null;
+  if (!currentPlayer || !liveChallengeId) return null;
 
   const completedAt = new Date().toISOString();
 
@@ -227,6 +142,10 @@ async function completeLiveChallengeForPlayer(liveChallengeId, proofImagePath = 
   return data;
 }
 
+/**
+ * Versucht, den Gewinner einer Live-Challenge zu setzen.
+ * Nur der erste erfolgreiche Update bekommt die Challenge wirklich.
+ */
 async function markLiveChallengeWinner(liveChallengeId, playerId) {
   const completedAt = new Date().toISOString();
 
@@ -251,6 +170,10 @@ async function markLiveChallengeWinner(liveChallengeId, playerId) {
   return data;
 }
 
+/**
+ * Aktualisiert die endgültig vergebenen Punkte
+ * im player_live_challenges-Eintrag des Spielers.
+ */
 async function updatePlayerLiveChallengePoints(entryId, points) {
   const { data, error } = await supabaseClient
     .from("player_live_challenges")
@@ -269,75 +192,267 @@ async function updatePlayerLiveChallengePoints(entryId, points) {
   return data;
 }
 
-// =======================
-// LIVE CHALLENGE CHECK
-// =======================
+/* ============================================================
+ * DB LOAD - VIEW STATE
+ * ============================================================
+ */
 
-async function checkLiveChallengeStatus() {
+/**
+ * Lädt den View-State eines Spielers für genau eine Live-Challenge.
+ */
+async function loadLiveChallengeViewState(playerId, liveChallengeId) {
+  const { data, error } = await supabaseClient
+    .from("player_live_challenge_views")
+    .select("*")
+    .eq("player_id", playerId)
+    .eq("live_challenge_id", liveChallengeId)
+    .maybeSingle();
 
-if (uploadOverlay && !uploadOverlay.classList.contains("hidden")) {
-  return;
-}
-
-  const next = await getNextLiveChallengeToDisplay();
-  if (!next) return;
-
-  const { type, challenge } = next;
-
-  currentLiveChallenge = challenge;
-
-  if (type === "end") {
-    if (challenge.status === "completed") {
-      await renderCompletedLiveChallengeModal(challenge);
-    } else {
-      renderExpiredLiveChallengeModal(challenge);
-    }
-
-    openLiveChallengeOverlay();
-    return;
+  if (error) {
+    console.error("Fehler beim Laden des Live-Challenge-View-Status:", error);
+    return null;
   }
 
-  if (type === "start") {
-    renderLiveChallengeModal(challenge);
-    openLiveChallengeOverlay();
+  return data || null;
+}
+
+/**
+ * Stellt sicher, dass ein View-State-Datensatz für den Spieler existiert.
+ */
+async function ensureLiveChallengeViewState(playerId, liveChallengeId) {
+  const existing = await loadLiveChallengeViewState(playerId, liveChallengeId);
+  if (existing) return existing;
+
+  const { data, error } = await supabaseClient
+    .from("player_live_challenge_views")
+    .insert({
+      player_id: playerId,
+      live_challenge_id: liveChallengeId
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Fehler beim Erstellen des Live-Challenge-View-Status:", error);
+    return null;
   }
+
+  return data;
+}
+
+/**
+ * Setzt seen_start_at genau dann, wenn der Spieler das Start-Modal
+ * zum ersten Mal wirklich angezeigt bekommt.
+ *
+ * Wichtig:
+ * Der erste Zeitpunkt wird bewusst nicht überschrieben.
+ */
+async function markLiveChallengeStartSeen(playerId, liveChallengeId) {
+  const existing = await ensureLiveChallengeViewState(playerId, liveChallengeId);
+  if (!existing) return null;
+
+  if (existing.seen_start_at) {
+    return existing;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("player_live_challenge_views")
+    .update({
+      seen_start_at: new Date().toISOString()
+    })
+    .eq("player_id", playerId)
+    .eq("live_challenge_id", liveChallengeId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Fehler beim Markieren von seen_start_at:", error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Markiert, dass der Spieler die Live-Challenge bewusst weggeklickt hat.
+ * seen_start_at wird dabei ebenfalls abgesichert, falls es noch fehlte.
+ */
+async function markLiveChallengeDismissed(playerId, liveChallengeId) {
+  const existing = await ensureLiveChallengeViewState(playerId, liveChallengeId);
+  if (!existing) return null;
+
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabaseClient
+    .from("player_live_challenge_views")
+    .update({
+      seen_start_at: existing.seen_start_at || now,
+      dismissed_at: now
+    })
+    .eq("player_id", playerId)
+    .eq("live_challenge_id", liveChallengeId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Fehler beim Markieren von dismissed_at:", error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Markiert, dass der Spieler das End-/Resultat-Modal gesehen hat.
+ */
+async function markLiveChallengeEndSeen(playerId, liveChallengeId) {
+  const existing = await ensureLiveChallengeViewState(playerId, liveChallengeId);
+  if (!existing) return null;
+
+  const { data, error } = await supabaseClient
+    .from("player_live_challenge_views")
+    .update({
+      seen_end_at: new Date().toISOString()
+    })
+    .eq("player_id", playerId)
+    .eq("live_challenge_id", liveChallengeId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Fehler beim Markieren von seen_end_at:", error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Lädt alle Live-Challenges des aktuellen Spiels.
+ */
+async function loadAllLiveChallengesForCurrentGame() {
+  const { data, error } = await supabaseClient
+    .from("live_challenges")
+    .select(`
+      *,
+      players:winner_player_id (
+        username,
+        display_name
+      )
+    `)
+    .eq("game_id", currentGameId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Fehler beim Laden aller Live-Challenges:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Lädt alle View-State-Einträge des aktuellen Spielers.
+ */
+async function loadLiveChallengeViewStatesForPlayer(playerId) {
+  const { data, error } = await supabaseClient
+    .from("player_live_challenge_views")
+    .select("*")
+    .eq("player_id", playerId);
+
+  if (error) {
+    console.error("Fehler beim Laden aller Live-Challenge-View-States:", error);
+    return [];
+  }
+
+  return data || [];
 }
 
 
+function stopLiveChallengeCountdown() {
+  if (liveChallengeCountdownInterval) {
+    clearInterval(liveChallengeCountdownInterval);
+    liveChallengeCountdownInterval = null;
+  }
+}
 
-// =======================
-// LIVE CHALLENGE MODAL
-// =======================
+function updateLiveChallengeCountdownDisplay() {
+  if (!currentLiveChallenge || currentLiveChallenge.status !== "active") return;
 
+  const countdownEl = document.getElementById("liveChallengeRemainingValue");
+  if (!countdownEl) return;
+
+  const remainingSeconds = getLiveChallengeRemainingSeconds(currentLiveChallenge);
+  countdownEl.textContent =
+    remainingSeconds !== null
+      ? formatLiveChallengeRemainingTime(remainingSeconds)
+      : "Unbegrenzt";
+
+  // Falls Zeit abgelaufen ist, Overlay schließen und beim nächsten Poll
+  // kommt dann das Expired-Modal
+  if (remainingSeconds !== null && remainingSeconds <= 0) {
+    stopLiveChallengeCountdown();
+    closeLiveChallengeOverlay();
+  }
+}
+
+function startLiveChallengeCountdown() {
+  stopLiveChallengeCountdown();
+
+  if (!currentLiveChallenge || currentLiveChallenge.status !== "active") return;
+  if (!currentLiveChallenge.expires_at) return;
+
+  updateLiveChallengeCountdownDisplay();
+
+  liveChallengeCountdownInterval = setInterval(() => {
+    updateLiveChallengeCountdownDisplay();
+  }, 1000);
+}
+
+
+/* ============================================================
+ * MODAL - OPEN / CLOSE
+ * ============================================================
+ */
+
+/**
+ * Öffnet das zentrale Live-Challenge-Overlay.
+ */
 function openLiveChallengeOverlay() {
   if (!liveChallengeOverlay) return;
+
   lockBodyScroll();
   liveChallengeOverlay.classList.remove("hidden");
   currentLiveChallengeModalOpen = true;
+
+  startLiveChallengeCountdown();
 }
 
+/**
+ * Schließt das zentrale Live-Challenge-Overlay.
+ */
 function closeLiveChallengeOverlay() {
-  if (currentLiveChallenge?.id) {
-    markLiveChallengeAsSeen(currentLiveChallenge.id); // 🔥 wichtig
-  }
+  if (!liveChallengeOverlay) return;
+
+  stopLiveChallengeCountdown();
 
   liveChallengeOverlay.classList.add("hidden");
   unlockBodyScroll();
   currentLiveChallengeModalOpen = false;
 }
 
-// =======================
-// LIVE CHALLENGE - START MODAL
-// =======================
+/* ============================================================
+ * START MODAL
+ * ============================================================
+ */
 
+/**
+ * Rendert das Start-Modal für eine aktive Live-Challenge.
+ */
 function renderLiveChallengeModal(challenge) {
-  if (!challenge) return;
-
-  const titleEl = document.getElementById("liveChallengeTitle");
-  const contentEl = document.getElementById("liveChallengeContent");
-  const actionsEl = document.getElementById("liveChallengeActions");
-
-  if (!titleEl || !contentEl || !actionsEl) return;
+  if (!challenge || !liveChallengeTitle || !liveChallengeContent || !liveChallengeActions) {
+    return;
+  }
 
   const requiresPhoto =
     challenge.requires_photo_proof === true ||
@@ -349,12 +464,12 @@ function renderLiveChallengeModal(challenge) {
       ? formatLiveChallengeRemainingTime(remainingSeconds)
       : "Unbegrenzt";
 
-  titleEl.innerHTML = `
+  liveChallengeTitle.innerHTML = `
     <span style="opacity: 0.7;">Spontanchallenge:</span>
     <strong>${challenge.title || "Ohne Titel"}</strong>
   `;
 
-  contentEl.innerHTML = `
+  liveChallengeContent.innerHTML = `
     <p style="font-weight: 600; margin-bottom: 12px;">
       ${challenge.description || ""}
     </p>
@@ -376,19 +491,19 @@ function renderLiveChallengeModal(challenge) {
       </div>
 
       <div class="live-stat-box">
-        <div class="live-stat-label">Restzeit</div>
-        <div class="live-stat-value">${timeText}</div>
-      </div>
+  <div class="live-stat-label">Restzeit</div>
+  <div id="liveChallengeRemainingValue" class="live-stat-value">${timeText}</div>
+</div>
     </div>
   `;
 
-  actionsEl.innerHTML = `
+  liveChallengeActions.innerHTML = `
     <button id="dismissLiveChallengeBtn" type="button" class="secondary-btn">
       Nicht interessiert
     </button>
 
     <button id="completeLiveChallengeBtn" type="button">
-      ${requiresPhoto ? "Mit Foto abschließen" : "Aufgabe abschließen"}
+      ${requiresPhoto ? "Bestanden (foto hochladen)" : "Bestanden"}
     </button>
   `;
 
@@ -398,10 +513,9 @@ function renderLiveChallengeModal(challenge) {
   if (dismissBtn) {
     dismissBtn.onclick = async () => {
       if (currentPlayer && challenge.id) {
-        await markLiveChallengeStartSeen(currentPlayer.id, challenge.id);
+        await markLiveChallengeDismissed(currentPlayer.id, challenge.id);
       }
 
-      dismissLiveChallenge(challenge.id);
       closeLiveChallengeOverlay();
     };
   }
@@ -423,12 +537,14 @@ function renderLiveChallengeModal(challenge) {
   }
 }
 
+/* ============================================================
+ * END / RESULT MODALS
+ * ============================================================
+ */
 
-
-// =======================
-// LIVE CHALLENGE - END MODAL
-// =======================
-
+/**
+ * Rendert das End-Modal einer erfolgreich beendeten Live-Challenge.
+ */
 async function renderCompletedLiveChallengeModal(challenge) {
   if (!challenge) return;
 
@@ -479,131 +595,177 @@ async function renderCompletedLiveChallengeModal(challenge) {
   }
 }
 
+/**
+ * Rendert das End-Modal einer abgelaufenen Live-Challenge ohne Gewinner.
+ */
+function renderExpiredLiveChallengeModal(challenge) {
+  if (!challenge) return;
 
+  liveChallengeTitle.textContent = "Spontanchallenge beendet";
 
+  liveChallengeContent.innerHTML = `
+    <p style="font-weight: 600; margin-bottom: 12px;">
+      ${challenge.description || ""}
+    </p>
 
-// =======================
-// TEST BUTTON / CREATE MODAL EVENTS
-// =======================
+    <div class="live-challenge-result neutral">
+      Niemand hat die Aufgabe geschafft. Es wurden keine Punkte vergeben.
+    </div>
+  `;
 
-if (testLiveChallengeBtn) {
-  testLiveChallengeBtn.addEventListener("click", () => {
-    openCreateLiveChallengeModal();
-  });
+  liveChallengeActions.innerHTML = `
+    <button id="closeLiveChallengeEndBtn" type="button">Schließen</button>
+  `;
+
+  const closeBtn = document.getElementById("closeLiveChallengeEndBtn");
+
+  if (closeBtn) {
+    closeBtn.onclick = async () => {
+      if (currentPlayer && challenge.id) {
+        await markLiveChallengeEndSeen(currentPlayer.id, challenge.id);
+      }
+
+      closeLiveChallengeOverlay();
+    };
+  }
 }
 
-if (closeCreateLiveChallengeBtn) {
-  closeCreateLiveChallengeBtn.addEventListener("click", () => {
-    closeCreateLiveChallengeModal();
-  });
-}
+/* ============================================================
+ * LIVE CHALLENGE CHECK / DISPLAY FLOW
+ * ============================================================
+ */
 
-if (cancelCreateLiveChallengeBtn) {
-  cancelCreateLiveChallengeBtn.addEventListener("click", () => {
-    closeCreateLiveChallengeModal();
-  });
-}
+/**
+ * Zentrale Prüf-Funktion:
+ * Entscheidet, ob dem Spieler gerade
+ * - ein Start-Modal
+ * - oder ein End-Modal
+ * angezeigt werden soll.
+ */
+async function checkLiveChallengeStatus() {
+  if (uploadOverlay && !uploadOverlay.classList.contains("hidden")) {
+    return;
+  }
 
-if (confirmCreateLiveChallengeBtn) {
-  confirmCreateLiveChallengeBtn.addEventListener("click", async () => {
-    const title = createLiveChallengeTitleInput.value.trim();
-    const description = createLiveChallengeDescriptionInput.value.trim();
-    const points = Math.max(1, Number(createLiveChallengePointsInput.value) || 5);
+  const next = await getNextLiveChallengeToDisplay();
 
-    const durationRaw = createLiveChallengeDurationInput.value.trim();
-    const durationMinutes =
-      durationRaw !== "" ? Math.max(1, Number(durationRaw) || 0) : null;
+  // Wenn nichts mehr anzuzeigen ist, aber noch ein aktives Modal offen ist,
+  // dann schließen (z. B. Admin hat auf inactive gesetzt)
+  if (!next) {
+    if (
+      currentLiveChallengeModalOpen &&
+      currentLiveChallenge &&
+      currentLiveChallenge.status === "active"
+    ) {
+      closeLiveChallengeOverlay();
+      currentLiveChallenge = null;
+    }
+    return;
+  }
 
-    const requiresPhotoProof = createLiveChallengePhotoInput.checked;
+  const { type, challenge } = next;
 
-    if (!title) {
-      createLiveChallengeStatusText.textContent = "Bitte einen Namen eingeben.";
-      return;
+  const sameChallengeAlreadyOpen =
+    currentLiveChallengeModalOpen &&
+    currentLiveChallenge &&
+    Number(currentLiveChallenge.id) === Number(challenge.id);
+
+  if (type === "end") {
+    currentLiveChallenge = challenge;
+
+    if (challenge.status === "completed") {
+      await renderCompletedLiveChallengeModal(challenge);
+    } else {
+      renderExpiredLiveChallengeModal(challenge);
     }
 
-    if (!description) {
-      createLiveChallengeStatusText.textContent = "Bitte eine Beschreibung eingeben.";
-      return;
+    if (!currentLiveChallengeModalOpen) {
+      openLiveChallengeOverlay();
     }
 
-    createLiveChallengeStatusText.textContent = "Spontanchallenge wird erstellt...";
+    return;
+  }
 
-    const created = await createLiveChallenge({
-      title,
-      description,
-      points,
-      requiresPhotoProof,
-      durationMinutes
-    });
+  if (type === "start") {
+    currentLiveChallenge = challenge;
 
-    if (!created) {
-      createLiveChallengeStatusText.textContent = "Spontanchallenge konnte nicht erstellt werden.";
-      return;
+    renderLiveChallengeModal(challenge);
+
+    if (!sameChallengeAlreadyOpen) {
+      openLiveChallengeOverlay();
     }
 
-    closeCreateLiveChallengeModal();
-
-    currentLiveChallenge = created;
-    renderLiveChallengeModal(created);
-    openLiveChallengeOverlay();
-  });
-}
-
-// =======================
-// LIVE CHALLENGE ZEIT
-// =======================
-
-function getLiveChallengeRemainingSeconds(challenge) {
-  if (!challenge?.expires_at) return null;
-
-  const expiresAtMs = new Date(challenge.expires_at).getTime();
-  const remainingMs = expiresAtMs - Date.now();
-
-  return Math.max(0, Math.ceil(remainingMs / 1000));
-}
-
-function formatLiveChallengeRemainingTime(totalSeconds) {
-  if (totalSeconds === null) return "Unbegrenzt";
-
-  const seconds = Math.max(0, totalSeconds);
-  const minutes = Math.floor(seconds / 60);
-  const restSeconds = seconds % 60;
-
-  return `${String(minutes).padStart(2, "0")}:${String(restSeconds).padStart(2, "0")}`;
-}
-
-// =======================
-// LIVE CHALLENGE MANUELL BEENDEN
-// =======================
-
-if (endLiveChallengeBtn) {
-  endLiveChallengeBtn.addEventListener("click", async () => {
-    const activeChallenge = await loadActiveLiveChallenge();
-
-    if (!activeChallenge) {
-      alert("Aktuell gibt es keine aktive Spontanchallenge.");
-      return;
+    if (currentPlayer && challenge.id) {
+      await markLiveChallengeStartSeen(currentPlayer.id, challenge.id);
     }
-
-    const expired = await expireLiveChallenge(activeChallenge.id);
-
-    if (!expired) {
-      alert("Die aktive Spontanchallenge konnte nicht beendet werden.");
-      return;
-    }
-
-    console.log("Spontanchallenge manuell beendet:", {
-      id: activeChallenge.id,
-      title: activeChallenge.title,
-      description: activeChallenge.description
-    });
-  });
+  }
 }
 
-// =======================
-// LIVE CHALLENGE ABSCHLUSS
-// =======================
+/**
+ * Ermittelt die nächste relevante Live-Challenge-Anzeige
+ * für den aktuellen Spieler.
+ *
+ * Priorität:
+ * 1. Endmeldungen
+ * 2. neue aktive Challenge
+ */
+async function getNextLiveChallengeToDisplay() {
+  if (!currentPlayer) return null;
 
+  const playerId = currentPlayer.id;
+
+  const [challenges, views] = await Promise.all([
+    loadAllLiveChallengesForCurrentGame(),
+    loadLiveChallengeViewStatesForPlayer(playerId)
+  ]);
+
+  const viewMap = {};
+  for (const v of views) {
+    viewMap[v.live_challenge_id] = v;
+  }
+
+  // 1) Zuerst noch nicht gesehene Endmeldungen
+  for (const challenge of challenges) {
+    if (challenge.status === "completed" || challenge.status === "expired") {
+      const view = viewMap[challenge.id];
+      const hasSeenEnd = view?.seen_end_at;
+
+      if (!hasSeenEnd) {
+        return {
+          type: "end",
+          challenge
+        };
+      }
+    }
+  }
+
+  // 2) Danach neue aktive Challenge
+  for (const challenge of challenges) {
+  if (challenge.status === "active") {
+    const view = viewMap[challenge.id];
+    const wasDismissed = !!view?.dismissed_at;
+
+    if (!wasDismissed) {
+      return {
+        type: "start",
+        challenge
+      };
+    }
+  }
+}
+
+  return null;
+}
+
+/* ============================================================
+ * ABSCHLUSSLOGIK
+ * ============================================================
+ */
+
+/**
+ * Verarbeitet den Abschluss einer Live-Challenge durch den Spieler.
+ * Nur der erste Gewinner erhält Punkte.
+ */
 async function handleCompleteLiveChallenge(challenge, proofImagePath = null) {
   if (!challenge || !currentPlayer) return;
 
@@ -615,17 +777,42 @@ async function handleCompleteLiveChallenge(challenge, proofImagePath = null) {
 
   const winnerUpdate = await markLiveChallengeWinner(challenge.id, currentPlayer.id);
 
-  let winnerName = "Jemand anderes";
-
   if (winnerUpdate) {
     const points = challenge.points ?? 5;
 
     await updatePlayerLiveChallengePoints(attempt.id, points);
 
     const newScore = (gameState.score || 0) + points;
-
     const updatedGameState = await updatePlayerGameState(currentPlayer.id, {
       score: newScore
+    });
+
+    if (proofImagePath) {
+      await logPhotoUploaded({
+        gameId: currentGameId,
+        playerId: currentPlayer.id,
+        liveChallengeId: challenge.id,
+        metadata: {
+          live_challenge_title: challenge.title || null,
+          proof_image_path: proofImagePath,
+          game_name: currentGame?.name || null,
+          player_name: currentPlayer.display_name || currentPlayer.username || null
+        }
+      });
+    }
+
+    await logLiveChallengeCompleted({
+      gameId: currentGameId,
+      playerId: currentPlayer.id,
+      liveChallengeId: challenge.id,
+      pointsDelta: points,
+      metadata: {
+        live_challenge_title: challenge.title || null,
+        description: challenge.description || null,
+        proof_image_path: proofImagePath || null,
+        player_name: currentPlayer.display_name || currentPlayer.username || null,
+        game_name: currentGame?.name || null
+      }
     });
 
     if (updatedGameState) {
@@ -637,14 +824,6 @@ async function handleCompleteLiveChallenge(challenge, proofImagePath = null) {
 
       await renderLeaderboard();
     }
-
-    winnerName = currentPlayer.display_name || currentPlayer.username;
-  } else {
-    const latest = await loadLatestLiveChallenge();
-    winnerName =
-      latest?.players?.display_name ||
-      latest?.players?.username ||
-      "Jemand anderes";
   }
 
   currentLiveChallenge = {
@@ -655,6 +834,83 @@ async function handleCompleteLiveChallenge(challenge, proofImagePath = null) {
   await renderCompletedLiveChallengeModal(challenge);
 }
 
+/* ============================================================
+ * ZEIT / ABLAUF
+ * ============================================================
+ */
+
+/**
+ * Liefert die verbleibenden Sekunden bis zum Ablauf.
+ * Null => abgelaufen, null/nullish => unbegrenzt.
+ */
+function getLiveChallengeRemainingSeconds(challenge) {
+  if (!challenge?.expires_at) return null;
+
+  const expiresAtMs = new Date(challenge.expires_at).getTime();
+  const remainingMs = expiresAtMs - Date.now();
+
+  return Math.max(0, Math.ceil(remainingMs / 1000));
+}
+
+/**
+ * Formatiert Sekunden als MM:SS.
+ */
+function formatLiveChallengeRemainingTime(totalSeconds) {
+  if (totalSeconds === null) return "Unbegrenzt";
+
+  const seconds = Math.max(0, totalSeconds);
+  const minutes = Math.floor(seconds / 60);
+  const restSeconds = seconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(restSeconds).padStart(2, "0")}`;
+}
+
+/**
+ * Beendet eine aktive Live-Challenge ohne Gewinner als expired.
+ * Diese Funktion wird weiterhin gebraucht, z. B. für automatische Abläufe.
+ */
+async function expireLiveChallenge(liveChallengeId) {
+  if (!liveChallengeId) return null;
+
+  const completedAt = new Date().toISOString();
+
+  const { data, error } = await supabaseClient
+    .from("live_challenges")
+    .update({
+      status: "expired",
+      completed_at: completedAt
+    })
+    .eq("id", liveChallengeId)
+    .eq("status", "active")
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Fehler beim Beenden der Spontanchallenge ohne Gewinner:", error);
+    return null;
+  }
+
+  const effectiveGameName =
+    (typeof currentGame !== "undefined" && currentGame?.name)
+      ? currentGame.name
+      : ((typeof adminCurrentGame !== "undefined" && adminCurrentGame?.name) ? adminCurrentGame.name : null);
+
+  await logLiveChallengeExpired({
+    gameId: data?.game_id || currentGameId || adminCurrentGameId || null,
+    liveChallengeId,
+    metadata: {
+      live_challenge_title: data?.title || null,
+      game_name: effectiveGameName
+    }
+  });
+
+  return data;
+}
+
+/**
+ * Prüft, ob die aktive Live-Challenge bereits abgelaufen ist,
+ * und setzt sie in diesem Fall auf expired.
+ */
 async function expireOverdueLiveChallenges() {
   const activeChallenge = await loadActiveLiveChallenge();
   if (!activeChallenge) return false;
@@ -668,31 +924,15 @@ async function expireOverdueLiveChallenges() {
   return !!expired;
 }
 
-// =======================
-// Hilfsfunktionen
-// =======================
+/* ============================================================
+ * PROFIL / SPIELERSTATS
+ * ============================================================
+ */
 
-function getLiveChallengeSeenKey(challengeId) {
-  if (!currentPlayer) return null;
-  return `live_challenge_seen_${currentGameId}_${currentPlayer.id}_${challengeId}`;
-}
-
-function hasSeenLiveChallenge(challengeId) {
-  const key = getLiveChallengeSeenKey(challengeId);
-  if (!key) return false;
-  return localStorage.getItem(key) === "true";
-}
-
-function markLiveChallengeAsSeen(challengeId) {
-  const key = getLiveChallengeSeenKey(challengeId);
-  if (!key) return;
-  localStorage.setItem(key, "true");
-}
-
-// =======================
-// LIVE CHALLENGES FÜR PROFIL
-// =======================
-
+/**
+ * Lädt alle abgeschlossenen Live-Challenges eines Spielers
+ * für die Profilansicht.
+ */
 async function loadCompletedLiveChallengesForPlayer(playerId) {
   const { data, error } = await supabaseClient
     .from("player_live_challenges")
@@ -726,10 +966,9 @@ async function loadCompletedLiveChallengesForPlayer(playerId) {
   }));
 }
 
-// =======================
-// LIVE CHALLENGE STATS
-// =======================
-
+/**
+ * Lädt Statistikdaten zu Live-Challenges für einen Spieler.
+ */
 async function loadLiveChallengeStatsForPlayer(playerId) {
   const [
     { data: playerRows, error: playerError },
@@ -770,6 +1009,9 @@ async function loadLiveChallengeStatsForPlayer(playerId) {
   };
 }
 
+/**
+ * Lädt Gewinnername und Gewinnerbild einer Live-Challenge.
+ */
 async function loadLiveChallengeWinner(liveChallengeId) {
   const { data, error } = await supabaseClient
     .from("player_live_challenges")
@@ -782,7 +1024,7 @@ async function loadLiveChallengeWinner(liveChallengeId) {
       )
     `)
     .eq("live_challenge_id", liveChallengeId)
-    .gt("points_awarded", 0) // nur Gewinner
+    .gt("points_awarded", 0)
     .maybeSingle();
 
   if (error) {
@@ -798,270 +1040,15 @@ async function loadLiveChallengeWinner(liveChallengeId) {
   };
 }
 
+/* ============================================================
+ * INITIALISIERUNG FÜR NEUE SPIELER
+ * ============================================================
+ */
 
-// =======================
-// LIVE CHALLENGE VIEW STATE
-// =======================
-
-async function loadLiveChallengeViewState(playerId, liveChallengeId) {
-  const { data, error } = await supabaseClient
-    .from("player_live_challenge_views")
-    .select("*")
-    .eq("player_id", playerId)
-    .eq("live_challenge_id", liveChallengeId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Fehler beim Laden des Live-Challenge-View-Status:", error);
-    return null;
-  }
-
-  return data || null;
-}
-
-async function ensureLiveChallengeViewState(playerId, liveChallengeId) {
-  const existing = await loadLiveChallengeViewState(playerId, liveChallengeId);
-  if (existing) return existing;
-
-  const { data, error } = await supabaseClient
-    .from("player_live_challenge_views")
-    .insert({
-      player_id: playerId,
-      live_challenge_id: liveChallengeId
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Fehler beim Erstellen des Live-Challenge-View-Status:", error);
-    return null;
-  }
-
-  return data;
-}
-
-async function markLiveChallengeStartSeen(playerId, liveChallengeId) {
-  const existing = await ensureLiveChallengeViewState(playerId, liveChallengeId);
-  if (!existing) return null;
-
-  const { data, error } = await supabaseClient
-    .from("player_live_challenge_views")
-    .update({
-      seen_start_at: new Date().toISOString()
-    })
-    .eq("player_id", playerId)
-    .eq("live_challenge_id", liveChallengeId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Fehler beim Markieren von seen_start_at:", error);
-    return null;
-  }
-
-  return data;
-}
-
-async function markLiveChallengeEndSeen(playerId, liveChallengeId) {
-  const existing = await ensureLiveChallengeViewState(playerId, liveChallengeId);
-  if (!existing) return null;
-
-  const { data, error } = await supabaseClient
-    .from("player_live_challenge_views")
-    .update({
-      seen_end_at: new Date().toISOString()
-    })
-    .eq("player_id", playerId)
-    .eq("live_challenge_id", liveChallengeId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Fehler beim Markieren von seen_end_at:", error);
-    return null;
-  }
-
-  return data;
-}
-
-
-async function loadAllLiveChallengesForCurrentGame() {
-  const { data, error } = await supabaseClient
-    .from("live_challenges")
-    .select(`
-      *,
-      players:winner_player_id (
-        username,
-        display_name
-      )
-    `)
-    .eq("game_id", currentGameId)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error("Fehler beim Laden aller Live-Challenges:", error);
-    return [];
-  }
-
-  return data || [];
-}
-
-async function loadLiveChallengeViewStatesForPlayer(playerId) {
-  const { data, error } = await supabaseClient
-    .from("player_live_challenge_views")
-    .select("*")
-    .eq("player_id", playerId);
-
-  if (error) {
-    console.error("Fehler beim Laden aller Live-Challenge-View-States:", error);
-    return [];
-  }
-
-  return data || [];
-}
-
-
-// =======================
-// ABGELAUFENE AUFGABEN
-// =======================
-
-
-let pendingExpiredChallenge = null;
-let lastShownLiveChallengeId = null;
-
-async function expireLiveChallenge(liveChallengeId) {
-  if (!liveChallengeId) return null;
-
-  const completedAt = new Date().toISOString();
-
-  const { data, error } = await supabaseClient
-    .from("live_challenges")
-    .update({
-      status: "expired",
-      completed_at: completedAt
-    })
-    .eq("id", liveChallengeId)
-    .eq("status", "active")
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Fehler beim Beenden der Spontanchallenge ohne Gewinner:", error);
-    return null;
-  }
-
-  return data;
-}
-
-function renderExpiredLiveChallengeModal(challenge) {
-  liveChallengeTitle.textContent = "Spontanchallenge beendet";
-
-  liveChallengeIntro.innerHTML = `
-    <strong>Niemand</strong> hat die Aufgabe geschafft.
-  `;
-
-  liveChallengeTaskTitle.textContent = challenge.title || "Ohne Titel";
-  liveChallengeTaskDescription.textContent = challenge.description || "";
-
-  liveChallengeMeta.innerHTML = `
-    Es wurden keine Punkte vergeben.
-  `;
-
-  liveChallengeActions.innerHTML = `
-    <button id="closeLiveChallengeEndBtn" type="button">Schließen</button>
-  `;
-
-  const closeBtn = document.getElementById("closeLiveChallengeEndBtn");
-
-  if (closeBtn) {
-    closeBtn.onclick = async () => {
-      if (currentPlayer && challenge.id) {
-        await markLiveChallengeEndSeen(currentPlayer.id, challenge.id);
-      }
-
-      closeLiveChallengeOverlay();
-    };
-  }
-}
-
-async function loadLatestFinishedLiveChallenge() {
-  const { data, error } = await supabaseClient
-    .from("live_challenges")
-    .select("*")
-    .eq("game_id", currentGameId)
-    .in("status", ["completed", "expired"])
-    .order("completed_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Fehler beim Laden der letzten beendeten Challenge:", error);
-    return null;
-  }
-
-  return data;
-}
-
-async function getNextLiveChallengeToDisplay() {
-  if (!currentPlayer) return null;
-
-  const playerId = currentPlayer.id;
-
-  const [challenges, views] = await Promise.all([
-    loadAllLiveChallengesForCurrentGame(),
-    loadLiveChallengeViewStatesForPlayer(playerId)
-  ]);
-
-  const viewMap = {};
-  for (const v of views) {
-    viewMap[v.live_challenge_id] = v;
-  }
-
-  // =======================
-  // 1. zuerst: offene Endmeldungen
-  // =======================
-
-  for (const challenge of challenges) {
-    if (challenge.status === "completed" || challenge.status === "expired") {
-      const view = viewMap[challenge.id];
-
-      const hasSeenEnd = view?.seen_end_at;
-
-      if (!hasSeenEnd) {
-        return {
-          type: "end",
-          challenge
-        };
-      }
-    }
-  }
-
-  // =======================
-  // 2. dann: neue aktive Challenge
-  // =======================
-
-  for (const challenge of challenges) {
-    if (challenge.status === "active") {
-      const view = viewMap[challenge.id];
-
-      const hasSeenStart = view?.seen_start_at;
-
-      if (!hasSeenStart) {
-        return {
-          type: "start",
-          challenge
-        };
-      }
-    }
-  }
-
-  return null;
-}
-
-// =======================
-// ALTE AUFGABEN NICHT ANZEIGEN
-// =======================
-
+/**
+ * Initialisiert View-State-Einträge für einen neuen Spieler im aktuellen Spiel,
+ * damit alte Events nicht nachträglich als neu auftauchen.
+ */
 async function initializeLiveChallengeViewsForNewPlayerInGame(playerId) {
   const { data: liveChallenges, error } = await supabaseClient
     .from("live_challenges")
@@ -1092,7 +1079,8 @@ async function initializeLiveChallengeViewsForNewPlayerInGame(playerId) {
       player_id: playerId,
       live_challenge_id: row.id,
       seen_start_at: null,
-      seen_end_at: null
+      seen_end_at: null,
+      dismissed_at: null
     };
 
     if (row.status === "completed" || row.status === "expired") {
@@ -1107,8 +1095,6 @@ async function initializeLiveChallengeViewsForNewPlayerInGame(playerId) {
     return entry;
   });
 
-  console.log("Initialisiere Live-Challenge-Views mit Payload:", payload);
-
   const { error: upsertError } = await supabaseClient
     .from("player_live_challenge_views")
     .upsert(payload, {
@@ -1120,6 +1106,5 @@ async function initializeLiveChallengeViewsForNewPlayerInGame(playerId) {
     return false;
   }
 
-  console.log("Live-Challenge-Views erfolgreich initialisiert.");
   return true;
 }

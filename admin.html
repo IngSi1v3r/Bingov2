@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Festival Bingo – Admin</title>
+
+  <link rel="stylesheet" href="admin.css" />
+</head>
+
+<body>
+
+  <!-- ===================== -->
+  <!-- ADMIN LOGIN OVERLAY -->
+  <!-- ===================== -->
+  <div id="adminLoginOverlay" class="admin-login-overlay hidden">
+    <div class="admin-login-modal">
+      <h2>Admin Login</h2>
+      <p class="admin-login-subtext">
+        Bitte melde dich mit einem Admin-Account an.
+      </p>
+
+      <input id="adminLoginNameInput" type="text" placeholder="Admin-Name" />
+      <input id="adminLoginPinInput" type="password" inputmode="numeric" placeholder="PIN" />
+
+      <p id="adminLoginStatusText" class="admin-login-status"></p>
+
+      <div class="admin-login-actions">
+        <button id="adminDoLoginBtn" type="button">Login</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+
+    <!-- ===================== -->
+<!-- HEADER -->
+<!-- ===================== -->
+<div class="header-card">
+  <div class="header-top-row">
+    <h1>Admin Panel</h1>
+
+    <div class="header-top-actions">
+      <button id="adminRefreshBtn" class="secondary-btn" type="button">Refresh</button>
+      <button id="adminLogoutBtn" class="secondary-btn" type="button">Admin Logout</button>
+      <a href="index.html" class="secondary-btn admin-link-btn">Zum Spiel</a>
+    </div>
+  </div>
+
+  <div class="header-controls">
+    <div class="header-item">
+      <div class="header-label">Admin</div>
+      <div id="adminName" class="header-value">-</div>
+    </div>
+
+    <div class="header-item">
+      <div class="header-label">Aktives Spiel</div>
+      <button id="adminCurrentGameBtn" class="secondary-btn header-button" type="button">
+        <span id="adminCurrentGame">-</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+    <!-- ===================== -->
+<!-- ADMIN GAME SELECT OVERLAY -->
+<!-- ===================== -->
+<div id="adminGameSelectOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <button id="closeAdminGameSelectBtn" class="modal-close-btn" type="button">×</button>
+
+    <h2>Spiel auswählen</h2>
+
+    <div id="adminGameList" class="game-list">
+      <p>Spiele werden geladen...</p>
+    </div>
+  </div>
+</div>
+
+    <!-- ===================== -->
+    <!-- TABS -->
+    <!-- ===================== -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="dashboard" type="button">Dashboard</button>
+      <button class="admin-tab" data-tab="players" type="button">Spieler</button>
+      <button class="admin-tab" data-tab="games" type="button">Spiele</button>
+      <button class="admin-tab" data-tab="live" type="button">Live</button>
+      <button class="admin-tab" data-tab="grid" type="button">Galerie</button>
+      <button class="admin-tab" data-tab="logs" type="button">Logs</button>
+    </div>
+
+    <!-- ===================== -->
+    <!-- CONTENT -->
+    <!-- ===================== -->
+    <div class="admin-content">
+
+      <!-- DASHBOARD -->
+      <div class="admin-tab-content active" id="tab-dashboard">
+        <h2>Dashboard</h2>
+        <p>Übersicht folgt…</p>
+      </div>
+
+      <!-- SPIELER -->
+      <div class="admin-tab-content" id="tab-players">
+        <h2>Spieler</h2>
+
+        <div class="admin-split-layout">
+
+          <!-- LISTE -->
+          <div class="admin-panel">
+            <div class="admin-panel-header">
+              <h3>Alle Spieler</h3>
+            </div>
+
+            <div id="adminPlayersList" class="admin-list">
+              <p>Spieler werden geladen...</p>
+            </div>
+          </div>
+
+          <!-- DETAILS -->
+          <div class="admin-panel">
+            <div class="admin-panel-header">
+              <h3>Spieler-Details</h3>
+            </div>
+
+            <div id="adminPlayerDetails" class="admin-details">
+              <p>Wähle links einen Spieler aus.</p>
+            </div>
+
+            <div id="adminPlayerActionBar" class="admin-player-action-bar hidden">
+             <button id="adminResetPlayerGameBtn" type="button">Spiel zurücksetzen</button>
+             <button id="adminDeletePlayerBtn" type="button">Spieler löschen</button>
+            </div>
+
+           <div id="adminPlayerCreateStateBar" class="admin-player-action-bar hidden">
+            <button id="adminCreatePlayerStateBtn" type="button">Spielstand anlegen</button>
+           </div>
+
+            <div id="adminPlayerGameMiniGrid" class="admin-mini-grid-wrapper hidden">
+              <h3 class="admin-section-title">Fortschritt im relevanten Spiel</h3>
+              <div id="adminPlayerMiniGrid" class="admin-mini-grid"></div>
+            </div>
+
+            <div id="adminPlayerGalleryWrapper" class="admin-gallery-wrapper hidden">
+              <h3 class="admin-section-title">Galerie</h3>
+              <div id="adminPlayerGallery"></div>
+            </div>
+
+            <div id="adminPlayerCompletedWrapper" class="admin-completed-wrapper hidden">
+              <h3 class="admin-section-title">Abgeschlossene Aufgaben</h3>
+              <div id="adminPlayerCompletedList"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SPIELE -->
+      <div class="admin-tab-content" id="tab-games">
+        <h2>Spiele</h2>
+        <p>Spieleverwaltung folgt…</p>
+      </div>
+
+      <!-- GRID -->
+      <div class="admin-tab-content" id="tab-grid">
+        <h2>Grid / Challenges</h2>
+        <p>Grid-Editor folgt…</p>
+      </div>
+
+      <!-- LIVE -->
+      <div class="admin-tab-content" id="tab-live">
+        <h2>Live Challenges</h2>
+        <p>Live-System folgt…</p>
+      </div>
+
+      <!-- LOGS -->
+      <div class="admin-tab-content" id="tab-logs">
+        <h2>Logs</h2>
+        <p>Logs folgen…</p>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ===================== -->
+<!-- ADMIN PLAYER CHALLENGE MODAL -->
+<!-- ===================== -->
+<div id="adminPlayerChallengeOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <button id="closeAdminPlayerChallengeBtn" class="modal-close-btn" type="button">×</button>
+
+    <h2 id="adminPlayerChallengeModalTitle">Challenge</h2>
+
+    <div id="adminPlayerChallengeModalContent" class="rules-content">
+      <p>Lade Challenge-Details...</p>
+    </div>
+
+    <div class="modal-actions" id="adminChallengeActions">
+  <button id="adminMarkChallengeCompletedBtn" type="button">Als bestanden markieren</button>
+  <button id="adminSetChallengeActiveBtn" type="button">Als aktiv setzen</button>
+  <button id="adminSetChallengeInactiveBtn" type="button">Inaktiv setzen</button>
+  <button id="adminResetChallengeBtn" type="button">Challenge aberkennen</button>
+</div>
+  </div>
+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="admin_logs.js"></script>
+<script src="admin_live.js"></script>
+<script src="admin.js"></script>
+<script src="admin_players.js"></script>
+<script src="admin_games.js"></script>
+<script src="admin_galerie.js"></script>
+</body>
+</html>

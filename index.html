@@ -67,8 +67,6 @@
     <!-- BOTTOM ACTIONS -->
     <div class="bottom-actions">
       <button id="rulesBtn" class="secondary-btn">Regeln anzeigen</button>
-      <button id="testLiveChallengeBtn" type="button">Spontanchallenge starten</button>
-      <button id="endLiveChallengeBtn" type="button">Spontanchallenge beenden</button>
     </div>
   </div>
 
@@ -445,6 +443,24 @@
     </div>
   </div>
 
+
+  <!-- ===================== -->
+<!-- BLOCKED OVERLAY -->
+<!-- ===================== -->
+<div id="blockedOverlay" class="overlay hidden">
+  <div class="overlay-content blocked-overlay-content">
+    <h2>🚫 Zugriff gesperrt</h2>
+
+    <p class="blocked-text">
+      Dein Spieler wurde durch einen Admin gesperrt.
+    </p>
+
+    <button id="blockedBackToLoginBtn" class="primary-btn">
+      Zur Anmeldung
+    </button>
+  </div>
+</div>
+
   <!-- ===================== -->
   <!-- SCRIPTS -->
   <!-- ===================== -->
@@ -454,6 +470,7 @@
   <script src="supabase-client.js"></script>
   <script src="auth.js"></script>
   <script src="data.js"></script>
+  <script src="admin_logs.js"></script>
   <script src="game.js"></script>
   <script src="app.js"></script>
   <script src="live-challenges.js"></script>
