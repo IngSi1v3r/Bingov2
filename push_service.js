@@ -42,6 +42,11 @@ async function initializePlayerPushService({ justRegistered = false } = {}) {
 
   await loadAndRenderPlayerPushPreference();
 
+  if (oneSignal) {
+    await syncOneSignalPushStateWithCurrentPreference(oneSignal);
+    await loadAndRenderPlayerPushPreference();
+  }
+
   playerPushRegistrationPromptPending = justRegistered === true;
   playerPushServiceInitialized = true;
 }
@@ -97,15 +102,23 @@ async function loginCurrentPlayerToOneSignal(oneSignal) {
   }
 }
 
-function logoutPlayerPushService() {
+async function logoutPlayerPushService() {
   try {
-    const oneSignal = cachedOneSignalInstance;
+    const oneSignal = await getOneSignalSafe();
+
+    if (oneSignal?.User?.PushSubscription?.optOut) {
+      await oneSignal.User.PushSubscription.optOut();
+    }
 
     if (oneSignal && typeof oneSignal.logout === "function") {
-      oneSignal.logout();
+      await oneSignal.logout();
     }
+
+    playerPushServiceInitialized = false;
+    playerPushRegistrationPromptPending = false;
+    playerPushPreference = null;
   } catch (error) {
-    console.warn("OneSignal logout fehlgeschlagen:", error);
+    console.warn("OneSignal logout/optOut fehlgeschlagen:", error);
   }
 }
 
@@ -151,6 +164,49 @@ async function loadAndRenderPlayerPushPreference() {
   }
 
   await renderPlayerPushProfileState();
+}
+
+async function syncOneSignalPushStateWithCurrentPreference(oneSignal = cachedOneSignalInstance) {
+  if (!currentPlayer?.id || !oneSignal) return false;
+
+  const shouldBeEnabled = playerPushPreference?.push_enabled === true;
+  const permissionState = getPlayerPushPermissionState(oneSignal);
+
+  try {
+    if (!shouldBeEnabled) {
+      if (oneSignal?.User?.PushSubscription?.optOut) {
+        await oneSignal.User.PushSubscription.optOut();
+      }
+
+      await savePlayerPushPreference({
+        push_enabled: false,
+        permission_state: permissionState,
+        external_id: String(currentPlayer.id),
+        last_subscription_id: getPlayerPushSubscriptionId(oneSignal),
+        disabled_at: playerPushPreference?.disabled_at || new Date().toISOString()
+      });
+
+      return true;
+    }
+
+    if (permissionState === "granted" && oneSignal?.User?.PushSubscription?.optIn) {
+      await oneSignal.User.PushSubscription.optIn();
+
+      await savePlayerPushPreference({
+        push_enabled: true,
+        permission_state: permissionState,
+        external_id: String(currentPlayer.id),
+        last_subscription_id: getPlayerPushSubscriptionId(oneSignal),
+        enabled_at: playerPushPreference?.enabled_at || new Date().toISOString(),
+        disabled_at: null
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.warn("Push-Synchronisierung fehlgeschlagen:", error);
+    return false;
+  }
 }
 
 async function renderPlayerPushProfileState() {
