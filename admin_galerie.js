@@ -48,6 +48,9 @@ let adminGalleryFilteredEntries = [];
 let adminGallerySelectedEntryId = null;
 let adminGallerySelectedIndex = 0;
 
+let adminGallerySelectionMode = false;
+let adminGallerySelectedIds = new Set();
+
 let adminGalleryFilters = {
   gameId: "",
   playerId: "",
@@ -82,69 +85,16 @@ async function initializeAdminGalleryTab() {
  */
 
 async function loadAdminGalleryBaseData() {
-  const tasks = [];
+  const bundle = await DataService.bundles.loadAdminGallery();
 
-  if (typeof loadAllPlayersForAdmin === "function") {
-    tasks.push(loadAllPlayersForAdmin());
-  }
-
-  if (typeof loadAllGamesForAdmin === "function") {
-    tasks.push(loadAllGamesForAdmin());
-  }
-
-  if (typeof loadAllPlayerChallengesForAdmin === "function") {
-    tasks.push(loadAllPlayerChallengesForAdmin());
-  }
-
-  if (typeof loadAllChallengesForAdminDetailed === "function") {
-    tasks.push(loadAllChallengesForAdminDetailed());
-  } else if (typeof loadAllChallengesForAdmin === "function") {
-    tasks.push(loadAllChallengesForAdmin());
-  }
-
-  if (typeof loadAllLiveChallengesForAdmin === "function") {
-    tasks.push(loadAllLiveChallengesForAdmin());
-  } else {
-    tasks.push(loadAllLiveChallengesForAdminFallback());
-  }
-
-  if (typeof loadAllPlayerLiveChallengesForAdmin === "function") {
-    tasks.push(loadAllPlayerLiveChallengesForAdmin());
-  } else {
-    tasks.push(loadAllPlayerLiveChallengesForAdminFallback());
-  }
-
-  await Promise.all(tasks);
+  adminPlayers = bundle.players || [];
+  adminGames = bundle.games || [];
+  adminPlayerChallenges = bundle.playerChallenges || [];
+  adminChallenges = bundle.challenges || [];
+  adminLiveChallenges = bundle.liveChallenges || [];
+  adminPlayerLiveChallenges = bundle.playerLiveChallenges || [];
 }
 
-async function loadAllLiveChallengesForAdminFallback() {
-  const { data, error } = await supabaseClient
-    .from("live_challenges")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Fehler beim Laden aller Live-Challenges (Fallback):", error);
-    window.adminLiveChallenges = [];
-    return;
-  }
-
-  window.adminLiveChallenges = data || [];
-}
-
-async function loadAllPlayerLiveChallengesForAdminFallback() {
-  const { data, error } = await supabaseClient
-    .from("player_live_challenges")
-    .select("*");
-
-  if (error) {
-    console.error("Fehler beim Laden aller player_live_challenges (Fallback):", error);
-    window.adminPlayerLiveChallenges = [];
-    return;
-  }
-
-  window.adminPlayerLiveChallenges = data || [];
-}
 
 /* ============================================================
  * LAYOUT / STYLES
@@ -230,6 +180,16 @@ function ensureAdminGalleryLayout() {
         </div>
 
         <div id="adminGalleryResultsInfo" class="admin-details-empty" style="margin-bottom: 14px;"></div>
+
+        <div class="admin-gallery-selection-toolbar">
+          <button id="adminGallerySelectModeBtn" type="button" class="secondary-btn">Bilder auswählen</button>
+          <button id="adminGallerySelectAllVisibleBtn" type="button" class="secondary-btn hidden">Alle sichtbaren auswählen</button>
+          <button id="adminGalleryShareSelectedBtn" type="button" class="secondary-btn hidden">Auswahl teilen</button>
+          <button id="adminGalleryDownloadSelectedBtn" type="button" class="secondary-btn hidden">Auswahl downloaden</button>
+          <button id="adminGalleryCancelSelectionBtn" type="button" class="secondary-btn hidden">Abbrechen</button>
+          <span id="adminGallerySelectionInfo" class="admin-gallery-selection-info hidden">0 Bilder ausgewählt</span>
+        </div>
+
         <div id="adminGalleryGrid" class="admin-gallery-grid"></div>
       </div>
     </div>
@@ -240,10 +200,31 @@ function ensureAdminGalleryLayout() {
   if (resetBtn) {
     resetBtn.addEventListener("click", () => {
       resetAdminGalleryFilters();
+      exitAdminGallerySelectionMode();
       renderAdminGalleryFilterOptions();
       renderAdminGalleryGrid();
     });
   }
+
+  document.getElementById("adminGallerySelectModeBtn")?.addEventListener("click", () => {
+    enterAdminGallerySelectionMode();
+  });
+
+  document.getElementById("adminGallerySelectAllVisibleBtn")?.addEventListener("click", () => {
+    selectAllVisibleAdminGalleryEntries();
+  });
+
+  document.getElementById("adminGalleryShareSelectedBtn")?.addEventListener("click", async () => {
+    await shareSelectedAdminGalleryImages();
+  });
+
+  document.getElementById("adminGalleryDownloadSelectedBtn")?.addEventListener("click", async () => {
+    await downloadSelectedAdminGalleryImages();
+  });
+
+  document.getElementById("adminGalleryCancelSelectionBtn")?.addEventListener("click", () => {
+    exitAdminGallerySelectionMode();
+  });
 
   const autoApplyIds = [
     "adminGalleryGameFilter",
@@ -440,6 +421,61 @@ function ensureAdminGalleryStyles() {
       box-shadow: 0 6px 14px rgba(0,0,0,0.22);
     }
 
+    .admin-gallery-selection-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 10px 0;
+      background: #09152d;
+    }
+
+    .admin-gallery-selection-info {
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+
+    .admin-gallery-card.selection-mode::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.18);
+      pointer-events: none;
+    }
+
+    .admin-gallery-card.selected {
+      border-color: #facc15;
+      box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.45);
+    }
+
+    .admin-gallery-card-check {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      color: white;
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(255,255,255,0.22);
+      font-size: 1.05rem;
+      font-weight: 900;
+    }
+
+    .admin-gallery-card.selected .admin-gallery-card-check {
+      color: #111827;
+      background: #facc15;
+      border-color: #facc15;
+    }
+
     .admin-gallery-empty {
       padding: 24px;
       border-radius: 14px;
@@ -611,7 +647,7 @@ function buildAdminGalleryNormalEntries() {
         challengePosition: challenge.position ?? null,
         createdAt: row.completed_at,
         proofImagePath: row.proof_image_path,
-        imageUrl: getPublicImageUrl(row.proof_image_path),
+        imageUrl: DataService.storage.getProofPhotoPublicUrl(row.proof_image_path),
         isLive: false
       };
     })
@@ -655,7 +691,7 @@ function buildAdminGalleryLiveEntries() {
         challengePosition: null,
         createdAt: row.completed_at,
         proofImagePath: row.proof_image_path,
-        imageUrl: getPublicImageUrl(row.proof_image_path),
+        imageUrl: DataService.storage.getProofPhotoPublicUrl(row.proof_image_path),
         isLive: true
       };
     })
@@ -889,6 +925,8 @@ function renderAdminGalleryGrid() {
   if (!gridEl) return;
 
   adminGalleryFilteredEntries = getFilteredAdminGalleryEntries();
+  pruneAdminGallerySelectionToFilteredEntries();
+  updateAdminGallerySelectionToolbar();
 
   if (titleEl) {
     titleEl.textContent = "Bilder";
@@ -914,11 +952,20 @@ function renderAdminGalleryGrid() {
     card.className = "admin-gallery-card";
     card.title = `${entry.playerName} – ${entry.challengeTitle}`;
 
+    if (adminGallerySelectionMode) {
+      card.classList.add("selection-mode");
+    }
+
+    if (adminGallerySelectedIds.has(entry.id)) {
+      card.classList.add("selected");
+    }
+
     card.innerHTML = `
       <div class="admin-gallery-card-image-wrap">
         <img src="${entry.imageUrl}" class="admin-gallery-card-image" alt="Beweisfoto" loading="lazy" />
       </div>
 
+      ${adminGallerySelectionMode ? `<div class="admin-gallery-card-check">${adminGallerySelectedIds.has(entry.id) ? "✓" : ""}</div>` : ""}
       ${entry.isLive ? `<div class="admin-gallery-card-live-badge">⚡</div>` : ""}
 
       <div class="admin-gallery-card-overlay">
@@ -928,6 +975,11 @@ function renderAdminGalleryGrid() {
     `;
 
     card.addEventListener("click", () => {
+      if (adminGallerySelectionMode) {
+        toggleAdminGalleryEntrySelection(entry.id);
+        return;
+      }
+
       adminGallerySelectedEntryId = entry.id;
       adminGallerySelectedIndex = index;
       openAdminGalleryViewer();
@@ -1067,12 +1119,266 @@ async function copyCurrentAdminGalleryImageLink() {
   const entry = getCurrentAdminGalleryEntry();
   if (!entry?.imageUrl) return;
 
-  try {
-    await navigator.clipboard.writeText(entry.imageUrl);
+  const copied = await copyTextAdminGallery(entry.imageUrl);
+
+  if (copied) {
     alert("Bildlink kopiert.");
+  } else {
+    prompt("Link konnte nicht automatisch kopiert werden. Du kannst ihn hier manuell kopieren:", entry.imageUrl);
+  }
+}
+
+
+/* ============================================================
+ * MULTI SELECT / SHARE / DOWNLOAD
+ * ============================================================
+ */
+
+function enterAdminGallerySelectionMode() {
+  adminGallerySelectionMode = true;
+  adminGallerySelectedIds = new Set();
+  renderAdminGalleryGrid();
+}
+
+function exitAdminGallerySelectionMode() {
+  adminGallerySelectionMode = false;
+  adminGallerySelectedIds = new Set();
+  renderAdminGalleryGrid();
+}
+
+function toggleAdminGalleryEntrySelection(entryId) {
+  if (!entryId) return;
+
+  if (adminGallerySelectedIds.has(entryId)) {
+    adminGallerySelectedIds.delete(entryId);
+  } else {
+    adminGallerySelectedIds.add(entryId);
+  }
+
+  renderAdminGalleryGrid();
+}
+
+function selectAllVisibleAdminGalleryEntries() {
+  if (!adminGallerySelectionMode) return;
+
+  const visibleIds = (adminGalleryFilteredEntries || []).map(entry => entry.id);
+  if (!visibleIds.length) return;
+
+  const allVisibleSelected = visibleIds.every(id => adminGallerySelectedIds.has(id));
+
+  if (allVisibleSelected) {
+    visibleIds.forEach(id => adminGallerySelectedIds.delete(id));
+  } else {
+    visibleIds.forEach(id => adminGallerySelectedIds.add(id));
+  }
+
+  renderAdminGalleryGrid();
+}
+
+function pruneAdminGallerySelectionToFilteredEntries() {
+  if (!adminGallerySelectionMode) return;
+
+  const visibleIds = new Set(
+    (adminGalleryFilteredEntries || []).map(entry => entry.id)
+  );
+
+  adminGallerySelectedIds = new Set(
+    [...adminGallerySelectedIds].filter(id => visibleIds.has(id))
+  );
+}
+
+function updateAdminGallerySelectionToolbar() {
+  const selectBtn = document.getElementById("adminGallerySelectModeBtn");
+  const selectAllBtn = document.getElementById("adminGallerySelectAllVisibleBtn");
+  const shareBtn = document.getElementById("adminGalleryShareSelectedBtn");
+  const downloadBtn = document.getElementById("adminGalleryDownloadSelectedBtn");
+  const cancelBtn = document.getElementById("adminGalleryCancelSelectionBtn");
+  const infoEl = document.getElementById("adminGallerySelectionInfo");
+
+  const selectedCount = adminGallerySelectedIds.size;
+  const inSelectionMode = adminGallerySelectionMode === true;
+
+  if (selectBtn) {
+    selectBtn.classList.toggle("hidden", inSelectionMode);
+  }
+
+  [selectAllBtn, shareBtn, downloadBtn, cancelBtn, infoEl].forEach(el => {
+    if (!el) return;
+    el.classList.toggle("hidden", !inSelectionMode);
+  });
+
+  if (infoEl) {
+    infoEl.textContent = `${selectedCount} Bild${selectedCount === 1 ? "" : "er"} ausgewählt`;
+  }
+
+  if (selectAllBtn) {
+    selectAllBtn.disabled = !adminGalleryFilteredEntries.length;
+    selectAllBtn.textContent = selectedCount === adminGalleryFilteredEntries.length && selectedCount > 0
+      ? "Alle sichtbaren abwählen"
+      : "Alle sichtbaren auswählen";
+  }
+
+  if (shareBtn) {
+    shareBtn.disabled = selectedCount === 0;
+  }
+
+  if (downloadBtn) {
+    downloadBtn.disabled = selectedCount === 0;
+  }
+}
+
+function getSelectedAdminGalleryEntries() {
+  return (adminGalleryFilteredEntries || []).filter(entry =>
+    adminGallerySelectedIds.has(entry.id)
+  );
+}
+
+async function shareSelectedAdminGalleryImages() {
+  const entries = getSelectedAdminGalleryEntries();
+
+  if (!entries.length) {
+    alert("Bitte zuerst mindestens ein Bild auswählen.");
+    return;
+  }
+
+  try {
+    const files = await buildAdminGalleryImageFiles(entries);
+
+    if (
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare({ files })
+    ) {
+      await navigator.share({ files });
+      return;
+    }
+
+    alert("Direktes Teilen wird von diesem Browser nicht unterstützt. Die Bilder werden stattdessen heruntergeladen.");
+    await downloadAdminGalleryFiles(files);
   } catch (error) {
-    console.error("Fehler beim Kopieren des Bildlinks:", error);
-    alert("Link konnte nicht kopiert werden.");
+    console.error("Fehler beim Teilen der Bilder:", error);
+    alert("Teilen ist fehlgeschlagen. Die Bilder werden stattdessen heruntergeladen.");
+    await downloadSelectedAdminGalleryImages();
+  }
+}
+
+async function downloadSelectedAdminGalleryImages() {
+  const entries = getSelectedAdminGalleryEntries();
+
+  if (!entries.length) {
+    alert("Bitte zuerst mindestens ein Bild auswählen.");
+    return;
+  }
+
+  try {
+    const files = await buildAdminGalleryImageFiles(entries);
+    await downloadAdminGalleryFiles(files);
+  } catch (error) {
+    console.error("Fehler beim Download der Bilder:", error);
+    alert("Bilder konnten nicht heruntergeladen werden.");
+  }
+}
+
+async function buildAdminGalleryImageFiles(entries) {
+  const files = [];
+
+  for (const entry of entries) {
+    const response = await fetch(entry.imageUrl);
+
+    if (!response.ok) {
+      throw new Error(`Bild konnte nicht geladen werden: ${entry.imageUrl}`);
+    }
+
+    const blob = await response.blob();
+    const filename = buildAdminGalleryImageFileName(entry, blob.type);
+
+    files.push(new File([blob], filename, {
+      type: blob.type || "image/jpeg"
+    }));
+  }
+
+  return files;
+}
+
+function buildAdminGalleryImageFileName(entry, mimeType = "") {
+  const extensionFromPath = String(entry.proofImagePath || "")
+    .split("?")[0]
+    .split(".")
+    .pop();
+
+  const extension = extensionFromPath && extensionFromPath.length <= 5
+    ? extensionFromPath
+    : getAdminGalleryExtensionFromMimeType(mimeType);
+
+  const datePart = entry.createdAt
+    ? new Date(entry.createdAt).toISOString().slice(0, 10)
+    : "bild";
+
+  const safePlayer = sanitizeAdminGalleryFileName(entry.playerName || "spieler");
+  const safeChallenge = sanitizeAdminGalleryFileName(entry.challengeTitle || "aufgabe");
+
+  return `${datePart}_${safePlayer}_${safeChallenge}.${extension || "jpg"}`;
+}
+
+function getAdminGalleryExtensionFromMimeType(mimeType) {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/gif") return "gif";
+  if (mimeType === "image/heic") return "heic";
+  return "jpg";
+}
+
+function sanitizeAdminGalleryFileName(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 48) || "bild";
+}
+
+async function downloadAdminGalleryFiles(files) {
+  for (const file of files) {
+    const objectUrl = URL.createObjectURL(file);
+    const link = document.createElement("a");
+
+    link.href = objectUrl;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+
+    // Kleiner Abstand, damit mobile Browser mehrere Downloads besser verarbeiten.
+    await new Promise(resolve => setTimeout(resolve, 180));
+  }
+}
+
+async function copyTextAdminGallery(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (_) {}
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const ok = document.execCommand("copy");
+    textarea.remove();
+
+    return ok;
+  } catch (_) {
+    return false;
   }
 }
 

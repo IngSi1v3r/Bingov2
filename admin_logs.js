@@ -172,69 +172,14 @@ async function loadActivityLogs({
   limit = 100,
   beforeCreatedAt = null
 } = {}) {
-  let query = supabaseClient
-    .from("activity_logs")
-    .select(`
-      *,
-      player:player_id (
-        id,
-        username,
-        display_name
-      ),
-      admin_player:admin_player_id (
-        id,
-        username,
-        display_name
-      ),
-      game:game_id (
-        id,
-        name
-      ),
-      challenge:challenge_id (
-        id,
-        title,
-        position
-      ),
-      live_challenge:live_challenge_id (
-        id,
-        title
-      )
-    `)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (gameId) {
-    query = query.eq("game_id", gameId);
-  }
-
-  if (playerId) {
-    query = query.eq("player_id", playerId);
-  }
-
-  if (adminPlayerId) {
-    query = query.eq("admin_player_id", adminPlayerId);
-  }
-
-  if (eventType) {
-    if (Array.isArray(eventType)) {
-      query = query.in("event_type", eventType);
-    } else {
-      query = query.eq("event_type", eventType);
-    }
-  }
-
-  if (beforeCreatedAt) {
-    query = query.lt("created_at", beforeCreatedAt);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error("Fehler beim Laden der Activity-Logs:", error);
-    return [];
-  }
-
-  return data || [];
+  return await DataService.logs.loadActivityLogs({
+    gameId,
+    playerId,
+    adminPlayerId,
+    eventType,
+    limit,
+    beforeCreatedAt
+  });
 }
 
 /* ============================================================
@@ -465,13 +410,17 @@ function formatActivityLogMessage(log) {
       return `${playerName} hat ${challengeLabel} gestartet (${gameName})`;
 
     case ACTIVITY_EVENT_TYPES.CHALLENGE_COMPLETED: {
-  const pointsText =
-    log.points_delta !== null && log.points_delta !== undefined
-      ? ` (+${log.points_delta}P)`
-      : "";
+      const pointsText =
+        log.points_delta !== null && log.points_delta !== undefined
+          ? ` (+${log.points_delta}P)`
+          : "";
 
-  return `${playerName} hat ${challengeLabel} abgeschlossen${pointsText} (${gameName})`;
-}
+      const variantText = log?.metadata?.success_variant_label
+        ? `: ${log.metadata.success_variant_label}`
+        : "";
+
+      return `${playerName} hat ${challengeLabel} abgeschlossen${variantText}${pointsText} (${gameName})`;
+    }
 
     case ACTIVITY_EVENT_TYPES.CHALLENGE_FAILED:
       return `${playerName} hat ${challengeLabel} aufgegeben (${gameName})`;
@@ -479,8 +428,20 @@ function formatActivityLogMessage(log) {
     case ACTIVITY_EVENT_TYPES.CHALLENGE_RESET:
       return `${playerName} hat ${challengeLabel} zurückgesetzt (${gameName})`;
 
-    case ACTIVITY_EVENT_TYPES.BINGO_AWARDED:
-      return `${playerName} hat Bingo erreicht (${gameName})`;
+    case ACTIVITY_EVENT_TYPES.BINGO_AWARDED: {
+      const lineLabel = getActivityBingoLineLabel(log);
+
+      const pointsText =
+        log.points_delta !== null && log.points_delta !== undefined
+          ? ` (+${log.points_delta}P)`
+          : "";
+
+      const firstText = log?.metadata?.is_first_for_line
+        ? " als Erster"
+        : "";
+
+      return `${playerName} hat ${lineLabel} Bingo${firstText} erreicht${pointsText} (${gameName})`;
+    }
 
     case ACTIVITY_EVENT_TYPES.POINTS_AWARDED:
       return `${playerName} hat ${log.points_delta >= 0 ? "+" : ""}${log.points_delta || 0} Punkte erhalten (${gameName})`;
@@ -489,6 +450,7 @@ function formatActivityLogMessage(log) {
       if (log.live_challenge_id || log?.metadata?.live_challenge_title) {
         return `${playerName} hat ein Foto für ${liveLabel} hochgeladen (${gameName})`;
       }
+
       return `${playerName} hat ein Foto für ${challengeLabel} hochgeladen (${gameName})`;
 
     case ACTIVITY_EVENT_TYPES.LIVE_CHALLENGE_CREATED:
@@ -510,26 +472,26 @@ function formatActivityLogMessage(log) {
       return `${adminName} hat ${playerName} entsperrt (${gameName})`;
 
     case ACTIVITY_EVENT_TYPES.ADMIN_SCORE_CHANGED: {
-  const oldScore = log?.metadata?.old_score;
-  const newScore = log?.metadata?.new_score;
+      const oldScore = log?.metadata?.old_score;
+      const newScore = log?.metadata?.new_score;
 
-  if (oldScore !== undefined && newScore !== undefined) {
-    return `${adminName} hat den Score von ${playerName} von ${oldScore} auf ${newScore} geändert (${gameName})`;
-  }
+      if (oldScore !== undefined && newScore !== undefined) {
+        return `${adminName} hat den Score von ${playerName} von ${oldScore} auf ${newScore} geändert (${gameName})`;
+      }
 
-  return `${adminName} hat den Score von ${playerName} geändert (${gameName})`;
-}
+      return `${adminName} hat den Score von ${playerName} geändert (${gameName})`;
+    }
 
     case ACTIVITY_EVENT_TYPES.ADMIN_COOLDOWN_CHANGED: {
-  const oldCooldown = log?.metadata?.old_cooldown_seconds;
-  const newCooldown = log?.metadata?.new_cooldown_seconds;
+      const oldCooldown = log?.metadata?.old_cooldown_seconds;
+      const newCooldown = log?.metadata?.new_cooldown_seconds;
 
-  if (oldCooldown !== undefined && newCooldown !== undefined) {
-    return `${adminName} hat den Cooldown von ${playerName} von ${oldCooldown}s auf ${newCooldown}s geändert (${gameName})`;
-  }
+      if (oldCooldown !== undefined && newCooldown !== undefined) {
+        return `${adminName} hat den Cooldown von ${playerName} von ${oldCooldown}s auf ${newCooldown}s geändert (${gameName})`;
+      }
 
-  return `${adminName} hat den Cooldown von ${playerName} geändert (${gameName})`;
-}
+      return `${adminName} hat den Cooldown von ${playerName} geändert (${gameName})`;
+    }
 
     case ACTIVITY_EVENT_TYPES.ADMIN_PLAYER_GAME_RESET:
       return `${adminName} hat den Spielstand von ${playerName} zurückgesetzt (${gameName})`;
@@ -547,36 +509,36 @@ function formatActivityLogMessage(log) {
       return `${adminName} hat ein Spiel dupliziert (${gameName})`;
 
     case ACTIVITY_EVENT_TYPES.ADMIN_GAME_UPDATED:
-  return `${adminName} hat ein Spiel geändert (${gameName})`;
+      return `${adminName} hat ein Spiel geändert (${gameName})`;
 
     case ACTIVITY_EVENT_TYPES.ADMIN_CHALLENGE_UPDATED: {
-  switch (action) {
-    case "admin_mark_completed":
-      return `${adminName} hat für ${playerName} ${challengeLabel} abgeschlossen (${gameName})`;
+      switch (action) {
+        case "admin_mark_completed":
+          return `${adminName} hat für ${playerName} ${challengeLabel} abgeschlossen (${gameName})`;
 
-    case "admin_reset_player_challenge":
-      return `${adminName} hat für ${playerName} ${challengeLabel} aberkannt (${gameName})`;
+        case "admin_reset_player_challenge":
+          return `${adminName} hat für ${playerName} ${challengeLabel} aberkannt (${gameName})`;
 
-    case "admin_set_player_challenge_inactive":
-      return `${adminName} hat für ${playerName} ${challengeLabel} inaktiv gesetzt (${gameName})`;
+        case "admin_set_player_challenge_inactive":
+          return `${adminName} hat für ${playerName} ${challengeLabel} inaktiv gesetzt (${gameName})`;
 
-    case "admin_set_player_challenge_active":
-      return `${adminName} hat für ${playerName} ${challengeLabel} gestartet (${gameName})`;
+        case "admin_set_player_challenge_active":
+          return `${adminName} hat für ${playerName} ${challengeLabel} gestartet (${gameName})`;
 
-    default: {
-      const field = log?.metadata?.field;
-      const oldValue = log?.metadata?.old_value;
-      const newValue = log?.metadata?.new_value;
+        default: {
+          const field = log?.metadata?.field;
+          const oldValue = log?.metadata?.old_value;
+          const newValue = log?.metadata?.new_value;
 
-      if (field) {
-        const fieldLabel = formatActivityFieldLabel(field);
-        return `${adminName} hat bei ${challengeLabel} ${fieldLabel} von ${formatActivityValue(oldValue)} auf ${formatActivityValue(newValue)} geändert (${gameName})`;
+          if (field) {
+            const fieldLabel = formatActivityFieldLabel(field);
+            return `${adminName} hat bei ${challengeLabel} ${fieldLabel} von ${formatActivityValue(oldValue)} auf ${formatActivityValue(newValue)} geändert (${gameName})`;
+          }
+
+          return `${adminName} hat ${challengeLabel} geändert (${gameName})`;
+        }
       }
-
-      return `${adminName} hat ${challengeLabel} geändert (${gameName})`;
     }
-  }
-}
 
     default:
       return getActivityEventLabel(log.event_type);
@@ -956,43 +918,11 @@ async function logAdminChallengeUpdated({
  * ============================================================ */
 
 async function loadAllPlayersForAdminLogs() {
-  if (typeof loadAllPlayersForAdmin === "function") {
-    await loadAllPlayersForAdmin();
-    return;
-  }
-
-  const { data, error } = await supabaseClient
-    .from("players")
-    .select("*")
-    .order("id", { ascending: true });
-
-  if (error) {
-    console.error("Fehler beim Laden aller Spieler für Logs:", error);
-    adminPlayers = [];
-    return;
-  }
-
-  adminPlayers = data || [];
+  adminPlayers = await DataService.players.loadAllSafe();
 }
 
 async function loadAllGamesForAdminLogs() {
-  if (typeof loadAllGamesForAdmin === "function") {
-    await loadAllGamesForAdmin();
-    return;
-  }
-
-  const { data, error } = await supabaseClient
-    .from("games")
-    .select("*")
-    .order("id", { ascending: true });
-
-  if (error) {
-    console.error("Fehler beim Laden aller Spiele für Logs:", error);
-    adminGames = [];
-    return;
-  }
-
-  adminGames = data || [];
+  adminGames = await DataService.games.loadAll();
 }
 
 /* ============================================================
@@ -1400,48 +1330,7 @@ async function refreshAdminLogsListIfNeeded() {
  * für einen Spieler in einem bestimmten Spiel.
  */
 async function loadLastActivityLogForPlayerInGame(playerId, gameId) {
-  if (!playerId || !gameId) return null;
-
-  const { data, error } = await supabaseClient
-    .from("activity_logs")
-    .select(`
-      *,
-      player:player_id (
-        id,
-        username,
-        display_name
-      ),
-      admin_player:admin_player_id (
-        id,
-        username,
-        display_name
-      ),
-      game:game_id (
-        id,
-        name
-      ),
-      challenge:challenge_id (
-        id,
-        title,
-        position
-      ),
-      live_challenge:live_challenge_id (
-        id,
-        title
-      )
-    `)
-    .eq("game_id", gameId)
-    .eq("player_id", playerId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Fehler beim Laden der letzten Aktivität:", error);
-    return null;
-  }
-
-  return data || null;
+  return await DataService.logs.loadLastForPlayerInGame(playerId, gameId);
 }
 
 function formatLastActivityShort(log) {
@@ -1456,13 +1345,17 @@ function formatLastActivityShort(log) {
       return `${challengeLabel} gestartet, ${timeText}`;
 
     case ACTIVITY_EVENT_TYPES.CHALLENGE_COMPLETED: {
-  const pointsText =
-    log.points_delta !== null && log.points_delta !== undefined
-      ? ` (+${log.points_delta}P)`
-      : "";
+      const pointsText =
+        log.points_delta !== null && log.points_delta !== undefined
+          ? ` (+${log.points_delta}P)`
+          : "";
 
-  return `${challengeLabel} abgeschlossen${pointsText}, ${timeText}`;
-}
+      const variantText = log?.metadata?.success_variant_label
+        ? `: ${log.metadata.success_variant_label}`
+        : "";
+
+      return `${challengeLabel} abgeschlossen${variantText}${pointsText}, ${timeText}`;
+    }
 
     case ACTIVITY_EVENT_TYPES.CHALLENGE_FAILED:
       return `${challengeLabel} aufgegeben, ${timeText}`;
@@ -1470,8 +1363,20 @@ function formatLastActivityShort(log) {
     case ACTIVITY_EVENT_TYPES.CHALLENGE_RESET:
       return `${challengeLabel} zurückgesetzt, ${timeText}`;
 
-    case ACTIVITY_EVENT_TYPES.BINGO_AWARDED:
-      return `Bingo erreicht, ${timeText}`;
+    case ACTIVITY_EVENT_TYPES.BINGO_AWARDED: {
+      const lineLabel = getActivityBingoLineLabel(log);
+
+      const pointsText =
+        log.points_delta !== null && log.points_delta !== undefined
+          ? ` (+${log.points_delta}P)`
+          : "";
+
+      const firstText = log?.metadata?.is_first_for_line
+        ? " als Erster"
+        : "";
+
+      return `${lineLabel} Bingo${firstText} erreicht${pointsText}, ${timeText}`;
+    }
 
     case ACTIVITY_EVENT_TYPES.PHOTO_UPLOADED:
       return `Foto für ${challengeLabel} hochgeladen, ${timeText}`;
@@ -1537,8 +1442,14 @@ function formatActivityFieldLabel(field) {
       return "Cooldown";
     case "bingo_bonus_points":
       return "Bingo-Bonus";
+    case "first_bingo_bonus_points":
+      return "First-Bingo-Bonus";
     case "is_active":
       return "Status";
+    case "visibility":
+      return "Sichtbarkeit";
+    case "game_password_hash":
+      return "Spielpasswort";
     case "title":
       return "Namen";
     case "task":
@@ -1549,6 +1460,12 @@ function formatActivityFieldLabel(field) {
       return "Congratulation Text";
     case "points":
       return "Punkte";
+    case "success_variant_1":
+      return "Variante 1";
+    case "success_variant_2":
+      return "Variante 2";
+    case "success_variant_3":
+      return "Variante 3";
     case "requires_photo_proof":
       return "Foto erforderlich";
     case "category_icon":
@@ -1558,3 +1475,20 @@ function formatActivityFieldLabel(field) {
   }
 }
 
+function getActivityBingoLineLabel(log) {
+  const lineKey =
+    log?.metadata?.line_key ??
+    log?.metadata?.line_index ??
+    null;
+
+  const gridSize =
+    log?.metadata?.grid_size ||
+    log?.game?.grid_size ||
+    5;
+
+  if (typeof formatAdminBingoLineName === "function") {
+    return formatAdminBingoLineName(lineKey, gridSize);
+  }
+
+  return `Bingo ${lineKey}`;
+}

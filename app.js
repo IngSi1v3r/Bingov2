@@ -1,3 +1,28 @@
+
+/**
+ * ============================================================
+ * app.js
+ * ============================================================
+ *
+ * Zweck:
+ * Zentrale UI-Datei der normalen Spielerseite.
+ *
+ * Diese Datei kuemmert sich um:
+ * - Grid-Rendering
+ * - Challenge-Modals
+ * - Foto-Upload und Fotoanzeige
+ * - Regeln / Hinweise / Profil
+ * - Leaderboard-Rendering
+ * - Animationen
+ * - Profilgalerie
+ * - Reset- und Loeschaktionen fuer den Spieler
+ *
+ * Reine Ladefunktionen liegen inzwischen in data.js / data_service.js.
+ * Gameplay-Logik liegt in game.js.
+ * Live-Challenge-Logik liegt in live-challenges.js.
+ */
+
+
 // =======================
 // DOM ELEMENTE
 // =======================
@@ -58,7 +83,8 @@ const scoreValue = document.getElementById("scoreValue");
 // =======================
 
 let pendingUploadChallenge = null;
-let pendingUploadType = null; // 🔥 NEU ("normal" | "live")
+let pendingUploadType = null; // "normal" | "live"
+let pendingUploadSuccessVariant = null;
 
 let currentCompletionGallery = [];
 let currentGalleryIndex = 0;
@@ -140,17 +166,41 @@ function openChallengeModal(challenge) {
     </div>
   `;
 
-  modalPoints.textContent = `Punkte: ${challenge.points}`;
+  const isVariableChallenge = isVariablePointsChallenge(challenge);
+  const successVariants = getChallengeSuccessVariants(challenge);
+
+  modalPoints.textContent = isVariableChallenge
+    ? "Punkte: je nach Erfolgsstufe"
+    : `Punkte: ${challenge.points}`;
 
   const hasDetails = challenge.details && challenge.details.trim() !== "";
 
-  modalActions.innerHTML = `
-    ${hasDetails ? `<button id="detailsBtn">Hinweise</button>` : ""}
-    <button id="completeBtn">
-      ${challenge.requiresPhotoProof ? "Foto hochladen" : "Bestanden"}
-    </button>
-    <button id="failBtn">Aufgeben</button>
-  `;
+  if (isVariableChallenge) {
+    modalActions.innerHTML = `
+      ${hasDetails ? `<button id="detailsBtn">Hinweise</button>` : ""}
+      <div class="success-variant-actions">
+        <div class="success-variant-title">Welche Stufe hast du geschafft?</div>
+        ${successVariants.map(variant => `
+          <button
+            type="button"
+            class="success-variant-btn"
+            data-variant-points="${variant.points}"
+          >
+            ${variant.points}P · ${variant.label}
+          </button>
+        `).join("")}
+      </div>
+      <button id="failBtn">Aufgeben</button>
+    `;
+  } else {
+    modalActions.innerHTML = `
+      ${hasDetails ? `<button id="detailsBtn">Hinweise</button>` : ""}
+      <button id="completeBtn">
+        ${challenge.requiresPhotoProof ? "Foto hochladen" : "Bestanden"}
+      </button>
+      <button id="failBtn">Aufgeben</button>
+    `;
+  }
 
   if (hasDetails) {
     document.getElementById("detailsBtn").onclick = () => {
@@ -158,15 +208,33 @@ function openChallengeModal(challenge) {
     };
   }
 
-  document.getElementById("completeBtn").onclick = async () => {
-    if (challenge.requiresPhotoProof) {
-      closeModal();
-      openUploadModal(challenge);
-      return;
-    }
+  if (isVariableChallenge) {
+    modalActions.querySelectorAll(".success-variant-btn").forEach(button => {
+      button.onclick = async () => {
+        const variantPoints = Number(button.dataset.variantPoints);
+        const successVariant = successVariants.find(v => v.points === variantPoints);
+        if (!successVariant) return;
 
-    await completeChallenge(challenge.boardId);
-  };
+        if (challenge.requiresPhotoProof) {
+          closeModal();
+          openUploadModal(challenge, "normal", successVariant);
+          return;
+        }
+
+        await completeChallenge(challenge.boardId, null, successVariant);
+      };
+    });
+  } else {
+    document.getElementById("completeBtn").onclick = async () => {
+      if (challenge.requiresPhotoProof) {
+        closeModal();
+        openUploadModal(challenge);
+        return;
+      }
+
+      await completeChallenge(challenge.boardId);
+    };
+  }
 
   document.getElementById("failBtn").onclick = () => {
     openFailConfirmModal();
@@ -188,11 +256,7 @@ function renderCompletionGallery() {
 
   const entry = currentCompletionGallery[currentGalleryIndex];
 
-  const { data } = supabaseClient.storage
-    .from("proof-photos")
-    .getPublicUrl(entry.proofImagePath);
-
-  const imageUrl = data.publicUrl;
+  const imageUrl = DataService.storage.getProofPhotoPublicUrl(entry.proofImagePath);
 
   galleryContainer.innerHTML = `
     <div class="gallery-wrapper gallery-fade-in">
@@ -283,7 +347,7 @@ async function openCompletedChallengeModal(challenge) {
             class="completion-name ${isClickable ? "clickable" : ""}"
             data-player-id="${entry.playerId}"
           >
-            ${index + 1}. ${entry.display_name || entry.username}${index === 0 ? `<span class="completion-star">⭐</span>` : ""}
+            ${index + 1}. ${entry.display_name || entry.username}${entry.successVariantLabel ? ` – ${entry.successVariantLabel}` : ""}${index === 0 ? `<span class="completion-star">⭐</span>` : ""}
           </div>
           <div class="completion-time">
             ${formatCompletedDateTime(entry.completedAt)}
@@ -307,7 +371,7 @@ if (challenge.successText && challenge.successText.trim() !== "") {
 
 modalTask.innerHTML = `
   <p>${challenge.task}</p>
-  <p><strong>Punkte:</strong> ${challenge.points}</p>
+  <p><strong>Punkte:</strong> ${getChallengePointsDisplay(challenge)}</p>
   ${successHtml}
   ${completionsHtml}
 `;
@@ -400,11 +464,15 @@ function closeDetailsModal() {
 
 
 
-function openUploadModal(challenge, type = "normal") {
+function openUploadModal(challenge, type = "normal", successVariant = null) {
   pendingUploadChallenge = challenge;
   pendingUploadType = type;
+  pendingUploadSuccessVariant = successVariant;
 
-  uploadChallengeTitle.innerHTML = `<strong>Aufgabe:</strong> ${challenge.title}`;
+  uploadChallengeTitle.innerHTML = `
+    <strong>Aufgabe:</strong> ${challenge.title}
+    ${successVariant ? `<br><strong>Stufe:</strong> ${successVariant.points}P · ${successVariant.label}` : ""}
+  `;
   uploadPhotoInput.value = "";
   uploadStatusText.textContent = "";
   doUploadBtn.textContent = "Hochladen";
@@ -419,6 +487,7 @@ function closeUploadModal() {
   uploadOverlay.classList.add("hidden");
   pendingUploadChallenge = null;
   pendingUploadType = null;
+  pendingUploadSuccessVariant = null;
   uploadPhotoInput.value = "";
   uploadStatusText.textContent = "";
   doUploadBtn.textContent = "Hochladen";
@@ -457,7 +526,9 @@ async function openPlayerProfileModal() {
             completedAt: row.completed_at,
             proofImagePath: row.proof_image_path,
             wasFirstSolver: row.was_first_solver,
-            pointsAwarded: row.points_awarded
+            pointsAwarded: row.points_awarded,
+            successVariantLabel: row.success_variant_label || null,
+            successVariantPoints: row.success_variant_points || null
           }
         : null;
     })
@@ -559,8 +630,21 @@ function updateCooldownDisplay() {
 // Animationen
 // =======================
 
-function showBingoAnimation() {
+function showBingoAnimation(points = null, isFirstForLine = false) {
   return new Promise((resolve) => {
+    const titleEl = document.getElementById("bingoBannerTitle");
+    const textEl = document.getElementById("bingoBannerText");
+
+    if (titleEl) {
+      titleEl.textContent = isFirstForLine ? "FIRST BINGO!" : "BINGO!";
+    }
+
+    if (textEl) {
+      textEl.textContent = points !== null
+        ? `+${points} Punkte`
+        : "";
+    }
+
     bingoBanner.classList.remove("hidden");
     bingoBanner.classList.add("show");
 
@@ -795,22 +879,6 @@ async function renderPlayerProfileStats() {
 }
 
 
-async function loadCompletedChallengesForCurrentPlayer(playerId) {
-  const { data, error } = await supabaseClient
-    .from("player_challenges")
-    .select("challenge_id, completed_at, was_first_solver, points_awarded, proof_image_path")
-    .eq("player_id", playerId)
-    .eq("game_id", currentGameId)
-    .eq("status", "completed")
-    .order("completed_at", { ascending: false });
-
-  if (error) {
-    console.error("Fehler beim Laden der abgeschlossenen Aufgaben:", error);
-    return [];
-  }
-
-  return data || [];
-}
 
 function renderPlayerProfileGallery() {
   if (!playerProfileGallery) return;
@@ -822,11 +890,7 @@ function renderPlayerProfileGallery() {
 
   const entry = currentPlayerProfileGallery[currentPlayerProfileGalleryIndex];
 
-  const { data } = supabaseClient.storage
-    .from("proof-photos")
-    .getPublicUrl(entry.proofImagePath);
-
-  const imageUrl = data.publicUrl;
+  const imageUrl = DataService.storage.getProofPhotoPublicUrl(entry.proofImagePath);
 
   playerProfileGallery.innerHTML = `
     <div class="gallery-wrapper gallery-fade-in">
@@ -880,6 +944,7 @@ async function renderPlayerProfileCompletedList() {
 
   const normalRows = await loadCompletedChallengesForCurrentPlayer(currentPlayer.id);
   const liveRows = await loadCompletedLiveChallengesForPlayer(currentPlayer.id);
+  const bingoRows = await loadPlayerBingos(currentPlayer.id);
 
   const combined = [];
 
@@ -892,6 +957,7 @@ async function renderPlayerProfileCompletedList() {
       type: "normal",
       challengeId: row.challenge_id,
       title: challenge.title,
+      successVariantLabel: row.success_variant_label || null,
       completedAt: row.completed_at,
       points: row.points_awarded || 0,
       wasFirstSolver: row.was_first_solver === true,
@@ -912,6 +978,19 @@ async function renderPlayerProfileCompletedList() {
     });
   });
 
+  // Bingos
+bingoRows.forEach(row => {
+  combined.push({
+    type: "bingo",
+    challengeId: null,
+    title: formatBingoLineName(row.line_key),
+    completedAt: row.awarded_at,
+    points: row.bonus_points || 0,
+    wasFirstSolver: isFirstBingoForLine(row),
+    proofImagePath: null
+  });
+});
+
   // Nach Datum sortieren, neueste zuerst
   combined.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
 
@@ -925,7 +1004,12 @@ async function renderPlayerProfileCompletedList() {
 
   combined.forEach((entry, index) => {
     const isClickable = !!entry.proofImagePath;
-    const icon = entry.type === "live" ? `<span class="completion-live">⚡</span>` : "";
+    const icon =
+      entry.type === "live"
+        ? `<span class="completion-live">⚡</span>`
+        : entry.type === "bingo"
+          ? `<span class="completion-live">🏆</span>`
+          : "";
     const number = total - index;
 
     html += `
@@ -935,7 +1019,7 @@ async function renderPlayerProfileCompletedList() {
           data-challenge-id="${entry.challengeId}"
           data-challenge-type="${entry.type}"
         >
-          ${number}. ${entry.title}, ${formatCompletedDateTime(entry.completedAt)}
+          ${number}. ${entry.title}${entry.successVariantLabel ? ` – ${entry.successVariantLabel}` : ""}, ${formatCompletedDateTime(entry.completedAt)}
           ${entry.wasFirstSolver ? `<span class="completion-star">⭐</span>` : ""}
           ${icon}
         </div>
@@ -980,7 +1064,9 @@ async function resetAllCompletedChallengesForPlayer(playerId) {
       completed_at: null,
       was_first_solver: false,
       points_awarded: null,
-      proof_image_path: null
+      proof_image_path: null,
+      success_variant_label: null,
+      success_variant_points: null
     })
     .eq("player_id", playerId)
     .eq("game_id", currentGameId)
@@ -995,20 +1081,6 @@ async function resetAllCompletedChallengesForPlayer(playerId) {
 }
 
 
-async function deleteAllPlayerBingos(playerId) {
-  const { error } = await supabaseClient
-    .from("player_bingos")
-    .delete()
-    .eq("player_id", playerId)
-    .eq("game_id", currentGameId);
-
-  if (error) {
-    console.error("Fehler beim Löschen der Bingos:", error);
-    return false;
-  }
-
-  return true;
-}
 
 async function resetCurrentGameProgress() {
   if (!currentPlayer) return;
@@ -1193,8 +1265,78 @@ async function deleteAllPlayerLiveChallengeViewsForCurrentGame(playerId) {
 // GRID RENDERN
 // =======================
 
+function renderBingoLineIndicators() {
+  const columnContainer = document.getElementById("bingoColumnIndicators");
+  const rowContainer = document.getElementById("bingoRowIndicators");
+  const diagonalTopContainer = document.getElementById("bingoDiagonalTopIndicator");
+  const diagonalBottomContainer = document.getElementById("bingoDiagonalBottomIndicator");
+
+  if (
+    !columnContainer ||
+    !rowContainer ||
+    !diagonalTopContainer ||
+    !diagonalBottomContainer
+  ) return;
+
+  const gridSize = currentGame?.grid_size || 5;
+
+  columnContainer.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+  rowContainer.style.gridTemplateRows = `repeat(${gridSize}, 1fr)`;
+
+  columnContainer.innerHTML = "";
+  rowContainer.innerHTML = "";
+  diagonalTopContainer.innerHTML = "";
+  diagonalBottomContainer.innerHTML = "";
+
+  // Spalten unten
+  for (let col = 0; col < gridSize; col++) {
+    const lineIndex = gridSize + col;
+    columnContainer.appendChild(
+      createBingoLineIndicator(lineIndex, `Spalte ${col + 1}`)
+    );
+  }
+
+  // Reihen rechts
+  for (let row = 0; row < gridSize; row++) {
+    const lineIndex = row;
+    rowContainer.appendChild(
+      createBingoLineIndicator(lineIndex, `Reihe ${row + 1}`)
+    );
+  }
+
+  // Diagonale von rechts oben nach links unten
+  diagonalTopContainer.appendChild(
+    createBingoLineIndicator(gridSize * 2 + 1, "Diagonale ↙")
+  );
+
+  // Diagonale von links oben nach rechts unten
+  diagonalBottomContainer.appendChild(
+    createBingoLineIndicator(gridSize * 2, "Diagonale ↘")
+  );
+}
+
+function createBingoLineIndicator(lineIndex, title) {
+  const info = getBingoLineDisplayInfo(lineIndex);
+
+  const el = document.createElement("div");
+  el.className = "bingo-line-indicator";
+  el.title = title;
+
+  if (info.ownCompleted) {
+    el.classList.add("own");
+  }
+
+  el.innerHTML = `
+    <span class="bingo-line-points">${info.availablePoints}P</span>
+    <span class="bingo-line-count">(${info.count})</span>
+  `;
+
+  return el;
+}
+
 function renderGrid(updateScore = true) {
   grid.innerHTML = "";
+  renderBingoLineIndicators();
 
   const gridSize = currentGame?.grid_size || 5;
   grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
@@ -1279,7 +1421,7 @@ function renderGrid(updateScore = true) {
       ${isChallengeDisabled && !isCompleted ? `<div class="cell-lock-icon">🚫</div>` : ""}
 
       <div class="cell-title">${challenge.title}</div>
-      <div class="cell-points">${challenge.points}P</div>
+      <div class="cell-points">${getChallengePointsDisplay(challenge)}</div>
       <div class="cell-solved-count">${challenge.solvedCount}</div>
     `;
 
@@ -1316,11 +1458,7 @@ function renderGrid(updateScore = true) {
 
 
 function openPhotoViewer(username, imagePath) {
-  const { data } = supabaseClient.storage
-    .from("proof-photos")
-    .getPublicUrl(imagePath);
-
-  const imageUrl = data.publicUrl;
+  const imageUrl = DataService.storage.getProofPhotoPublicUrl(imagePath);
 
   photoViewerTitle.textContent = `Beweisfoto von ${username}`;
 
@@ -1471,6 +1609,7 @@ confirmFailBtn.addEventListener("click", async () => {
 cancelUploadBtn.addEventListener("click", () => {
   const challenge = pendingUploadChallenge;
   const uploadType = pendingUploadType;
+  const successVariant = pendingUploadSuccessVariant;
 
   closeUploadModal();
 
@@ -1502,6 +1641,7 @@ doUploadBtn.addEventListener("click", async () => {
 
   const challenge = pendingUploadChallenge;
   const uploadType = pendingUploadType;
+  const successVariant = pendingUploadSuccessVariant;
 
   if (!challenge || !currentPlayer) return;
 
@@ -1543,7 +1683,7 @@ doUploadBtn.addEventListener("click", async () => {
       await handleCompleteLiveChallenge(latest, fileName);
     } else {
       closeUploadModal();
-      await completeChallenge(challenge.boardId, fileName);
+      await completeChallenge(challenge.boardId, fileName, successVariant);
     }
 
   } catch (error) {

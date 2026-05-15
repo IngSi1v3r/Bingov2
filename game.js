@@ -1,3 +1,26 @@
+/**
+ * ============================================================
+ * game.js
+ * ============================================================
+ *
+ * Zweck:
+ * Zentrale Spiellogik der normalen Spielerseite.
+ *
+ * Diese Datei kuemmert sich um:
+ * - lokalen Spielzustand eines Spielers
+ * - Cooldown-Logik
+ * - Bingo-Linien und Bingo-Bonus
+ * - Synchronisation des lokalen States mit der Datenbank
+ * - Aktivieren, Abschliessen, Aufgeben und Zuruecksetzen von Challenges
+ * - Punktevergabe inklusive First Solver
+ * - lokale UI-Folgeaktionen nach Spielaktionen
+ *
+ * Reine Ladefunktionen liegen inzwischen in data.js / data_service.js.
+ * Schreibfunktionen werden indirekt ueber data.js genutzt.
+ */
+
+
+
 // =======================
 // GAME STATE
 // =======================
@@ -417,7 +440,9 @@ async function activateChallenge(boardId) {
     status: "active",
     completed_at: null,
     was_first_solver: false,
-    points_awarded: null
+    points_awarded: null,
+    success_variant_label: null,
+    success_variant_points: null
   });
 
   if (!updatedPlayerChallenge) {
@@ -438,7 +463,7 @@ async function activateChallenge(boardId) {
     metadata: {
       challenge_title: challenge.title || null,
       position: challenge.boardId,
-      points: challenge.points || 0
+      points: challenge.points || null
     }
   });
 
@@ -451,11 +476,25 @@ async function activateChallenge(boardId) {
 // SPIELLOGIK
 // =======================
 
-async function completeChallenge(boardId, proofImagePath = null) {
+async function completeChallenge(boardId, proofImagePath = null, successVariant = null) {
   if (!currentPlayer) return;
 
   const challenge = getChallengeByBoardId(boardId);
   if (!challenge) return;
+
+  const variableChallenge = isVariablePointsChallenge(challenge);
+
+  if (variableChallenge && !successVariant) {
+    alert("Bitte zuerst eine Erfolgsstufe auswählen.");
+    return;
+  }
+
+  const basePoints = successVariant?.points ?? challenge.points;
+
+  if (!Number.isFinite(Number(basePoints))) {
+    alert("Für diese Aufgabe sind keine Punkte definiert.");
+    return;
+  }
 
   const playerId = currentPlayer.id;
 
@@ -477,7 +516,7 @@ async function completeChallenge(boardId, proofImagePath = null) {
   }
 
   const isFirstSolver = count === 0;
-  const awardedPoints = isFirstSolver ? challenge.points * 2 : challenge.points;
+  const awardedPoints = isFirstSolver ? Number(basePoints) * 2 : Number(basePoints);
 
   const wasAlreadyCompleted = gameState.completed.includes(boardId);
 
@@ -507,6 +546,32 @@ async function completeChallenge(boardId, proofImagePath = null) {
   const newBingoIndexes = bingoResult.newLineIndexes;
   nextScore = bingoResult.score;
 
+  const bingoBonus = currentGame?.bingo_bonus_points ?? 5;
+  const firstBingoBonus = getFirstBingoBonusPoints();
+
+  const newBingoAwards = [];
+
+  for (const lineIndex of newBingoIndexes) {
+    const lineKey = String(lineIndex);
+    const alreadyClaimedByAnyone = await hasAnyPlayerClaimedBingoLine(lineKey);
+
+    const isFirstForLine = !alreadyClaimedByAnyone;
+    const awardedBingoPoints = isFirstForLine
+      ? bingoBonus + firstBingoBonus
+      : bingoBonus;
+
+    nextScore += awardedBingoPoints;
+
+    newBingoAwards.push({
+      lineIndex,
+      lineKey,
+      isFirstForLine,
+      awardedBingoPoints
+    });
+  }
+
+  await loadGlobalBingoLineStats();
+
   const updatedGameState = await updatePlayerGameState(playerId, {
     score: nextScore,
     active_challenge_id: null,
@@ -525,7 +590,9 @@ async function completeChallenge(boardId, proofImagePath = null) {
   completed_at: completedAt,
   was_first_solver: isFirstSolver,
   points_awarded: awardedPoints,
-  proof_image_path: proofImagePath
+  proof_image_path: proofImagePath,
+  success_variant_label: successVariant?.label || null,
+  success_variant_points: successVariant?.points || null
 });
 
 if (proofImagePath) {
@@ -565,7 +632,9 @@ if (proofImagePath) {
       metadata: {
         challenge_title: challenge.title || null,
         position: challenge.boardId,
-        proof_image_path: proofImagePath
+        proof_image_path: proofImagePath,
+        success_variant_label: successVariant?.label || null,
+        success_variant_points: successVariant?.points || null
       }
     });
   }
@@ -580,33 +649,43 @@ if (proofImagePath) {
       challenge_title: challenge.title || null,
       position: challenge.boardId,
       was_first_solver: isFirstSolver,
-      proof_image_path: proofImagePath || null
+      proof_image_path: proofImagePath || null,
+      success_variant_label: successVariant?.label || null,
+      success_variant_points: successVariant?.points || null,
+      base_points: Number(basePoints)
     }
   });
 
-  const bingoBonus = currentGame?.bingo_bonus_points ?? 5;
+ 
 
-  for (const lineIndex of newBingoIndexes) {
-    await logBingoAwarded({
-      gameId: currentGameId,
-      playerId: playerId,
-      pointsDelta: bingoBonus,
-      metadata: {
-        line_index: lineIndex,
-        challenge_title: challenge.title || null,
-        trigger_position: challenge.boardId
-      }
-    });
-  }
+  for (const award of newBingoAwards) {
+  await logBingoAwarded({
+    gameId: currentGameId,
+    playerId: playerId,
+    pointsDelta: award.awardedBingoPoints,
+    metadata: {
+      line_index: award.lineIndex,
+      line_key: award.lineKey,
+      is_first_for_line: award.isFirstForLine,
+      normal_bingo_bonus: bingoBonus,
+      first_bingo_bonus: award.isFirstForLine ? firstBingoBonus : 0,
+      challenge_title: challenge.title || null,
+      trigger_position: challenge.boardId
+    }
+  });
+}
 } catch (error) {
   console.error("Fehler beim Schreiben der Activity-Logs:", error);
 }
 
-    const bingoBonus = currentGame?.bingo_bonus_points ?? 5;
 
-  for (const lineIndex of newBingoIndexes) {
-    await insertPlayerBingo(playerId, String(lineIndex), bingoBonus);
-  }
+  for (const award of newBingoAwards) {
+  await insertPlayerBingo(
+    playerId,
+    award.lineKey,
+    award.awardedBingoPoints
+  );
+}
 
   await loadGlobalChallengeStats();
 await renderLeaderboard();
@@ -620,9 +699,18 @@ renderGrid(false);
     await showFirstSolverAnimation();
   }
 
-  if (newBingoIndexes.length > 0) {
-    await showBingoAnimation();
-  }
+  if (newBingoAwards.length > 0) {
+  const totalBingoPoints = newBingoAwards.reduce(
+    (sum, award) => sum + award.awardedBingoPoints,
+    0
+  );
+
+  const hasFirstBingo = newBingoAwards.some(
+    award => award.isFirstForLine
+  );
+
+  await showBingoAnimation(totalBingoPoints, hasFirstBingo);
+}
 
  await showPointsPopup(boardId, awardedPoints);
 
@@ -663,7 +751,9 @@ async function failChallenge() {
       status: "hidden",
       completed_at: null,
       was_first_solver: false,
-      points_awarded: null
+      points_awarded: null,
+      success_variant_label: null,
+      success_variant_points: null
     });
 
     if (!updatedPlayerChallenge) {
@@ -746,6 +836,7 @@ async function resetCompletedChallenge(boardId) {
   const challenge = getChallengeByBoardId(boardId);
   if (!challenge) return;
 
+
   const playerId = currentPlayer.id;
 
   const isCompleted = gameState.completed.includes(boardId);
@@ -763,7 +854,9 @@ async function resetCompletedChallenge(boardId) {
     completed_at: null,
     was_first_solver: false,
     points_awarded: null,
-    proof_image_path: null
+    proof_image_path: null,
+    success_variant_label: null,
+    success_variant_points: null
   });
 
   if (!resetRow) {

@@ -41,7 +41,8 @@
  * - Diese Datei nutzt globale Collections und Helper aus admin.js
  *   (adminGames, adminPlayers, adminPlayerStates, adminPlayerChallenges,
  *    adminChallenges, adminCurrentGame, adminCurrentGameId, ...)
- * - Diese Datei greift direkt auf Supabase zu.
+ * - Reine Ladefunktionen laufen ueber data_service.js.
+ * - Schreib-/Bearbeitungsaktionen bleiben in dieser Datei.
  * - Die Datei ist absichtlich in logisch getrennte Abschnitte gegliedert.
  */
 
@@ -80,14 +81,9 @@ async function initializeAdminGamesTab() {
   ensureAdminTextEditModal();
   ensureAdminCreateGameModal();
   ensureAdminChallengeSetupModal();
+  ensureAdminGamePasswordModal();
 
-  await Promise.all([
-    loadAllPlayersForAdmin(),
-    loadAllGamesForAdmin(),
-    loadAllPlayerStatesForAdmin(),
-    loadAllPlayerChallengesForAdmin(),
-    loadAllChallengesForAdminDetailed()
-  ]);
+  await loadAdminGamesTabData();
 
   if (!selectedAdminGameDetailsId) {
     selectedAdminGameDetailsId = adminCurrentGameId || adminGames[0]?.id || null;
@@ -102,6 +98,24 @@ async function initializeAdminGamesTab() {
 
   const selectedGame = adminGames.find(game => game.id === selectedAdminGameDetailsId) || null;
   await renderAdminGameDetails(selectedGame);
+}
+
+/**
+ * Laedt alle Daten, die der Games-Tab braucht.
+ *
+ * Die eigentlichen Supabase-Reads liegen zentral in data_service.js.
+ * Die globalen Collections bleiben vorerst erhalten, damit die bestehenden
+ * Render- und Helperfunktionen unveraendert weiterarbeiten.
+ */
+async function loadAdminGamesTabData() {
+  const bundle = await DataService.bundles.loadAdminGamesTab();
+
+  adminPlayers = bundle.players || [];
+  adminGames = bundle.games || [];
+  adminPlayerStates = bundle.playerStates || [];
+  adminPlayerChallenges = bundle.playerChallenges || [];
+  adminChallenges = bundle.challenges || [];
+  adminPlayerBingos = bundle.playerBingos || [];
 }
 
 /* ============================================================
@@ -154,7 +168,23 @@ function ensureAdminGamesTabLayout() {
 
         <div id="adminGameGridWrapper" class="admin-mini-grid-wrapper hidden">
           <h3 class="admin-section-title">Grid</h3>
-          <div id="adminGameGrid" class="admin-game-grid"></div>
+
+          <div class="admin-bingo-board-shell">
+            <div class="admin-bingo-board-top">
+              <div></div>
+              <div id="adminBingoDiagonalTopIndicator" class="admin-bingo-diagonal-single"></div>
+            </div>
+
+            <div class="admin-bingo-board-main">
+              <div id="adminGameGrid" class="admin-game-grid"></div>
+              <div id="adminBingoRowIndicators" class="admin-bingo-row-indicators"></div>
+            </div>
+
+            <div class="admin-bingo-board-bottom">
+              <div id="adminBingoColumnIndicators" class="admin-bingo-column-indicators"></div>
+              <div id="adminBingoDiagonalBottomIndicator" class="admin-bingo-diagonal-single"></div>
+            </div>
+          </div>
         </div>
 
         <div id="adminGameLeaderboardWrapper" class="admin-completed-wrapper hidden">
@@ -220,31 +250,7 @@ function ensureAdminGamesTabLayout() {
  * Diese Funktion überschreibt adminChallenges global.
  */
 async function loadAllChallengesForAdminDetailed() {
-  const { data, error } = await supabaseClient
-    .from("challenges")
-    .select(`
-      id,
-      game_id,
-      position,
-      title,
-      task,
-      points,
-      is_active,
-      category_icon,
-      details,
-      success_text,
-      requires_photo_proof
-    `)
-    .order("game_id", { ascending: true })
-    .order("position", { ascending: true });
-
-  if (error) {
-    console.error("Fehler beim Laden der vollständigen Challenges:", error);
-    adminChallenges = [];
-    return;
-  }
-
-  adminChallenges = data || [];
+  adminChallenges = await DataService.challenges.loadAllDetailed();
 }
 
 /** Liefert alle player_game_state Einträge für ein Spiel */
@@ -344,6 +350,34 @@ function getAdminPlayerName(playerId) {
   return player?.display_name || player?.username || `Spieler ${playerId}`;
 }
 
+function getAdminChallengeSuccessVariants(challenge) {
+  if (!challenge) return [];
+
+  return [
+    { points: 1, label: challenge.success_variant_1 || "" },
+    { points: 2, label: challenge.success_variant_2 || "" },
+    { points: 3, label: challenge.success_variant_3 || "" }
+  ].filter(variant => String(variant.label || "").trim() !== "");
+}
+
+function isAdminVariablePointsChallenge(challenge) {
+  return (
+    !!challenge &&
+    (challenge.points === null || challenge.points === undefined) &&
+    getAdminChallengeSuccessVariants(challenge).length > 0
+  );
+}
+
+function getAdminChallengePointsDisplay(challenge) {
+  if (isAdminVariablePointsChallenge(challenge)) return "?";
+  return `${challenge?.points ?? 0}P`;
+}
+
+function getAdminChallengePointsValueDisplay(challenge) {
+  if (isAdminVariablePointsChallenge(challenge)) return "Variable Punkte (?)";
+  return String(challenge?.points ?? 0);
+}
+
 /**
  * Prüft, ob eine Challenge als unvollständig gilt.
  * Aktuell Pflichtfelder:
@@ -356,9 +390,10 @@ function isAdminChallengeIncomplete(challenge) {
 
   const hasTitle = !!String(challenge.title || "").trim();
   const hasTask = !!String(challenge.task || "").trim();
-  const hasPoints = challenge.points !== null && challenge.points !== undefined && String(challenge.points) !== "";
+  const hasFixedPoints = challenge.points !== null && challenge.points !== undefined && String(challenge.points) !== "";
+  const hasVariablePoints = isAdminVariablePointsChallenge(challenge);
 
-  return !(hasTitle && hasTask && hasPoints);
+  return !(hasTitle && hasTask && (hasFixedPoints || hasVariablePoints));
 }
 
 /**
@@ -437,9 +472,20 @@ function renderAdminGamesList() {
           <div class="admin-list-meta">ID ${game.id}</div>
 
           <div class="admin-status-row">
-            ${game.is_active ? `<span class="admin-badge ingame">Aktiv</span>` : `<span class="admin-badge blocked">Inaktiv</span>`}
-            ${isCurrentAdminGame ? `<span class="admin-badge cooldown">Ausgewählt</span>` : ""}
-          </div>
+              ${game.is_active ? `<span class="admin-badge ingame">Aktiv</span>` : `<span class="admin-badge blocked">Inaktiv</span>`}
+
+              ${(game.visibility || "public") === "private"
+                ? `<span class="admin-badge blocked">Privat</span>`
+                : `<span class="admin-badge ingame">Öffentlich</span>`
+              }
+
+              ${game.game_password_hash
+                ? `<span class="admin-badge cooldown">Gesperrt</span>`
+                : `<span class="admin-badge ingame">Offen</span>`
+              }
+
+              ${isCurrentAdminGame ? `<span class="admin-badge cooldown">Ausgewählt</span>` : ""}
+            </div>
 
           <div class="admin-list-subinfo">
             <div><strong>Grid:</strong> ${game.grid_size || 5}x${game.grid_size || 5}</div>
@@ -492,6 +538,7 @@ async function renderAdminGameDetails(game) {
     if (deleteWrapper) deleteWrapper.classList.add("hidden");
     if (gridWrapper) gridWrapper.classList.add("hidden");
     if (leaderboardWrapper) leaderboardWrapper.classList.add("hidden");
+
     return;
   }
 
@@ -532,6 +579,28 @@ async function renderAdminGameDetails(game) {
       </div>
 
       <div class="admin-detail-card">
+        <div class="admin-detail-label">Sichtbarkeit</div>
+        <div
+          id="adminEditGameVisibilityBtn"
+          class="admin-detail-value clickable"
+          title="Zum Bearbeiten klicken"
+        >
+          ${getAdminGameVisibilityLabel(game.visibility || "public")}
+        </div>
+      </div>
+
+      <div class="admin-detail-card">
+        <div class="admin-detail-label">Spielpasswort</div>
+        <div
+          id="adminEditGamePasswordBtn"
+          class="admin-detail-value clickable ${game.game_password_hash ? "" : "muted"}"
+          title="Zum Bearbeiten klicken"
+        >
+          ${game.game_password_hash ? "Gesetzt" : "Nicht gesetzt"}
+        </div>
+      </div>
+
+      <div class="admin-detail-card">
         <div class="admin-detail-label">Cooldown</div>
         <div
           id="adminEditGameCooldownBtn"
@@ -550,6 +619,17 @@ async function renderAdminGameDetails(game) {
           title="Zum Bearbeiten klicken"
         >
           ${game.bingo_bonus_points ?? 0} P
+        </div>
+      </div>
+
+      <div class="admin-detail-card">
+        <div class="admin-detail-label">First-Bingo-Bonus</div>
+        <div
+          id="adminEditGameFirstBingoBtn"
+          class="admin-detail-value clickable"
+          title="Zum Bearbeiten klicken"
+        >
+          ${game.first_bingo_bonus_points ?? 3} P
         </div>
       </div>
 
@@ -593,7 +673,10 @@ async function renderAdminGameDetails(game) {
   const editNameBtn = document.getElementById("adminEditGameNameBtn");
   const editCooldownBtn = document.getElementById("adminEditGameCooldownBtn");
   const editBingoBtn = document.getElementById("adminEditGameBingoBtn");
+  const editFirstBingoBtn = document.getElementById("adminEditGameFirstBingoBtn");
   const toggleActiveBtn = document.getElementById("adminToggleGameActiveBtn");
+  const editVisibilityBtn = document.getElementById("adminEditGameVisibilityBtn");
+  const editPasswordBtn = document.getElementById("adminEditGamePasswordBtn");
 
   if (editNameBtn) {
     editNameBtn.addEventListener("click", async () => {
@@ -613,9 +696,27 @@ async function renderAdminGameDetails(game) {
     });
   }
 
+  if (editFirstBingoBtn) {
+    editFirstBingoBtn.addEventListener("click", async () => {
+      await handleAdminEditGameFirstBingoBonus(game);
+    });
+  }
+
   if (toggleActiveBtn) {
     toggleActiveBtn.addEventListener("click", async () => {
       await handleAdminToggleGameActive(game);
+    });
+  }
+
+  if (editVisibilityBtn) {
+    editVisibilityBtn.addEventListener("click", async () => {
+      await handleAdminEditGameVisibility(game);
+    });
+  }
+
+  if (editPasswordBtn) {
+    editPasswordBtn.addEventListener("click", async () => {
+      await openAdminGamePasswordModal(game);
     });
   }
 
@@ -650,6 +751,49 @@ async function updateAdminGameFields(gameId, updates) {
   }
 
   return data;
+}
+
+function getAdminGameVisibilityLabel(visibility) {
+  if (visibility === "private") return "Privat";
+  return "Öffentlich";
+}
+
+async function handleAdminEditGameVisibility(game) {
+  if (!game) return;
+
+  const current = game.visibility || "public";
+  const nextValue = current === "private" ? "public" : "private";
+
+  const confirmed = confirm(
+    `"${game.name}" wirklich auf ${nextValue === "private" ? "Privat" : "Öffentlich"} setzen?`
+  );
+
+  if (!confirmed) return;
+
+  const updated = await updateAdminGameFields(game.id, {
+    visibility: nextValue
+  });
+
+  if (!updated) return;
+
+  await logAdminGameUpdated({
+    gameId: game.id,
+    adminPlayerId: adminPlayer?.id || null,
+    metadata: {
+      admin_name: adminPlayer?.display_name || adminPlayer?.username || null,
+      game_name: updated.name || game.name || null,
+      field: "visibility",
+      old_value: current,
+      new_value: nextValue
+    }
+  });
+
+  if (adminCurrentGameId === game.id) {
+    adminCurrentGame = updated;
+    updateAdminCurrentGameDisplay();
+  }
+
+  await initializeAdminGamesTab();
 }
 
 /** Bearbeitet den Spielnamen */
@@ -775,6 +919,51 @@ async function handleAdminEditGameBingoBonus(game) {
   await initializeAdminGamesTab();
 }
 
+async function handleAdminEditGameFirstBingoBonus(game) {
+  if (!game) return;
+
+  const oldBonus = game.first_bingo_bonus_points ?? 3;
+
+  const input = prompt(
+    `First-Bingo-Bonus in Punkten für "${game.name}" eingeben:`,
+    String(oldBonus)
+  );
+
+  if (input === null) return;
+
+  const value = Number(input);
+
+  if (!Number.isFinite(value) || value < 0) {
+    alert("Ungültiger First-Bingo-Bonus.");
+    return;
+  }
+
+  const updated = await updateAdminGameFields(game.id, {
+    first_bingo_bonus_points: value
+  });
+
+  if (!updated) return;
+
+  if (adminCurrentGameId === game.id) {
+    adminCurrentGame = updated;
+    updateAdminCurrentGameDisplay();
+  }
+
+  await logAdminGameUpdated({
+    gameId: game.id,
+    adminPlayerId: adminPlayer?.id || null,
+    metadata: {
+      admin_name: adminPlayer?.display_name || adminPlayer?.username || null,
+      game_name: updated.name || game.name || null,
+      field: "first_bingo_bonus_points",
+      old_value: oldBonus,
+      new_value: value
+    }
+  });
+
+  await initializeAdminGamesTab();
+}
+
 /** Schaltet das Spiel aktiv/inaktiv */
 async function handleAdminToggleGameActive(game) {
   if (!game) return;
@@ -824,6 +1013,7 @@ function renderAdminGameGrid(game) {
   if (!gridEl || !game) return;
 
   const gridSize = game.grid_size || 5;
+  renderAdminBingoLineIndicators(game);
   const expectedCount = gridSize * gridSize;
 
   const challenges = getAdminGameChallenges(game.id);
@@ -866,7 +1056,7 @@ function renderAdminGameGrid(game) {
       ${isIncomplete ? `<div class="admin-game-grid-warning">!</div>` : ""}
 
       <div class="admin-game-grid-title">${challenge.title || `Feld ${position}`}</div>
-      <div class="admin-game-grid-points">${challenge.points || 0}P</div>
+      <div class="admin-game-grid-points">${getAdminChallengePointsDisplay(challenge)}</div>
       <div class="admin-game-grid-count">${challengeStats.solvedCount}</div>
     `;
 
@@ -878,6 +1068,226 @@ function renderAdminGameGrid(game) {
     gridEl.appendChild(cell);
   }
 }
+
+/* ============================================================
+ * BINGO INFORMATIONEN
+ * ============================================================ */
+
+function formatAdminBingoLineName(lineKey, gridSize = 5) {
+  const lineIndex = Number(lineKey);
+
+  if (!Number.isInteger(lineIndex)) return `Bingo ${lineKey}`;
+
+  if (lineIndex < gridSize) {
+    return `Reihe ${lineIndex + 1}`;
+  }
+
+  if (lineIndex < gridSize * 2) {
+    return `Spalte ${lineIndex - gridSize + 1}`;
+  }
+
+  if (lineIndex === gridSize * 2) return "Diagonale ↘";
+  if (lineIndex === gridSize * 2 + 1) return "Diagonale ↙";
+
+  return `Bingo ${lineIndex}`;
+}
+
+function getAdminGameBingoRows(gameId) {
+  return adminPlayerBingos
+    .filter(row => Number(row.game_id) === Number(gameId))
+    .sort((a, b) => new Date(a.awarded_at) - new Date(b.awarded_at));
+}
+
+function renderAdminGameBingoOverview(game) {
+  const wrapper = document.getElementById("adminGameBingosWrapper");
+  const listEl = document.getElementById("adminGameBingosList");
+
+  if (!wrapper || !listEl || !game) return;
+
+  const gridSize = game.grid_size || 5;
+  const rows = getAdminGameBingoRows(game.id);
+
+  if (!rows.length) {
+    wrapper.classList.remove("hidden");
+    listEl.innerHTML = `<p class="admin-details-empty">Noch keine Bingos erreicht.</p>`;
+    return;
+  }
+
+  let html = `<div class="admin-completion-list">`;
+
+  rows.forEach(row => {
+    const playerName = getAdminPlayerName(row.player_id);
+    const lineName = formatAdminBingoLineName(row.line_key, gridSize);
+
+    const firstRowForLine = rows.find(
+      r => String(r.line_key) === String(row.line_key)
+    );
+
+    const isFirstForLine =
+      firstRowForLine && Number(firstRowForLine.id) === Number(row.id);
+
+    html += `
+      <div class="admin-completion-row">
+        <div class="admin-completion-left">
+          <div class="admin-completion-name">
+            ${lineName} Bingo
+            ${isFirstForLine ? `<span class="admin-completion-star">⭐</span>` : ""}
+          </div>
+          <div class="admin-completion-meta">
+            ${playerName} · ${formatAdminDateTime(row.awarded_at)}
+          </div>
+        </div>
+
+        <div class="admin-completion-right">
+          <div class="admin-completion-points">${row.bonus_points || 0}P</div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+
+  listEl.innerHTML = html;
+  wrapper.classList.remove("hidden");
+}
+
+function renderAdminBingoLineIndicators(game) {
+  const columnContainer = document.getElementById("adminBingoColumnIndicators");
+  const rowContainer = document.getElementById("adminBingoRowIndicators");
+  const diagonalTopContainer = document.getElementById("adminBingoDiagonalTopIndicator");
+  const diagonalBottomContainer = document.getElementById("adminBingoDiagonalBottomIndicator");
+
+  if (
+    !game ||
+    !columnContainer ||
+    !rowContainer ||
+    !diagonalTopContainer ||
+    !diagonalBottomContainer
+  ) return;
+
+  const gridSize = game.grid_size || 5;
+
+  columnContainer.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+  rowContainer.style.gridTemplateRows = `repeat(${gridSize}, 1fr)`;
+
+  columnContainer.innerHTML = "";
+  rowContainer.innerHTML = "";
+  diagonalTopContainer.innerHTML = "";
+  diagonalBottomContainer.innerHTML = "";
+
+  // Spalten unten
+  for (let col = 0; col < gridSize; col++) {
+    const lineIndex = gridSize + col;
+    columnContainer.appendChild(
+      createAdminBingoLineIndicator(game, lineIndex, `Spalte ${col + 1}`)
+    );
+  }
+
+  // Reihen rechts
+  for (let row = 0; row < gridSize; row++) {
+    const lineIndex = row;
+    rowContainer.appendChild(
+      createAdminBingoLineIndicator(game, lineIndex, `Reihe ${row + 1}`)
+    );
+  }
+
+  // Diagonale rechts oben nach links unten
+  diagonalTopContainer.appendChild(
+    createAdminBingoLineIndicator(game, gridSize * 2 + 1, "Diagonale ↙")
+  );
+
+  // Diagonale links oben nach rechts unten
+  diagonalBottomContainer.appendChild(
+    createAdminBingoLineIndicator(game, gridSize * 2, "Diagonale ↘")
+  );
+}
+
+function ensureAdminBingoLineModal() {
+  if (document.getElementById("adminBingoLineOverlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "adminBingoLineOverlay";
+  overlay.className = "modal-overlay hidden";
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <button id="closeAdminBingoLineBtn" class="modal-close-btn" type="button">×</button>
+      <h2 id="adminBingoLineTitle">Bingo</h2>
+
+      <div id="adminBingoLineContent" class="rules-content">
+        <p>Lade Bingo-Details...</p>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("closeAdminBingoLineBtn")
+    ?.addEventListener("click", closeAdminBingoLineModal);
+}
+
+function closeAdminBingoLineModal() {
+  document.getElementById("adminBingoLineOverlay")?.classList.add("hidden");
+}
+
+function openAdminBingoLineDetails(game, lineIndex, title) {
+  ensureAdminBingoLineModal();
+
+  const overlay = document.getElementById("adminBingoLineOverlay");
+  const titleEl = document.getElementById("adminBingoLineTitle");
+  const contentEl = document.getElementById("adminBingoLineContent");
+
+  if (!overlay || !titleEl || !contentEl || !game) return;
+
+  const rows = adminPlayerBingos
+    .filter(row =>
+      Number(row.game_id) === Number(game.id) &&
+      String(row.line_key) === String(lineIndex)
+    )
+    .sort((a, b) => new Date(a.awarded_at) - new Date(b.awarded_at));
+
+  titleEl.textContent = `${title} Bingo`;
+
+  if (!rows.length) {
+    contentEl.innerHTML = `<p class="admin-details-empty">Dieses Bingo wurde noch nicht erreicht.</p>`;
+    overlay.classList.remove("hidden");
+    return;
+  }
+
+  let html = `<div class="admin-completion-list">`;
+
+  rows.forEach((row, index) => {
+    const playerName = getAdminPlayerName(row.player_id);
+    const isFirst = index === 0;
+
+    html += `
+      <div class="admin-completion-row">
+        <div class="admin-completion-left">
+          <div class="admin-completion-name">
+            ${index + 1}. ${playerName}
+            ${isFirst ? `<span class="admin-completion-star">⭐</span>` : ""}
+          </div>
+
+          <div class="admin-completion-meta">
+            ${formatAdminDateTime(row.awarded_at)}
+          </div>
+        </div>
+
+        <div class="admin-completion-right">
+          <div class="admin-completion-points">
+            ${row.bonus_points || 0}P
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  contentEl.innerHTML = html;
+
+  overlay.classList.remove("hidden");
+}
+
 
 /* ============================================================
  * CHALLENGE-DETAILMODAL IM GAMES-TAB
@@ -926,6 +1336,150 @@ function ensureAdminGameChallengeModal() {
     closeBtn.addEventListener("click", () => {
       closeAdminGameChallengeModal();
     });
+  }
+}
+
+let adminGamePasswordContext = null;
+let adminGamePasswordAdminPassword = "";
+
+function ensureAdminGamePasswordModal() {
+  if (document.getElementById("adminGamePasswordOverlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "adminGamePasswordOverlay";
+  overlay.className = "modal-overlay hidden";
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <button id="closeAdminGamePasswordBtn" class="modal-close-btn" type="button">×</button>
+
+      <h2>Spielpasswort ändern</h2>
+
+      <div class="rules-content">
+        <p id="adminGamePasswordInfo" class="admin-details-empty">
+          Leer speichern entfernt das Spielpasswort.
+        </p>
+
+        <div class="admin-form-group">
+          <label for="adminGamePasswordInput"><strong>Neues Spielpasswort</strong></label>
+          <input id="adminGamePasswordInput" type="password" placeholder="Leer = Passwort entfernen" />
+        </div>
+
+        <div class="admin-form-group">
+          <label for="adminGamePasswordRepeatInput"><strong>Wiederholen</strong></label>
+          <input id="adminGamePasswordRepeatInput" type="password" placeholder="Wiederholen" />
+        </div>
+
+        <p id="adminGamePasswordStatus" class="admin-details-empty"></p>
+      </div>
+
+      <div class="modal-actions">
+        <button id="cancelAdminGamePasswordBtn" type="button" class="secondary-btn">Abbrechen</button>
+        <button id="saveAdminGamePasswordBtn" type="button">Speichern</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("closeAdminGamePasswordBtn")?.addEventListener("click", closeAdminGamePasswordModal);
+  document.getElementById("cancelAdminGamePasswordBtn")?.addEventListener("click", closeAdminGamePasswordModal);
+  document.getElementById("saveAdminGamePasswordBtn")?.addEventListener("click", handleAdminSaveGamePassword);
+}
+
+async function openAdminGamePasswordModal(game) {
+  if (!game) return;
+
+  const adminPassword = await requireAdminPassword();
+  if (!adminPassword) return;
+
+  adminGamePasswordAdminPassword = adminPassword;
+  adminGamePasswordContext = game;
+
+  ensureAdminGamePasswordModal();
+
+  document.getElementById("adminGamePasswordInput").value = "";
+  document.getElementById("adminGamePasswordRepeatInput").value = "";
+  document.getElementById("adminGamePasswordStatus").textContent = "";
+  document.getElementById("adminGamePasswordInfo").textContent =
+    `Spiel: ${game.name || `Spiel ${game.id}`}. Leer speichern entfernt das Spielpasswort.`;
+
+  document.getElementById("adminGamePasswordOverlay")?.classList.remove("hidden");
+
+  setTimeout(() => {
+    document.getElementById("adminGamePasswordInput")?.focus();
+  }, 0);
+}
+
+function closeAdminGamePasswordModal() {
+  adminGamePasswordContext = null;
+  adminGamePasswordAdminPassword = "";
+
+  document.getElementById("adminGamePasswordOverlay")?.classList.add("hidden");
+}
+
+async function handleAdminSaveGamePassword() {
+  const game = adminGamePasswordContext;
+  if (!game) return;
+
+  const password = document.getElementById("adminGamePasswordInput")?.value || "";
+  const repeat = document.getElementById("adminGamePasswordRepeatInput")?.value || "";
+  const status = document.getElementById("adminGamePasswordStatus");
+
+  if (password !== repeat) {
+    if (status) status.textContent = "Die beiden Passwörter stimmen nicht überein.";
+    return;
+  }
+
+  if (password.trim() && password.length < 4) {
+    if (status) status.textContent = "Das Spielpasswort muss mindestens 4 Zeichen haben.";
+    return;
+  }
+
+  if (!adminGamePasswordAdminPassword) {
+    if (status) status.textContent = "Admin-Passwort fehlt. Bitte erneut öffnen.";
+    return;
+  }
+
+  if (status) status.textContent = "Speichere Spielpasswort...";
+
+  try {
+    const { data, error } = await supabaseClient.rpc(
+      "update_bingo_game_password",
+      {
+        p_admin_user_id: adminPlayer?.id || null,
+        p_admin_password: adminGamePasswordAdminPassword,
+        p_game_id: game.id,
+        p_new_game_password: password,
+        p_new_game_password_repeat: repeat
+      }
+    );
+
+    if (error) throw error;
+
+    if (!data) {
+      if (status) status.textContent = "Spielpasswort konnte nicht gespeichert werden.";
+      return;
+    }
+
+    await logAdminGameUpdated({
+      gameId: game.id,
+      adminPlayerId: adminPlayer?.id || null,
+      metadata: {
+        admin_name: adminPlayer?.display_name || adminPlayer?.username || null,
+        game_name: game.name || null,
+        field: "game_password_hash",
+        action: password.trim() ? "set_game_password" : "remove_game_password"
+      }
+    });
+
+    alert(password.trim() ? "Spielpasswort wurde gespeichert." : "Spielpasswort wurde entfernt.");
+
+    closeAdminGamePasswordModal();
+    await initializeAdminGamesTab();
+  } catch (error) {
+    console.error("Fehler beim Speichern des Spielpassworts:", error);
+    if (status) status.textContent = error.message || "Spielpasswort konnte nicht gespeichert werden.";
   }
 }
 
@@ -1053,7 +1607,7 @@ async function openAdminGameChallengeDetails(game, challenge) {
             </div>
 
             <div class="admin-completion-meta">
-              ${formatAdminDateTime(row.completed_at)}
+              ${row.success_variant_label ? `${row.success_variant_label} · ` : ""}${formatAdminDateTime(row.completed_at)}
             </div>
           </div>
 
@@ -1082,7 +1636,22 @@ async function openAdminGameChallengeDetails(game, challenge) {
 
       <div id="adminEditChallengePointsBtn" class="admin-game-challenge-card editable">
         <div class="admin-game-challenge-card-label">Punkte</div>
-        <div class="admin-game-challenge-card-value">${challenge.points || 0}</div>
+        <div class="admin-game-challenge-card-value">${getAdminChallengePointsValueDisplay(challenge)}</div>
+      </div>
+
+      <div id="adminEditChallengeVariant1Btn" class="admin-game-challenge-card editable">
+        <div class="admin-game-challenge-card-label">Variante 1</div>
+        <div class="admin-game-challenge-card-value muted">${challenge.success_variant_1 || "–"}</div>
+      </div>
+
+      <div id="adminEditChallengeVariant2Btn" class="admin-game-challenge-card editable">
+        <div class="admin-game-challenge-card-label">Variante 2</div>
+        <div class="admin-game-challenge-card-value muted">${challenge.success_variant_2 || "–"}</div>
+      </div>
+
+      <div id="adminEditChallengeVariant3Btn" class="admin-game-challenge-card editable">
+        <div class="admin-game-challenge-card-label">Variante 3</div>
+        <div class="admin-game-challenge-card-value muted">${challenge.success_variant_3 || "–"}</div>
       </div>
 
       <div id="adminEditChallengeTaskBtn" class="admin-game-challenge-card editable admin-game-challenge-card-wide">
@@ -1160,6 +1729,9 @@ async function openAdminGameChallengeDetails(game, challenge) {
   const editDetailsBtn = document.getElementById("adminEditChallengeDetailsBtn");
   const editPointsBtn = document.getElementById("adminEditChallengePointsBtn");
   const editSuccessBtn = document.getElementById("adminEditChallengeSuccessBtn");
+  const editVariant1Btn = document.getElementById("adminEditChallengeVariant1Btn");
+  const editVariant2Btn = document.getElementById("adminEditChallengeVariant2Btn");
+  const editVariant3Btn = document.getElementById("adminEditChallengeVariant3Btn");
   const togglePhotoBtn = document.getElementById("adminToggleChallengePhotoBtn");
   const toggleActiveBtn = document.getElementById("adminToggleChallengeActiveBtn");
   const editCategoryBtn = document.getElementById("adminEditChallengeCategoryBtn");
@@ -1191,6 +1763,24 @@ async function openAdminGameChallengeDetails(game, challenge) {
   if (editSuccessBtn) {
     editSuccessBtn.addEventListener("click", async () => {
       await handleAdminEditChallengeSuccessText(game, challenge);
+    });
+  }
+
+  if (editVariant1Btn) {
+    editVariant1Btn.addEventListener("click", async () => {
+      await handleAdminEditChallengeSuccessVariant(game, challenge, 1);
+    });
+  }
+
+  if (editVariant2Btn) {
+    editVariant2Btn.addEventListener("click", async () => {
+      await handleAdminEditChallengeSuccessVariant(game, challenge, 2);
+    });
+  }
+
+  if (editVariant3Btn) {
+    editVariant3Btn.addEventListener("click", async () => {
+      await handleAdminEditChallengeSuccessVariant(game, challenge, 3);
     });
   }
 
@@ -1293,7 +1883,7 @@ async function handleAdminEditChallengeTitle(game, challenge) {
     challengeId: challenge.id,
     metadata: {
       admin_name: adminPlayer?.display_name || adminPlayer?.username || null,
-      challenge_title: trimmed || value,
+      challenge_title: value,
       position: challenge.position ?? null,
       game_name: game.name || null,
       field: "title",
@@ -1413,13 +2003,18 @@ async function handleAdminEditChallengeSuccessText(game, challenge) {
 
 /** Punkte bearbeiten */
 async function handleAdminEditChallengePoints(game, challenge) {
+  const oldPoints = challenge.points ?? null;
+  const input = prompt(
+    "Neue Punktzahl eingeben (leer = variable Punkte / ?):",
+    challenge.points === null || challenge.points === undefined ? "" : String(challenge.points)
+  );
 
-  const oldPoints = challenge.points ?? 0;
-  const input = prompt("Neue Punktzahl eingeben:", String(challenge.points ?? 0));
   if (input === null) return;
 
-  const value = Number(input);
-  if (!Number.isFinite(value) || value < 0) {
+  const trimmed = input.trim();
+  const value = trimmed === "" ? null : Number(trimmed);
+
+  if (value !== null && (!Number.isFinite(value) || value < 0)) {
     alert("Ungültige Punktzahl.");
     return;
   }
@@ -1427,7 +2022,7 @@ async function handleAdminEditChallengePoints(game, challenge) {
   const updated = await updateAdminChallengeFields(challenge.id, { points: value });
   if (!updated) return;
 
-    await logAdminChallengeUpdated({
+  await logAdminChallengeUpdated({
     gameId: game.id,
     adminPlayerId: adminPlayer?.id || null,
     challengeId: challenge.id,
@@ -1441,6 +2036,46 @@ async function handleAdminEditChallengePoints(game, challenge) {
       new_value: value
     }
   });
+
+  await refreshAdminGamesChallengeModal(game.id, challenge.id);
+}
+
+async function handleAdminEditChallengeSuccessVariant(game, challenge, variantNumber) {
+  if (![1, 2, 3].includes(Number(variantNumber))) return;
+
+  const field = `success_variant_${variantNumber}`;
+  const oldValue = challenge[field] || "";
+
+  const input = prompt(
+    `Text für Variante ${variantNumber} eingeben (leer = entfernen):`,
+    oldValue
+  );
+
+  if (input === null) return;
+
+  const value = input.trim();
+
+  const updated = await updateAdminChallengeFields(challenge.id, {
+    [field]: value || null
+  });
+
+  if (!updated) return;
+
+  await logAdminChallengeUpdated({
+    gameId: game.id,
+    adminPlayerId: adminPlayer?.id || null,
+    challengeId: challenge.id,
+    metadata: {
+      admin_name: adminPlayer?.display_name || adminPlayer?.username || null,
+      challenge_title: challenge.title || null,
+      position: challenge.position ?? null,
+      game_name: game.name || null,
+      field,
+      old_value: oldValue || null,
+      new_value: value || null
+    }
+  });
+
   await refreshAdminGamesChallengeModal(game.id, challenge.id);
 }
 
@@ -1806,7 +2441,9 @@ async function handleAdminCreateGameFromModal() {
       grid_size: selectedGridSize,
       cooldown_seconds: cooldownSeconds,
       bingo_bonus_points: bingo,
-      is_active: active
+      is_active: active,
+      visibility: "public",
+      game_password_hash: null
     })
     .select()
     .single();
@@ -1919,7 +2556,22 @@ function ensureAdminChallengeSetupModal() {
         <div class="admin-game-challenge-cards">
           <div class="admin-game-challenge-card">
             <div class="admin-game-challenge-card-label">Punkte</div>
-            <input id="adminSetupChallengePointsInput" type="number" min="0" value="1" />
+            <input id="adminSetupChallengePointsInput" type="number" min="0" value="1" placeholder="leer = variabel" />
+          </div>
+
+          <div class="admin-game-challenge-card">
+            <div class="admin-game-challenge-card-label">Variante 1</div>
+            <input id="adminSetupChallengeVariant1Input" type="text" placeholder="z.B. Mehr als 5 Dosen" />
+          </div>
+
+          <div class="admin-game-challenge-card">
+            <div class="admin-game-challenge-card-label">Variante 2</div>
+            <input id="adminSetupChallengeVariant2Input" type="text" placeholder="z.B. Mehr als 8 Dosen" />
+          </div>
+
+          <div class="admin-game-challenge-card">
+            <div class="admin-game-challenge-card-label">Variante 3</div>
+            <input id="adminSetupChallengeVariant3Input" type="text" placeholder="z.B. Mehr als 12 Dosen" />
           </div>
 
           <div class="admin-game-challenge-card">
@@ -2052,6 +2704,9 @@ function renderAdminChallengeSetupStep() {
   const successInput = document.getElementById("adminSetupChallengeSuccessInput");
   const pointsInput = document.getElementById("adminSetupChallengePointsInput");
   const categoryInput = document.getElementById("adminSetupChallengeCategoryInput");
+  const variant1Input = document.getElementById("adminSetupChallengeVariant1Input");
+  const variant2Input = document.getElementById("adminSetupChallengeVariant2Input");
+  const variant3Input = document.getElementById("adminSetupChallengeVariant3Input");
   const photoInput = document.getElementById("adminSetupChallengePhotoInput");
   const activeInput = document.getElementById("adminSetupChallengeActiveInput");
   const backBtn = document.getElementById("adminSetupBackBtn");
@@ -2070,7 +2725,10 @@ function renderAdminChallengeSetupStep() {
   if (taskInput) taskInput.value = challenge.task || "";
   if (detailsInput) detailsInput.value = challenge.details || "";
   if (successInput) successInput.value = challenge.success_text || "";
-  if (pointsInput) pointsInput.value = challenge.points ?? 1;
+  if (pointsInput) pointsInput.value = challenge.points ?? "";
+  if (variant1Input) variant1Input.value = challenge.success_variant_1 || "";
+  if (variant2Input) variant2Input.value = challenge.success_variant_2 || "";
+  if (variant3Input) variant3Input.value = challenge.success_variant_3 || "";
   if (categoryInput) categoryInput.value = challenge.category_icon || "";
   if (photoInput) photoInput.checked = challenge.requires_photo_proof === true;
   if (activeInput) activeInput.checked = challenge.is_active !== false;
@@ -2083,7 +2741,10 @@ function getAdminChallengeSetupFormValues() {
     task: document.getElementById("adminSetupChallengeTaskInput")?.value || "",
     details: document.getElementById("adminSetupChallengeDetailsInput")?.value || "",
     success_text: document.getElementById("adminSetupChallengeSuccessInput")?.value || "",
-    points: Number(document.getElementById("adminSetupChallengePointsInput")?.value || 0),
+    points: (() => { const raw = document.getElementById("adminSetupChallengePointsInput")?.value ?? ""; return raw.trim() === "" ? null : Number(raw); })(),
+    success_variant_1: document.getElementById("adminSetupChallengeVariant1Input")?.value?.trim() || "",
+    success_variant_2: document.getElementById("adminSetupChallengeVariant2Input")?.value?.trim() || "",
+    success_variant_3: document.getElementById("adminSetupChallengeVariant3Input")?.value?.trim() || "",
     category_icon: document.getElementById("adminSetupChallengeCategoryInput")?.value?.trim() || "",
     requires_photo_proof: document.getElementById("adminSetupChallengePhotoInput")?.checked === true,
     is_active: document.getElementById("adminSetupChallengeActiveInput")?.checked === true
@@ -2112,7 +2773,10 @@ async function handleAdminChallengeSetupSaveNext() {
     task: values.task.trim(),
     details: values.details.trim() || null,
     success_text: values.success_text.trim() || null,
-    points: Number.isFinite(values.points) ? values.points : 0,
+    points: values.points === null ? null : (Number.isFinite(values.points) ? values.points : 0),
+    success_variant_1: values.success_variant_1 || null,
+    success_variant_2: values.success_variant_2 || null,
+    success_variant_3: values.success_variant_3 || null,
     category_icon: values.category_icon || null,
     requires_photo_proof: values.requires_photo_proof,
     is_active: values.is_active
@@ -2189,7 +2853,10 @@ async function handleAdminChallengeSetupApplyToRemaining() {
       task: values.task.trim(),
       details: values.details.trim() || null,
       success_text: values.success_text.trim() || null,
-      points: Number.isFinite(values.points) ? values.points : 0,
+      points: values.points === null ? null : (Number.isFinite(values.points) ? values.points : 0),
+      success_variant_1: values.success_variant_1 || null,
+      success_variant_2: values.success_variant_2 || null,
+      success_variant_3: values.success_variant_3 || null,
       category_icon: values.category_icon || null,
       requires_photo_proof: values.requires_photo_proof,
       is_active: values.is_active
@@ -2237,7 +2904,9 @@ async function handleAdminDuplicateGame(game) {
       grid_size: game.grid_size,
       cooldown_seconds: game.cooldown_seconds,
       bingo_bonus_points: game.bingo_bonus_points,
-      is_active: false
+      is_active: false,
+      visibility: game.visibility || "public",
+      game_password_hash: game.game_password_hash || null
     })
     .select()
     .single();
@@ -2277,7 +2946,10 @@ async function handleAdminDuplicateGame(game) {
     category_icon: challenge.category_icon || null,
     details: challenge.details || null,
     success_text: challenge.success_text || null,
-    requires_photo_proof: challenge.requires_photo_proof === true
+    requires_photo_proof: challenge.requires_photo_proof === true,
+    success_variant_1: challenge.success_variant_1 || null,
+    success_variant_2: challenge.success_variant_2 || null,
+    success_variant_3: challenge.success_variant_3 || null
   }));
 
   if (challengePayload.length > 0) {
@@ -2397,3 +3069,31 @@ async function handleAdminDeleteGame(game) {
   await loadAdminCurrentGame();
   await initializeAdminGamesTab();
 }
+
+function getAdminBingoLineCount(gameId, lineIndex) {
+  return adminPlayerBingos.filter(row =>
+    Number(row.game_id) === Number(gameId) &&
+    String(row.line_key) === String(lineIndex)
+  ).length;
+}
+
+function createAdminBingoLineIndicator(game, lineIndex, title) {
+  const count = getAdminBingoLineCount(game.id, lineIndex);
+
+  const el = document.createElement("div");
+  el.className = "admin-bingo-line-indicator";
+  el.title = `${title} Bingo`;
+
+  if (count > 0) {
+    el.classList.add("solved");
+  }
+
+  el.textContent = `(${count})`;
+
+  el.addEventListener("click", () => {
+    openAdminBingoLineDetails(game, lineIndex, title);
+  });
+
+  return el;
+}
+

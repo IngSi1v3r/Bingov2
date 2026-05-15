@@ -1,13 +1,42 @@
-// =======================
-// ADMIN CONSTANTS
-// =======================
+/**
+ * ============================================================
+ * admin.js
+ * ============================================================
+ *
+ * Zweck:
+ * Zentrale Start- und Steuerdatei des Adminpanels.
+ *
+ * Diese Datei kuemmert sich um:
+ * - Admin-Bootstrap nach Auth
+ * - global ausgewaehltes Admin-Spiel
+ * - Admin-Header
+ * - Tabwechsel
+ * - globales Admin-Polling ueber PollingService
+ * - allgemeine Admin-Helfer fuer Datum, Cooldown, Bilder usw.
+ *
+ * Nicht hier enthalten:
+ * - Auth-Logik -> auth.js
+ * - Datenzugriffe -> data_service.js / Tab-Dateien
+ * - Players-Tab -> admin_players.js
+ * - Games-Tab -> admin_games.js
+ * - Live-Tab -> admin_live.js
+ * - Logs-Tab -> admin_logs.js
+ * - Dashboard -> admin_dashboard.js
+ * - Galerie -> admin_galerie.js
+ */
 
-const ADMIN_STORAGE_KEY = "festival_bingo_admin";
+/* ============================================================
+ * KONSTANTEN
+ * ============================================================ */
+
 const ADMIN_GAME_STORAGE_KEY = "festival_bingo_game_id";
+const ADMIN_POLLING_JOB_ID = "admin-active-tab";
 
-// =======================
-// ADMIN STATE
-// =======================
+const adminGoToGameBtn = document.getElementById("adminGoToGameBtn");
+
+/* ============================================================
+ * GLOBALER ADMIN-STATE
+ * ============================================================ */
 
 let adminPlayer = null;
 let adminCurrentGameId = loadGameIdFromLocalStorageAdmin();
@@ -15,7 +44,10 @@ let adminCurrentGame = null;
 
 let selectedAdminPlayerId = null;
 
-// Diese Collections werden von Tab-Dateien befüllt
+/**
+ * Zentrale Collections.
+ * Diese werden aktuell weiterhin von den Tab-Dateien befuellt.
+ */
 let adminPlayers = [];
 let adminGames = [];
 let adminPlayerStates = [];
@@ -26,22 +58,15 @@ let adminChallenges = [];
 let currentAdminGalleryEntries = [];
 let currentAdminGalleryIndex = 0;
 
-let adminPollingInterval = null;
-
-// =======================
-// DOM
-// =======================
+/* ============================================================
+ * DOM
+ * ============================================================ */
 
 const tabs = document.querySelectorAll(".admin-tab");
 const contents = document.querySelectorAll(".admin-tab-content");
+
 const adminRefreshBtn = document.getElementById("adminRefreshBtn");
 const adminLogoutBtn = document.getElementById("adminLogoutBtn");
-
-const adminLoginOverlay = document.getElementById("adminLoginOverlay");
-const adminLoginNameInput = document.getElementById("adminLoginNameInput");
-const adminLoginPinInput = document.getElementById("adminLoginPinInput");
-const adminDoLoginBtn = document.getElementById("adminDoLoginBtn");
-const adminLoginStatusText = document.getElementById("adminLoginStatusText");
 
 const adminCurrentGameBtn = document.getElementById("adminCurrentGameBtn");
 const adminCurrentGameText = document.getElementById("adminCurrentGame");
@@ -50,29 +75,9 @@ const adminGameSelectOverlay = document.getElementById("adminGameSelectOverlay")
 const closeAdminGameSelectBtn = document.getElementById("closeAdminGameSelectBtn");
 const adminGameList = document.getElementById("adminGameList");
 
-// =======================
-// LOCAL STORAGE
-// =======================
-
-function saveAdminToLocalStorage(admin) {
-  localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(admin));
-}
-
-function loadAdminFromLocalStorage() {
-  const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    console.error("Fehler beim Lesen des Admins aus dem LocalStorage:", error);
-    return null;
-  }
-}
-
-function clearAdminFromLocalStorage() {
-  localStorage.removeItem(ADMIN_STORAGE_KEY);
-}
+/* ============================================================
+ * LOCAL STORAGE
+ * ============================================================ */
 
 function saveGameIdToLocalStorageAdmin(gameId) {
   localStorage.setItem(ADMIN_GAME_STORAGE_KEY, String(gameId));
@@ -86,111 +91,36 @@ function loadGameIdFromLocalStorageAdmin() {
   return Number.isInteger(parsed) ? parsed : 1;
 }
 
-// =======================
-// ADMIN LOGIN
-// =======================
+/* ============================================================
+ * START / LOGOUT
+ * ============================================================ */
 
-function openAdminLoginOverlay() {
-  adminLoginOverlay.classList.remove("hidden");
-  adminLoginStatusText.textContent = "";
-  adminLoginNameInput.value = "";
-  adminLoginPinInput.value = "";
+/**
+ * Startet das Adminpanel nach erfolgreicher Auth-Pruefung.
+ */
+async function startAdminApp() {
+  const boot = await authBootstrapForAdminPage();
+  if (!boot?.allowed) return;
 
-  setTimeout(() => {
-    adminLoginNameInput.focus();
-  }, 0);
-}
-
-function closeAdminLoginOverlay() {
-  adminLoginOverlay.classList.add("hidden");
-}
-
-async function loginAdmin(username, pin) {
-  const cleanUsername = username.trim().toLowerCase();
-  const cleanPin = pin.trim();
-
-  if (!cleanUsername) {
-    return { success: false, message: "Bitte einen Namen eingeben." };
-  }
-
-  if (!cleanPin) {
-    return { success: false, message: "Bitte eine PIN eingeben." };
-  }
-
-  const { data: player, error } = await supabaseClient
-    .from("players")
-    .select("*")
-    .eq("username", cleanUsername)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Fehler beim Laden des Admins:", error);
-    return { success: false, message: "Admin konnte nicht geladen werden." };
-  }
-
-  if (!player) {
-    return { success: false, message: "Benutzer nicht gefunden." };
-  }
-
-  if (player.pin_hash !== cleanPin) {
-    return { success: false, message: "Falsche PIN." };
-  }
-
-  if (player.is_blocked) {
-    return { success: false, message: "Dieser Benutzer ist gesperrt." };
-  }
-
-  if (player.role !== "admin") {
-    return { success: false, message: "Dieser Benutzer ist kein Admin." };
-  }
-
-  return { success: true, admin: player };
-}
-
-async function handleAdminLogin() {
-  const username = adminLoginNameInput.value;
-  const pin = adminLoginPinInput.value;
-
-  adminLoginStatusText.textContent = "Prüfe Login...";
-
-  const result = await loginAdmin(username, pin);
-
-  if (!result.success) {
-    adminLoginStatusText.textContent = result.message;
-    return;
-  }
-
-  adminPlayer = result.admin;
-  saveAdminToLocalStorage(adminPlayer);
-
-  closeAdminLoginOverlay();
+  adminPlayer = boot.user;
   await startAdminPanelAfterLogin();
 }
 
+/**
+ * Logout aus dem Adminpanel.
+ */
 function logoutAdmin() {
   stopAdminPolling();
-  clearAdminFromLocalStorage();
+
   adminPlayer = null;
   selectedAdminPlayerId = null;
-  openAdminLoginOverlay();
+
+  authLogout({ redirectTo: AUTH_VIEW_GAME });
 }
 
-// =======================
-// START
-// =======================
-
-async function startAdminApp() {
-  const savedAdmin = loadAdminFromLocalStorage();
-
-  if (!savedAdmin || savedAdmin.role !== "admin") {
-    openAdminLoginOverlay();
-    return;
-  }
-
-  adminPlayer = savedAdmin;
-  await startAdminPanelAfterLogin();
-}
-
+/**
+ * Initialisiert Header, aktuelles Spiel, aktiven Tab und Polling.
+ */
 async function startAdminPanelAfterLogin() {
   renderAdminHeader();
   await loadAdminCurrentGame();
@@ -201,45 +131,37 @@ async function startAdminPanelAfterLogin() {
   startAdminPolling();
 }
 
-// =======================
-// HEADER
-// =======================
+/* ============================================================
+ * HEADER
+ * ============================================================ */
 
+/**
+ * Rendert den Adminnamen im Header.
+ */
 function renderAdminHeader() {
   const nameEl = document.getElementById("adminName");
+
   if (nameEl && adminPlayer) {
     nameEl.textContent = adminPlayer.display_name || adminPlayer.username || "-";
   }
 }
 
+/**
+ * Laedt das aktuell globale Admin-Spiel.
+ * Falls es nicht mehr existiert, wird auf das erste aktive Spiel zurueckgefallen.
+ */
 async function loadAdminCurrentGame() {
-  const { data, error } = await supabaseClient
-    .from("games")
-    .select("*")
-    .eq("id", adminCurrentGameId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Fehler beim Laden des aktuellen Admin-Spiels:", error);
+  if (typeof DataService === "undefined") {
+    console.error("DataService nicht gefunden. Bitte data_service.js einbinden.");
     adminCurrentGame = null;
-  } else {
-    adminCurrentGame = data || null;
+    updateAdminCurrentGameDisplay();
+    return;
   }
 
+  adminCurrentGame = await DataService.games.loadById(adminCurrentGameId);
+
   if (!adminCurrentGame) {
-    const { data: fallbackGame, error: fallbackError } = await supabaseClient
-      .from("games")
-      .select("*")
-      .eq("is_active", true)
-      .order("id", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (fallbackError) {
-      console.error("Fehler beim Laden des Fallback-Spiels:", fallbackError);
-    }
-
-    adminCurrentGame = fallbackGame || null;
+    adminCurrentGame = await DataService.games.loadFirstActive();
 
     if (adminCurrentGame) {
       adminCurrentGameId = adminCurrentGame.id;
@@ -250,15 +172,18 @@ async function loadAdminCurrentGame() {
   updateAdminCurrentGameDisplay();
 }
 
+/**
+ * Aktualisiert die Anzeige des aktuell ausgewaehlten Spiels.
+ */
 function updateAdminCurrentGameDisplay() {
   if (adminCurrentGameText) {
     adminCurrentGameText.textContent = adminCurrentGame?.name || "-";
   }
 }
 
-// =======================
-// GLOBAL GAME SELECTION
-// =======================
+/* ============================================================
+ * GLOBALE SPIELAUSWAHL
+ * ============================================================ */
 
 function openAdminGameSelectOverlay() {
   if (!adminGameSelectOverlay) return;
@@ -270,20 +195,21 @@ function closeAdminGameSelectOverlay() {
   adminGameSelectOverlay.classList.add("hidden");
 }
 
+/**
+ * Laedt alle Spiele fuer die globale Admin-Spielauswahl.
+ */
 async function loadAllGamesForHeader() {
-  const { data, error } = await supabaseClient
-    .from("games")
-    .select("*")
-    .order("id", { ascending: true });
-
-  if (error) {
-    console.error("Fehler beim Laden der Spiele für die Admin-Auswahl:", error);
+  if (typeof DataService === "undefined") {
+    console.error("DataService nicht gefunden. Bitte data_service.js einbinden.");
     return [];
   }
 
-  return data || [];
+  return await DataService.games.loadAll();
 }
 
+/**
+ * Rendert die globale Spielauswahl im Header.
+ */
 async function renderAdminGameList() {
   if (!adminGameList) return;
 
@@ -304,8 +230,8 @@ async function renderAdminGameList() {
     btn.addEventListener("click", async () => {
       adminCurrentGameId = game.id;
       adminCurrentGame = game;
-      saveGameIdToLocalStorageAdmin(adminCurrentGameId);
 
+      saveGameIdToLocalStorageAdmin(adminCurrentGameId);
       updateAdminCurrentGameDisplay();
       closeAdminGameSelectOverlay();
 
@@ -317,38 +243,55 @@ async function renderAdminGameList() {
   });
 }
 
-// =======================
-// TAB HELPERS
-// =======================
+/* ============================================================
+ * TAB-HELPER
+ * ============================================================ */
 
+/**
+ * Liefert den aktuell aktiven Admin-Tab.
+ */
 function getActiveAdminTab() {
   const activeTab = document.querySelector(".admin-tab.active");
   return activeTab?.dataset.tab || "dashboard";
 }
 
+/**
+ * Initialisiert oder aktualisiert den gewaehlten Tab.
+ */
 async function handleAdminTabActivated(tabName) {
+  if (tabName === "dashboard") {
+    if (typeof initializeAdminDashboardTab === "function") {
+      await initializeAdminDashboardTab();
+    }
+    return;
+  }
+
   if (tabName === "players") {
     if (typeof initializeAdminPlayersTab === "function") {
       await initializeAdminPlayersTab();
     }
+    return;
   }
 
   if (tabName === "games") {
     if (typeof initializeAdminGamesTab === "function") {
       await initializeAdminGamesTab();
     }
+    return;
   }
 
   if (tabName === "logs") {
     if (typeof initializeAdminLogsTab === "function") {
       await initializeAdminLogsTab();
     }
+    return;
   }
 
   if (tabName === "live") {
     if (typeof initializeAdminLiveTab === "function") {
       await initializeAdminLiveTab();
     }
+    return;
   }
 
   if (tabName === "grid") {
@@ -356,56 +299,78 @@ async function handleAdminTabActivated(tabName) {
       await initializeAdminGalleryTab();
     }
   }
-
 }
 
-// =======================
-// ADMIN POLLING
-// =======================
+/* ============================================================
+ * ADMIN POLLING
+ * ============================================================ */
 
+/**
+ * Stoppt das globale Admin-Polling.
+ * Der Funktionsname bleibt aus Kompatibilitaetsgruenden bestehen.
+ */
 function stopAdminPolling() {
-  if (adminPollingInterval) {
-    clearInterval(adminPollingInterval);
-    adminPollingInterval = null;
-  }
+  if (typeof PollingService === "undefined") return;
+  PollingService.stopJob(ADMIN_POLLING_JOB_ID);
 }
 
+/**
+ * Startet das globale Admin-Polling.
+ *
+ * Logik:
+ * - Logs-Tab nutzt refreshAdminLogsListIfNeeded(), um Flackern zu vermeiden.
+ * - Live-Tab prueft zuerst geplante Starts.
+ * - Alle anderen Tabs werden ueber handleAdminTabActivated() neu geladen.
+ */
 function startAdminPolling() {
   stopAdminPolling();
 
-  adminPollingInterval = setInterval(async () => {
-    if (!adminPlayer) return;
-
-    const activeTab = getActiveAdminTab();
-
-if (activeTab === "logs") {
-  if (typeof refreshAdminLogsListIfNeeded === "function") {
-    await refreshAdminLogsListIfNeeded();
-  }
-  return;
-}
-
-if (activeTab === "live") {
-  let changed = false;
-
-  if (typeof autoActivateScheduledLiveChallenges === "function") {
-    changed = await autoActivateScheduledLiveChallenges();
+  if (typeof PollingService === "undefined") {
+    console.error("PollingService nicht gefunden. Bitte polling_service.js einbinden.");
+    return;
   }
 
-  if (changed || typeof initializeAdminLiveTab === "function") {
-    await initializeAdminLiveTab();
-  }
+  PollingService.registerOrUpdateJob({
+    id: ADMIN_POLLING_JOB_ID,
+    level: "admin",
+    description: "Adminpanel: aktiven Tab aktualisieren",
+    runImmediately: false,
+    callback: async () => {
+      if (!adminPlayer) return;
 
-  return;
+      const activeTab = getActiveAdminTab();
+
+      if (activeTab === "logs") {
+        if (typeof refreshAdminLogsListIfNeeded === "function") {
+          await refreshAdminLogsListIfNeeded();
+        }
+        return;
+      }
+
+      if (activeTab === "live") {
+        let changed = false;
+
+        if (typeof autoActivateScheduledLiveChallenges === "function") {
+          changed = await autoActivateScheduledLiveChallenges();
+        }
+
+        if (changed || typeof initializeAdminLiveTab === "function") {
+          await initializeAdminLiveTab();
+        }
+
+        return;
+      }
+
+      await handleAdminTabActivated(activeTab);
+    }
+  });
+
+  PollingService.startJob(ADMIN_POLLING_JOB_ID);
 }
 
-await handleAdminTabActivated(activeTab);
-  }, 5000);
-}
-
-// =======================
-// TABS
-// =======================
+/* ============================================================
+ * TAB EVENTS
+ * ============================================================ */
 
 tabs.forEach(tab => {
   tab.addEventListener("click", async () => {
@@ -425,9 +390,9 @@ tabs.forEach(tab => {
   });
 });
 
-// =======================
-// EVENTS
-// =======================
+/* ============================================================
+ * HEADER / GLOBAL EVENTS
+ * ============================================================ */
 
 if (adminRefreshBtn) {
   adminRefreshBtn.addEventListener("click", async () => {
@@ -444,25 +409,11 @@ if (adminLogoutBtn) {
   });
 }
 
-if (adminDoLoginBtn) {
-  adminDoLoginBtn.addEventListener("click", async () => {
-    await handleAdminLogin();
-  });
-}
-
-if (adminLoginNameInput) {
-  adminLoginNameInput.addEventListener("keydown", async (event) => {
-    if (event.key === "Enter") {
-      await handleAdminLogin();
-    }
-  });
-}
-
-if (adminLoginPinInput) {
-  adminLoginPinInput.addEventListener("keydown", async (event) => {
-    if (event.key === "Enter") {
-      await handleAdminLogin();
-    }
+if (adminGoToGameBtn) {
+  adminGoToGameBtn.addEventListener("click", () => {
+    localStorage.setItem(AUTH_FORCE_GAME_VIEW_KEY, "true");
+    saveAuthPreferredView(AUTH_VIEW_GAME);
+    window.location.href = "index.html";
   });
 }
 
@@ -479,10 +430,13 @@ if (closeAdminGameSelectBtn) {
   });
 }
 
-// =======================
-// GENERIC HELPERS
-// =======================
+/* ============================================================
+ * GENERISCHE HELPER
+ * ============================================================ */
 
+/**
+ * Formatiert ein ISO-Datum fuer Admin-Ansichten.
+ */
 function formatAdminDateTime(isoString) {
   if (!isoString) return "-";
 
@@ -513,6 +467,9 @@ function formatAdminDateTime(isoString) {
   });
 }
 
+/**
+ * Formatiert einen Cooldown-Zeitpunkt lesbar.
+ */
 function formatAdminCooldown(cooldownUntil) {
   if (!cooldownUntil) return "Nein";
 
@@ -529,20 +486,34 @@ function formatAdminCooldown(cooldownUntil) {
   return `${diffSeconds} s`;
 }
 
+/**
+ * Prueft, ob ein Cooldown-Zeitpunkt noch in der Zukunft liegt.
+ */
 function isCooldownActiveAdmin(cooldownUntil) {
   if (!cooldownUntil) return false;
   return new Date(cooldownUntil).getTime() > Date.now();
 }
 
+/**
+ * Kuerzt lange Titel fuer kompakte Anzeigen.
+ */
 function shortenTitle(title, maxLength = 20) {
   if (!title) return "";
+
   return title.length > maxLength
-    ? title.substring(0, maxLength) + "…"
+    ? title.substring(0, maxLength) + "..."
     : title;
 }
 
+/**
+ * Liefert die public URL fuer ein Beweisfoto.
+ */
 function getPublicImageUrl(path) {
   if (!path) return null;
+
+  if (typeof DataService !== "undefined") {
+    return DataService.storage.getProofPhotoPublicUrl(path);
+  }
 
   const { data } = supabaseClient.storage
     .from("proof-photos")
@@ -551,8 +522,8 @@ function getPublicImageUrl(path) {
   return data?.publicUrl || null;
 }
 
-// =======================
-// START
-// =======================
+/* ============================================================
+ * INIT
+ * ============================================================ */
 
 startAdminApp();

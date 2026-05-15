@@ -56,7 +56,23 @@
       </div>
     </div>
 
+   <div class="bingo-board-shell">
+
+  <div class="bingo-board-top">
+    <div></div>
+    <div id="bingoDiagonalTopIndicator" class="bingo-diagonal-single"></div>
+  </div>
+
+  <div class="bingo-board-main">
     <div id="grid" class="grid"></div>
+    <div id="bingoRowIndicators" class="bingo-row-indicators"></div>
+  </div>
+
+  <div class="bingo-board-bottom">
+    <div id="bingoColumnIndicators" class="bingo-column-indicators"></div>
+    <div id="bingoDiagonalBottomIndicator" class="bingo-diagonal-single"></div>
+  </div>
+</div>
 
     <!-- LEADERBOARD -->
     <div class="leaderboard">
@@ -213,11 +229,11 @@
   <!-- BINGO BANNER -->
   <!-- ===================== -->
   <div id="bingoBanner" class="bingo-banner hidden">
-    <div class="bingo-card">
-      <h2>BINGO!</h2>
-      <p>+5 Punkte</p>
-    </div>
+  <div class="bingo-card">
+    <h2 id="bingoBannerTitle">BINGO!</h2>
+    <p id="bingoBannerText">+5 Punkte</p>
   </div>
+</div>
 
   <!-- ===================== -->
   <!-- FOTO UPLOAD -->
@@ -444,20 +460,22 @@
   </div>
 
 
-  <!-- ===================== -->
-<!-- BLOCKED OVERLAY -->
 <!-- ===================== -->
-<div id="blockedOverlay" class="overlay hidden">
-  <div class="overlay-content blocked-overlay-content">
-    <h2>🚫 Zugriff gesperrt</h2>
+<!-- ACCESS BLOCKED / GAME UNAVAILABLE OVERLAY -->
+<!-- ===================== -->
+<div id="blockedOverlay" class="modal-overlay hidden">
+  <div class="modal blocked-overlay-content">
+    <h2 id="blockedOverlayTitle">🚫 Zugriff gesperrt</h2>
 
-    <p class="blocked-text">
+    <p id="blockedOverlayText" class="blocked-text">
       Dein Spieler wurde durch einen Admin gesperrt.
     </p>
 
-    <button id="blockedBackToLoginBtn" class="primary-btn">
-      Zur Anmeldung
-    </button>
+    <div class="modal-actions">
+      <button id="blockedBackToLoginBtn" type="button">
+        Zur Anmeldung
+      </button>
+    </div>
   </div>
 </div>
 
@@ -468,9 +486,14 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
+
+  <script src="data_service.js"></script>
+  <script src="polling_service.js"></script>
+
   <script src="auth.js"></script>
   <script src="data.js"></script>
   <script src="admin_logs.js"></script>
+  <script src="player_activity_toasts.js"></script>
   <script src="game.js"></script>
   <script src="app.js"></script>
   <script src="live-challenges.js"></script>

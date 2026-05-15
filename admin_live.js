@@ -35,7 +35,11 @@
  * 7. Rendering: Statistik / Liste / Details
  * 8. Edit-Actions
  * 9. Geplante automatische Starts
- */
+ *
+ * Hinweis:
+ * - Reine Ladefunktionen laufen ueber data_service.js.
+ * - Schreib-/Bearbeitungsaktionen bleiben in dieser Datei.
+*/
 
 /* ============================================================
  * STATE
@@ -80,15 +84,7 @@ async function initializeAdminLiveTab() {
   ensureAdminCreateLiveChallengeModal();
 
   await autoActivateScheduledLiveChallenges();
-
-  await Promise.all([
-    loadAllPlayersForAdmin(),
-    loadAllGamesForAdmin(),
-    loadAllPlayerStatesForAdmin(),
-    loadAllLiveChallengesForAdmin(),
-    loadAllPlayerLiveChallengesForAdmin(),
-    loadAllLiveChallengeViewsForAdmin()
-  ]);
+  await loadAdminLiveTabData();
 
   const visibleRows = getVisibleAdminLiveChallenges();
 
@@ -375,66 +371,39 @@ function attachAdminLiveFilterEvents() {
 
 /* ============================================================
  * DATA LOAD
- * ============================================================
- */
+ * ============================================================ */
 
 /**
- * Lädt alle Live-Challenges für das Adminpanel.
+ * Laedt alle Daten, die der Live-Tab braucht.
+ *
+ * Die eigentlichen Supabase-Reads liegen zentral in data_service.js.
+ * Die globalen Collections bleiben vorerst erhalten, damit die bestehenden
+ * Render- und Helperfunktionen unveraendert weiterarbeiten.
+ */
+async function loadAdminLiveTabData() {
+  const bundle = await DataService.bundles.loadAdminLiveTab();
+
+  adminPlayers = bundle.players || [];
+  adminGames = bundle.games || [];
+  adminPlayerStates = bundle.playerStates || [];
+  adminLiveChallenges = bundle.liveChallenges || [];
+  adminPlayerLiveChallenges = bundle.playerLiveChallenges || [];
+  adminLiveChallengeViews = bundle.liveChallengeViews || [];
+}
+
+/**
+ * Kompatibilitaets-Wrapper fuer bestehende Aufrufe.
  */
 async function loadAllLiveChallengesForAdmin() {
-  const { data, error } = await supabaseClient
-    .from("live_challenges")
-    .select(`
-      *,
-      players:winner_player_id (
-        id,
-        username,
-        display_name
-      )
-    `)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Fehler beim Laden aller Live-Challenges:", error);
-    adminLiveChallenges = [];
-    return;
-  }
-
-  adminLiveChallenges = data || [];
+  adminLiveChallenges = await DataService.live.loadAllWithWinner();
 }
 
-/**
- * Lädt alle player_live_challenges-Datensätze.
- */
 async function loadAllPlayerLiveChallengesForAdmin() {
-  const { data, error } = await supabaseClient
-    .from("player_live_challenges")
-    .select("*");
-
-  if (error) {
-    console.error("Fehler beim Laden aller player_live_challenges:", error);
-    adminPlayerLiveChallenges = [];
-    return;
-  }
-
-  adminPlayerLiveChallenges = data || [];
+  adminPlayerLiveChallenges = await DataService.live.loadAllPlayerLiveChallenges();
 }
 
-/**
- * Lädt alle player_live_challenge_views-Datensätze.
- */
 async function loadAllLiveChallengeViewsForAdmin() {
-  const { data, error } = await supabaseClient
-    .from("player_live_challenge_views")
-    .select("*");
-
-  if (error) {
-    console.error("Fehler beim Laden aller player_live_challenge_views:", error);
-    adminLiveChallengeViews = [];
-    return;
-  }
-
-  adminLiveChallengeViews = data || [];
+  adminLiveChallengeViews = await DataService.liveViews.loadAll();
 }
 
 /* ============================================================
@@ -627,14 +596,7 @@ async function updateAdminLiveChallengeFields(liveChallengeId, updates) {
  * Optional kann eine bevorzugte ausgewählte Challenge-ID erhalten bleiben.
  */
 async function refreshAdminLiveAfterMutation(preferredLiveId = null) {
-  await Promise.all([
-    loadAllPlayersForAdmin(),
-    loadAllGamesForAdmin(),
-    loadAllPlayerStatesForAdmin(),
-    loadAllLiveChallengesForAdmin(),
-    loadAllPlayerLiveChallengesForAdmin(),
-    loadAllLiveChallengeViewsForAdmin()
-  ]);
+  await loadAdminLiveTabData();
 
   const visibleRows = getVisibleAdminLiveChallenges();
 
