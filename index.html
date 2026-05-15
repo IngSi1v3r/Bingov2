@@ -11,10 +11,16 @@
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
+    const isGithubPagesProject = window.location.pathname.startsWith("/Bingov2/");
+
     await OneSignal.init({
       appId: "92ef34ba-d553-48b5-8f43-915adb64bffd",
-      serviceWorkerPath: "Bingov2/OneSignalSDKWorker.js",
-      serviceWorkerParam: { scope: "/Bingov2/" },
+      serviceWorkerPath: isGithubPagesProject
+        ? "/Bingov2/OneSignalSDKWorker.js"
+        : "/OneSignalSDKWorker.js",
+      serviceWorkerParam: {
+        scope: isGithubPagesProject ? "/Bingov2/" : "/"
+      },
       notifyButton: { enable: false }
     });
   });
@@ -201,6 +207,16 @@
       <h3>Abgeschlossene Aufgaben</h3>
       <div id="playerProfileCompletedList">
         <p>Noch keine Aufgaben abgeschlossen.</p>
+      </div>
+
+      <div class="player-push-profile-box">
+        <h3>Push-Benachrichtigungen</h3>
+        <p id="playerPushStatusText" class="player-push-status-text">Push-Status wird geladen...</p>
+        <div class="player-push-actions">
+          <button id="playerProfilePushEnableBtn" type="button" class="secondary-btn">Push aktivieren</button>
+          <button id="playerProfilePushDisableBtn" type="button" class="secondary-btn hidden">Push deaktivieren</button>
+          <button id="playerProfilePushDebugBtn" type="button" class="secondary-btn">Debug</button>
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -491,9 +507,9 @@
   <script src="polling_service.js"></script>
 
   <script src="auth.js"></script>
+  <script src="push_service.js"></script>
   <script src="data.js"></script>
   <script src="admin_logs.js"></script>
-  <script src="player_activity_toasts.js"></script>
   <script src="game.js"></script>
   <script src="app.js"></script>
   <script src="live-challenges.js"></script>

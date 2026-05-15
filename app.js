@@ -149,42 +149,70 @@ function formatCompletedDateTime(isoString) {
   });
 }
 
+function renderChallengeDescriptionImage(challenge) {
+  const imageUrl = challenge?.descriptionImagePath && DataService?.storage?.getChallengeImagePublicUrl
+    ? DataService.storage.getChallengeImagePublicUrl(challenge.descriptionImagePath)
+    : null;
+
+  if (!imageUrl) return "";
+
+  return `
+    <div class="challenge-description-image-frame">
+      <img src="${imageUrl}" class="challenge-description-image" alt="Aufgabenbild" loading="lazy" />
+    </div>
+  `;
+}
+
 function openChallengeModal(challenge) {
   modalCloseBtn.classList.add("hidden");
 
   modalTitle.textContent = challenge.title;
 
-  modalTask.innerHTML = `
-    <div class="challenge-description-wrapper">
-      <div class="challenge-description-text">
-        ${challenge.task}
-      </div>
+  const descriptionImageUrl = challenge.descriptionImagePath
+  ? DataService.storage.getChallengeImagePublicUrl(challenge.descriptionImagePath)
+  : null;
 
-      ${challenge.requiresPhotoProof ? `
-        <div class="challenge-photo-icon">📷</div>
-      ` : ""}
+modalTask.innerHTML = `
+  <div class="challenge-description-wrapper">
+    <div class="challenge-description-text">
+      ${challenge.task}
     </div>
-  `;
 
-  const isVariableChallenge = isVariablePointsChallenge(challenge);
+    ${challenge.requiresPhotoProof ? `
+      <div class="challenge-photo-icon">📷</div>
+    ` : ""}
+  </div>
+
+  ${descriptionImageUrl ? `
+    <div class="challenge-description-image-frame">
+      <img
+        src="${descriptionImageUrl}"
+        class="challenge-description-image"
+        alt="Aufgabenbild"
+      />
+    </div>
+  ` : ""}
+`;
+
+  const isVariable = isVariablePointsChallenge(challenge);
   const successVariants = getChallengeSuccessVariants(challenge);
 
-  modalPoints.textContent = isVariableChallenge
+  modalPoints.textContent = isVariable
     ? "Punkte: je nach Erfolgsstufe"
     : `Punkte: ${challenge.points}`;
 
   const hasDetails = challenge.details && challenge.details.trim() !== "";
 
-  if (isVariableChallenge) {
+  if (isVariable) {
     modalActions.innerHTML = `
       ${hasDetails ? `<button id="detailsBtn">Hinweise</button>` : ""}
       <div class="success-variant-actions">
-        <div class="success-variant-title">Welche Stufe hast du geschafft?</div>
-        ${successVariants.map(variant => `
+        <div class="success-variant-heading">Welche Stufe hast du geschafft?</div>
+        ${successVariants.map((variant, index) => `
           <button
-            type="button"
+            id="successVariantBtn${index}"
             class="success-variant-btn"
-            data-variant-points="${variant.points}"
+            type="button"
           >
             ${variant.points}P · ${variant.label}
           </button>
@@ -208,20 +236,19 @@ function openChallengeModal(challenge) {
     };
   }
 
-  if (isVariableChallenge) {
-    modalActions.querySelectorAll(".success-variant-btn").forEach(button => {
-      button.onclick = async () => {
-        const variantPoints = Number(button.dataset.variantPoints);
-        const successVariant = successVariants.find(v => v.points === variantPoints);
-        if (!successVariant) return;
+  if (isVariable) {
+    successVariants.forEach((variant, index) => {
+      const btn = document.getElementById(`successVariantBtn${index}`);
+      if (!btn) return;
 
+      btn.onclick = async () => {
         if (challenge.requiresPhotoProof) {
           closeModal();
-          openUploadModal(challenge, "normal", successVariant);
+          openUploadModal(challenge, "normal", variant);
           return;
         }
 
-        await completeChallenge(challenge.boardId, null, successVariant);
+        await completeChallenge(challenge.boardId, null, variant);
       };
     });
   } else {
@@ -262,7 +289,7 @@ function renderCompletionGallery() {
     <div class="gallery-wrapper gallery-fade-in">
       <p class="gallery-caption">
         <strong>Foto von:</strong> ${entry.display_name || entry.username}
-        <span class="gallery-time">(${formatCompletedDateTime(entry.completedAt)})</span>
+        <span class="gallery-time">(${entry.successVariantLabel ? `${entry.successVariantLabel} · ` : ""}${formatCompletedDateTime(entry.completedAt)})</span>
       </p>
 
       <div class="gallery-image-container">
@@ -347,10 +374,10 @@ async function openCompletedChallengeModal(challenge) {
             class="completion-name ${isClickable ? "clickable" : ""}"
             data-player-id="${entry.playerId}"
           >
-            ${index + 1}. ${entry.display_name || entry.username}${entry.successVariantLabel ? ` – ${entry.successVariantLabel}` : ""}${index === 0 ? `<span class="completion-star">⭐</span>` : ""}
+            ${index + 1}. ${entry.display_name || entry.username}${index === 0 ? `<span class="completion-star">⭐</span>` : ""}
           </div>
           <div class="completion-time">
-            ${formatCompletedDateTime(entry.completedAt)}
+            ${entry.successVariantLabel ? `${entry.successVariantLabel} · ` : ""}${formatCompletedDateTime(entry.completedAt)}
           </div>
         </div>
       `;
@@ -371,6 +398,7 @@ if (challenge.successText && challenge.successText.trim() !== "") {
 
 modalTask.innerHTML = `
   <p>${challenge.task}</p>
+  ${renderChallengeDescriptionImage(challenge)}
   <p><strong>Punkte:</strong> ${getChallengePointsDisplay(challenge)}</p>
   ${successHtml}
   ${completionsHtml}
@@ -528,7 +556,7 @@ async function openPlayerProfileModal() {
             wasFirstSolver: row.was_first_solver,
             pointsAwarded: row.points_awarded,
             successVariantLabel: row.success_variant_label || null,
-            successVariantPoints: row.success_variant_points || null
+            successVariantPoints: row.success_variant_points ?? null
           }
         : null;
     })
@@ -895,7 +923,7 @@ function renderPlayerProfileGallery() {
   playerProfileGallery.innerHTML = `
     <div class="gallery-wrapper gallery-fade-in">
       <p class="gallery-caption">
-        <strong>${entry.challengeTitle}</strong>, ${formatCompletedDateTime(entry.completedAt)}
+        <strong>${entry.challengeTitle}</strong>, ${entry.successVariantLabel ? `${entry.successVariantLabel} · ` : ""}${formatCompletedDateTime(entry.completedAt)}
       </p>
 
       <div class="gallery-image-container">
@@ -957,11 +985,12 @@ async function renderPlayerProfileCompletedList() {
       type: "normal",
       challengeId: row.challenge_id,
       title: challenge.title,
-      successVariantLabel: row.success_variant_label || null,
       completedAt: row.completed_at,
       points: row.points_awarded || 0,
       wasFirstSolver: row.was_first_solver === true,
-      proofImagePath: row.proof_image_path || null
+      proofImagePath: row.proof_image_path || null,
+      successVariantLabel: row.success_variant_label || null,
+      successVariantPoints: row.success_variant_points ?? null
     });
   });
 

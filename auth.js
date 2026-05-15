@@ -1469,6 +1469,10 @@ async function authBootstrapForAdminPage() {
  * Löscht Session + View-State und leitet anschließend um.
  */
 function authLogout({ redirectTo = AUTH_VIEW_GAME } = {}) {
+  if (typeof logoutPlayerPushService === "function") {
+    logoutPlayerPushService();
+  }
+
   clearAuthSessionFromLocalStorage();
   clearAuthPreferredView();
   clearLegacyAuthStorage();

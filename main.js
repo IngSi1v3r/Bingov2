@@ -298,9 +298,6 @@ function startGlobalStatsPolling() {
       renderGrid();
       await renderLeaderboard();
       await checkLiveChallengeStatus();
-      if (typeof refreshPlayerActivityToasts === "function") {
-        await refreshPlayerActivityToasts();
-      }
     }
   });
 
@@ -474,10 +471,6 @@ async function loadCurrentGameIntoApp() {
   clearFinalSeenIfNeeded();
   await renderLeaderboard();
 
-  if (typeof initializePlayerActivityToasts === "function") {
-    await initializePlayerActivityToasts();
-  }
-
   startGlobalStatsPolling();
 
   if (isCooldownActive()) {
@@ -511,6 +504,12 @@ async function startGameApp() {
 
   await loadCurrentGameIntoApp();
 
+  if (typeof initializePlayerPushService === "function") {
+    await initializePlayerPushService({
+      justRegistered: boot.justRegistered === true
+    });
+  }
+
   if (boot.justRegistered) {
     openWelcomeOverlay();
   }
@@ -523,6 +522,10 @@ async function startGameApp() {
 if (welcomeStartBtn) {
   welcomeStartBtn.addEventListener("click", () => {
     closeWelcomeOverlay();
+
+    if (typeof maybeShowPlayerPushRegistrationPrompt === "function") {
+      maybeShowPlayerPushRegistrationPrompt();
+    }
   });
 }
 

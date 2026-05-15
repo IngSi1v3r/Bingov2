@@ -114,12 +114,13 @@ function mapChallengeRowForGameUi(row) {
     title: row.title,
     task: row.task,
     points: row.points,
-    successVariant1: row.success_variant_1 || "",
-    successVariant2: row.success_variant_2 || "",
-    successVariant3: row.success_variant_3 || "",
     categoryIcon: row.category_icon || "",
     details: row.details || "",
     successText: row.success_text || "",
+    successVariant1: row.success_variant_1 || "",
+    successVariant2: row.success_variant_2 || "",
+    successVariant3: row.success_variant_3 || "",
+    descriptionImagePath: row.description_image_path || null,
     requiresPhotoProof: row.requires_photo_proof === true,
     isActive: row.is_active === true,
     solvedCount: 0,
@@ -150,28 +151,28 @@ function getChallengeByDbId(dbId) {
   return challenges.find(c => c.dbId === dbId) || null;
 }
 
+
 function getChallengeSuccessVariants(challenge) {
   if (!challenge) return [];
 
   return [
-    { points: 1, label: challenge.successVariant1 },
-    { points: 2, label: challenge.successVariant2 },
-    { points: 3, label: challenge.successVariant3 }
-  ].filter(variant =>
-    variant.label && String(variant.label).trim() !== ""
-  ).map(variant => ({
-    points: variant.points,
-    label: String(variant.label).trim()
-  }));
+    { points: 1, label: challenge.successVariant1 || "" },
+    { points: 2, label: challenge.successVariant2 || "" },
+    { points: 3, label: challenge.successVariant3 || "" }
+  ].filter(variant => String(variant.label || "").trim() !== "");
 }
 
 function isVariablePointsChallenge(challenge) {
-  if (!challenge) return false;
-  return challenge.points == null && getChallengeSuccessVariants(challenge).length > 0;
+  return (
+    !!challenge &&
+    (challenge.points === null || challenge.points === undefined) &&
+    getChallengeSuccessVariants(challenge).length > 0
+  );
 }
 
 function getChallengePointsDisplay(challenge) {
-  return isVariablePointsChallenge(challenge) ? "?" : (challenge?.points ?? "?");
+  if (isVariablePointsChallenge(challenge)) return "?";
+  return `${challenge?.points ?? 0}P`;
 }
 
 /* ============================================================
@@ -745,7 +746,7 @@ function renderRulesContent() {
 
     <p><strong>Punkte:</strong></p>
     <ul>
-      <li>Jede Aufgabe bringt 1 bis 3 Punkte. Manche Aufgaben haben mehrere Erfolgsstufen.</li>
+      <li>Jede Aufgabe bringt 1 bis 3 Punkte.</li>
       <li>Wer eine Aufgabe als Erster loest, bekommt <strong>doppelte Punkte</strong>.</li>
     </ul>
 

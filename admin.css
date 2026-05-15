@@ -1576,3 +1576,41 @@ button.danger-btn:hover {
 .admin-bingo-line-indicator.solved:hover {
   background: #15803d;
 }
+/* ===================== */
+/* CHALLENGE DESCRIPTION IMAGES */
+/* ===================== */
+
+.admin-challenge-image-preview-wrap {
+  margin: 10px 0 14px;
+  padding: 10px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 12px;
+}
+
+.admin-challenge-description-image-preview {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  display: block;
+  background: #0b1220;
+  border-radius: 10px;
+}
+
+.admin-setup-image-box input[type="file"],
+#adminChallengeImageInput {
+  width: 100%;
+  padding: 10px;
+  color: white;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 10px;
+}
+
+.admin-setup-image-remove {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  color: #fca5a5;
+}

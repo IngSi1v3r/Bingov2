@@ -82,6 +82,7 @@ async function initializeAdminGamesTab() {
   ensureAdminCreateGameModal();
   ensureAdminChallengeSetupModal();
   ensureAdminGamePasswordModal();
+  ensureAdminChallengeImageModal();
 
   await loadAdminGamesTabData();
 
@@ -1675,6 +1676,13 @@ async function openAdminGameChallengeDetails(game, challenge) {
         </div>
       </div>
 
+      <div id="adminEditChallengeImageBtn" class="admin-game-challenge-card editable admin-game-challenge-card-wide">
+        <div class="admin-game-challenge-card-label">Aufgabenbild</div>
+        <div class="admin-game-challenge-card-value ${challenge.description_image_path ? "" : "muted"}">
+          ${challenge.description_image_path ? "Bild vorhanden" : "Nicht gesetzt"}
+        </div>
+      </div>
+
       <div id="adminToggleChallengePhotoBtn" class="admin-game-challenge-card editable">
         <div class="admin-game-challenge-card-label">Foto erforderlich</div>
         <div class="admin-game-challenge-card-value ${challenge.requires_photo_proof ? "" : "muted"}">
@@ -1729,6 +1737,7 @@ async function openAdminGameChallengeDetails(game, challenge) {
   const editDetailsBtn = document.getElementById("adminEditChallengeDetailsBtn");
   const editPointsBtn = document.getElementById("adminEditChallengePointsBtn");
   const editSuccessBtn = document.getElementById("adminEditChallengeSuccessBtn");
+  const editImageBtn = document.getElementById("adminEditChallengeImageBtn");
   const editVariant1Btn = document.getElementById("adminEditChallengeVariant1Btn");
   const editVariant2Btn = document.getElementById("adminEditChallengeVariant2Btn");
   const editVariant3Btn = document.getElementById("adminEditChallengeVariant3Btn");
@@ -1763,6 +1772,12 @@ async function openAdminGameChallengeDetails(game, challenge) {
   if (editSuccessBtn) {
     editSuccessBtn.addEventListener("click", async () => {
       await handleAdminEditChallengeSuccessText(game, challenge);
+    });
+  }
+
+  if (editImageBtn) {
+    editImageBtn.addEventListener("click", async () => {
+      openAdminChallengeImageModal(game, challenge);
     });
   }
 
@@ -1812,6 +1827,229 @@ async function openAdminGameChallengeDetails(game, challenge) {
 
   renderAdminGameChallengeGalleryCurrent();
   openAdminGameChallengeModal();
+}
+
+
+/* ============================================================
+ * AUFGABENBILD-MODAL
+ * ============================================================ */
+
+let adminChallengeImageContext = null;
+
+function ensureAdminChallengeImageModal() {
+  if (document.getElementById("adminChallengeImageOverlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "adminChallengeImageOverlay";
+  overlay.className = "modal-overlay hidden";
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <button id="closeAdminChallengeImageBtn" class="modal-close-btn" type="button">×</button>
+      <h2>Aufgabenbild</h2>
+
+      <div class="rules-content">
+        <p id="adminChallengeImageInfo" class="admin-details-empty"></p>
+
+        <div id="adminChallengeImageCurrentPreview" class="admin-challenge-image-preview-wrap"></div>
+
+        <div class="admin-form-group">
+          <label for="adminChallengeImageInput"><strong>Neues Bild hochladen</strong></label>
+          <input id="adminChallengeImageInput" type="file" accept="image/*" />
+        </div>
+
+        <p id="adminChallengeImageStatus" class="admin-details-empty"></p>
+      </div>
+
+      <div class="modal-actions">
+        <button id="removeAdminChallengeImageBtn" type="button" class="danger-btn-soft">Bild entfernen</button>
+        <button id="cancelAdminChallengeImageBtn" type="button" class="secondary-btn">Abbrechen</button>
+        <button id="saveAdminChallengeImageBtn" type="button">Bild hochladen</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("closeAdminChallengeImageBtn")?.addEventListener("click", closeAdminChallengeImageModal);
+  document.getElementById("cancelAdminChallengeImageBtn")?.addEventListener("click", closeAdminChallengeImageModal);
+  document.getElementById("saveAdminChallengeImageBtn")?.addEventListener("click", handleAdminSaveChallengeImage);
+  document.getElementById("removeAdminChallengeImageBtn")?.addEventListener("click", handleAdminRemoveChallengeImage);
+}
+
+function openAdminChallengeImageModal(game, challenge) {
+  if (!game || !challenge) return;
+
+  ensureAdminChallengeImageModal();
+
+  adminChallengeImageContext = { game, challenge };
+
+  const overlay = document.getElementById("adminChallengeImageOverlay");
+  const infoEl = document.getElementById("adminChallengeImageInfo");
+  const inputEl = document.getElementById("adminChallengeImageInput");
+  const statusEl = document.getElementById("adminChallengeImageStatus");
+  const previewEl = document.getElementById("adminChallengeImageCurrentPreview");
+  const removeBtn = document.getElementById("removeAdminChallengeImageBtn");
+
+  if (infoEl) {
+    infoEl.textContent = `${challenge.title || `Feld ${challenge.position}`} · ${game.name || `Spiel ${game.id}`}`;
+  }
+
+  if (inputEl) inputEl.value = "";
+  if (statusEl) statusEl.textContent = "";
+
+  const imageUrl = getAdminChallengeImagePublicUrl(challenge.description_image_path);
+
+  if (previewEl) {
+    previewEl.innerHTML = imageUrl
+      ? `<img src="${imageUrl}" class="admin-challenge-description-image-preview" alt="Aufgabenbild" />`
+      : `<p class="admin-details-empty">Noch kein Aufgabenbild gesetzt.</p>`;
+  }
+
+  if (removeBtn) {
+    removeBtn.classList.toggle("hidden", !challenge.description_image_path);
+  }
+
+  overlay?.classList.remove("hidden");
+}
+
+function closeAdminChallengeImageModal() {
+  adminChallengeImageContext = null;
+  document.getElementById("adminChallengeImageOverlay")?.classList.add("hidden");
+}
+
+function getAdminChallengeImagePublicUrl(path) {
+  if (!path) return null;
+
+  if (typeof DataService !== "undefined" && DataService.storage?.getChallengeImagePublicUrl) {
+    return DataService.storage.getChallengeImagePublicUrl(path);
+  }
+
+  const { data } = supabaseClient.storage
+    .from("challenge-images")
+    .getPublicUrl(path);
+
+  return data?.publicUrl || null;
+}
+
+function buildAdminChallengeImagePath(gameId, challengeId, file) {
+  const extension = String(file?.name || "image.jpg")
+    .split(".")
+    .pop()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "") || "jpg";
+
+  return `game-${gameId}/challenge-${challengeId}/description-${Date.now()}.${extension}`;
+}
+
+async function uploadAdminChallengeImageFile(gameId, challengeId, file) {
+  if (!file) return null;
+
+  if (!file.type || !file.type.startsWith("image/")) {
+    alert("Bitte eine Bilddatei auswählen.");
+    return null;
+  }
+
+  const path = buildAdminChallengeImagePath(gameId, challengeId, file);
+
+  const { error } = await supabaseClient.storage
+    .from("challenge-images")
+    .upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || "image/jpeg"
+    });
+
+  if (error) {
+    console.error("Fehler beim Hochladen des Aufgabenbildes:", error);
+    alert("Aufgabenbild konnte nicht hochgeladen werden.");
+    return null;
+  }
+
+  return path;
+}
+
+async function handleAdminSaveChallengeImage() {
+  const context = adminChallengeImageContext;
+  if (!context?.game || !context?.challenge) return;
+
+  const { game, challenge } = context;
+  const inputEl = document.getElementById("adminChallengeImageInput");
+  const statusEl = document.getElementById("adminChallengeImageStatus");
+  const file = inputEl?.files?.[0] || null;
+
+  if (!file) {
+    if (statusEl) statusEl.textContent = "Bitte zuerst ein Bild auswählen.";
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = "Bild wird hochgeladen...";
+
+  const imagePath = await uploadAdminChallengeImageFile(game.id, challenge.id, file);
+  if (!imagePath) {
+    if (statusEl) statusEl.textContent = "Upload fehlgeschlagen.";
+    return;
+  }
+
+  const updated = await updateAdminChallengeFields(challenge.id, {
+    description_image_path: imagePath
+  });
+
+  if (!updated) return;
+
+  await logAdminChallengeUpdated({
+    gameId: game.id,
+    adminPlayerId: adminPlayer?.id || null,
+    challengeId: challenge.id,
+    metadata: {
+      admin_name: adminPlayer?.display_name || adminPlayer?.username || null,
+      challenge_title: challenge.title || null,
+      position: challenge.position ?? null,
+      game_name: game.name || null,
+      field: "description_image_path",
+      old_value: challenge.description_image_path || null,
+      new_value: imagePath
+    }
+  });
+
+  closeAdminChallengeImageModal();
+  await refreshAdminGamesChallengeModal(game.id, challenge.id);
+}
+
+async function handleAdminRemoveChallengeImage() {
+  const context = adminChallengeImageContext;
+  if (!context?.game || !context?.challenge) return;
+
+  const { game, challenge } = context;
+
+  if (!challenge.description_image_path) return;
+
+  const confirmed = confirm("Aufgabenbild wirklich entfernen? Die Datei bleibt im Storage erhalten, wird aber nicht mehr angezeigt.");
+  if (!confirmed) return;
+
+  const updated = await updateAdminChallengeFields(challenge.id, {
+    description_image_path: null
+  });
+
+  if (!updated) return;
+
+  await logAdminChallengeUpdated({
+    gameId: game.id,
+    adminPlayerId: adminPlayer?.id || null,
+    challengeId: challenge.id,
+    metadata: {
+      admin_name: adminPlayer?.display_name || adminPlayer?.username || null,
+      challenge_title: challenge.title || null,
+      position: challenge.position ?? null,
+      game_name: game.name || null,
+      field: "description_image_path",
+      old_value: challenge.description_image_path || null,
+      new_value: null
+    }
+  });
+
+  closeAdminChallengeImageModal();
+  await refreshAdminGamesChallengeModal(game.id, challenge.id);
 }
 
 /* ============================================================
@@ -2477,6 +2715,7 @@ async function handleAdminCreateGameFromModal() {
       title: `Feld ${i}`,
       task: "",
       points: 1,
+      description_image_path: null,
       is_active: true
     });
   }
@@ -2556,7 +2795,7 @@ function ensureAdminChallengeSetupModal() {
         <div class="admin-game-challenge-cards">
           <div class="admin-game-challenge-card">
             <div class="admin-game-challenge-card-label">Punkte</div>
-            <input id="adminSetupChallengePointsInput" type="number" min="0" value="1" placeholder="leer = variabel" />
+            <input id="adminSetupChallengePointsInput" type="text" inputmode="numeric" value="1" placeholder="leer = variabel / ?" />
           </div>
 
           <div class="admin-game-challenge-card">
@@ -2592,6 +2831,17 @@ function ensureAdminChallengeSetupModal() {
               Aufgabe aktiv
             </label>
           </div>
+        </div>
+
+        <div class="admin-form-group admin-setup-image-box">
+          <label for="adminSetupChallengeImageInput"><strong>Aufgabenbild</strong></label>
+          <div id="adminSetupChallengeImagePreview" class="admin-challenge-image-preview-wrap"></div>
+          <input id="adminSetupChallengeImageInput" type="file" accept="image/*" />
+          <label id="adminSetupChallengeImageRemoveLabel" class="admin-setup-image-remove hidden">
+            <input id="adminSetupChallengeImageRemoveInput" type="checkbox" />
+            Vorhandenes Aufgabenbild entfernen
+          </label>
+          <p class="admin-details-empty">Optional. Wird im Aufgabenmodal unter der Beschreibung angezeigt.</p>
         </div>
 
         <div class="admin-setup-bulk-box">
@@ -2709,6 +2959,10 @@ function renderAdminChallengeSetupStep() {
   const variant3Input = document.getElementById("adminSetupChallengeVariant3Input");
   const photoInput = document.getElementById("adminSetupChallengePhotoInput");
   const activeInput = document.getElementById("adminSetupChallengeActiveInput");
+  const imageInput = document.getElementById("adminSetupChallengeImageInput");
+  const imagePreview = document.getElementById("adminSetupChallengeImagePreview");
+  const imageRemoveInput = document.getElementById("adminSetupChallengeImageRemoveInput");
+  const imageRemoveLabel = document.getElementById("adminSetupChallengeImageRemoveLabel");
   const backBtn = document.getElementById("adminSetupBackBtn");
 
   const currentStep = adminChallengeSetupIndex + 1;
@@ -2732,16 +2986,48 @@ function renderAdminChallengeSetupStep() {
   if (categoryInput) categoryInput.value = challenge.category_icon || "";
   if (photoInput) photoInput.checked = challenge.requires_photo_proof === true;
   if (activeInput) activeInput.checked = challenge.is_active !== false;
+  if (imageInput) imageInput.value = "";
+  if (imageRemoveInput) imageRemoveInput.checked = false;
+
+  const imageUrl = getAdminChallengeImagePublicUrl(challenge.description_image_path);
+
+  if (imagePreview) {
+    imagePreview.innerHTML = imageUrl
+      ? `<img src="${imageUrl}" class="admin-challenge-description-image-preview" alt="Aufgabenbild" />`
+      : `<p class="admin-details-empty">Noch kein Aufgabenbild gesetzt.</p>`;
+  }
+
+  if (imageRemoveLabel) {
+    imageRemoveLabel.classList.toggle("hidden", !challenge.description_image_path);
+  }
+}
+
+function parseAdminChallengePointsInput(rawValue) {
+  const trimmed = String(rawValue || "").trim();
+
+  if (trimmed === "" || trimmed === "?") {
+    return null;
+  }
+
+  const value = Number(trimmed);
+
+  if (!Number.isInteger(value) || value < 0) {
+    return undefined;
+  }
+
+  return value;
 }
 
 /** Liest die aktuellen Formularwerte des Wizards aus */
 function getAdminChallengeSetupFormValues() {
+  const pointsRaw = document.getElementById("adminSetupChallengePointsInput")?.value ?? "";
+
   return {
     title: document.getElementById("adminSetupChallengeTitleInput")?.value?.trim() || "",
     task: document.getElementById("adminSetupChallengeTaskInput")?.value || "",
     details: document.getElementById("adminSetupChallengeDetailsInput")?.value || "",
     success_text: document.getElementById("adminSetupChallengeSuccessInput")?.value || "",
-    points: (() => { const raw = document.getElementById("adminSetupChallengePointsInput")?.value ?? ""; return raw.trim() === "" ? null : Number(raw); })(),
+    points: parseAdminChallengePointsInput(pointsRaw),
     success_variant_1: document.getElementById("adminSetupChallengeVariant1Input")?.value?.trim() || "",
     success_variant_2: document.getElementById("adminSetupChallengeVariant2Input")?.value?.trim() || "",
     success_variant_3: document.getElementById("adminSetupChallengeVariant3Input")?.value?.trim() || "",
@@ -2768,6 +3054,13 @@ async function handleAdminChallengeSetupSaveNext() {
     return;
   }
 
+  if (values.points === undefined) {
+    alert("Bitte eine ganze Punktzahl eingeben oder das Feld leer lassen für variable Punkte.");
+    return;
+  }
+
+  const imagePath = await resolveAdminChallengeSetupImagePath(gameId, challenge);
+
   const updated = await updateAdminChallengeFields(challenge.id, {
     title: values.title,
     task: values.task.trim(),
@@ -2779,7 +3072,8 @@ async function handleAdminChallengeSetupSaveNext() {
     success_variant_3: values.success_variant_3 || null,
     category_icon: values.category_icon || null,
     requires_photo_proof: values.requires_photo_proof,
-    is_active: values.is_active
+    is_active: values.is_active,
+    description_image_path: imagePath
   });
 
   if (!updated) return;
@@ -2829,6 +3123,11 @@ async function handleAdminChallengeSetupApplyToRemaining() {
 
   if (!values.title) {
     alert("Bitte zuerst mindestens einen Namen eingeben.");
+    return;
+  }
+
+  if (values.points === undefined) {
+    alert("Bitte eine ganze Punktzahl eingeben oder das Feld leer lassen für variable Punkte.");
     return;
   }
 
@@ -2946,6 +3245,7 @@ async function handleAdminDuplicateGame(game) {
     category_icon: challenge.category_icon || null,
     details: challenge.details || null,
     success_text: challenge.success_text || null,
+    description_image_path: challenge.description_image_path || null,
     requires_photo_proof: challenge.requires_photo_proof === true,
     success_variant_1: challenge.success_variant_1 || null,
     success_variant_2: challenge.success_variant_2 || null,

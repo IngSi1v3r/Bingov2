@@ -62,9 +62,6 @@ const DataService = (() => {
     position,
     title,
     points,
-    success_variant_1,
-    success_variant_2,
-    success_variant_3,
     is_active
   `;
 
@@ -79,9 +76,6 @@ const DataService = (() => {
     category_icon,
     details,
     success_text,
-    success_variant_1,
-    success_variant_2,
-    success_variant_3,
     requires_photo_proof
   `;
 
@@ -165,10 +159,7 @@ const DataService = (() => {
       display_name: row.players?.display_name || null,
       completedAt: row.completed_at,
       wasFirstSolver: row.was_first_solver === true,
-      proofImagePath: row.proof_image_path || null,
-      successVariantLabel: row.success_variant_label || null,
-      successVariantPoints: row.success_variant_points || null,
-      pointsAwarded: row.points_awarded || 0
+      proofImagePath: row.proof_image_path || null
     };
   }
 
@@ -436,7 +427,50 @@ const DataService = (() => {
   };
 
   /* ============================================================
-   * 4. CHALLENGES
+   * 4. PUSH PREFERENCES
+   * ============================================================ */
+
+  const pushPreferences = {
+    async loadForPlayer(playerId = getDefaultPlayerId()) {
+      const safePlayerId = normalizeId(playerId);
+      if (!safePlayerId) return null;
+
+      const { data, error } = await supabaseClient
+        .from("player_push_preferences")
+        .select("*")
+        .eq("player_id", safePlayerId)
+        .maybeSingle();
+
+      return error
+        ? handleError("Fehler beim Laden der Push-Einstellungen:", error, null)
+        : (data || null);
+    },
+
+    async upsertForPlayer(playerId = getDefaultPlayerId(), fields = {}) {
+      const safePlayerId = normalizeId(playerId);
+      if (!safePlayerId) return null;
+
+      const payload = {
+        player_id: safePlayerId,
+        ...fields,
+        updated_at: new Date().toISOString(),
+        last_seen_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabaseClient
+        .from("player_push_preferences")
+        .upsert(payload, { onConflict: "player_id" })
+        .select()
+        .single();
+
+      return error
+        ? handleError("Fehler beim Speichern der Push-Einstellungen:", error, null)
+        : (data || null);
+    }
+  };
+
+  /* ============================================================
+   * 5. CHALLENGES
    * ============================================================ */
 
   const challenges = {
@@ -645,7 +679,7 @@ const DataService = (() => {
 
       const { data, error } = await supabaseClient
         .from("player_challenges")
-        .select("challenge_id, completed_at, was_first_solver, points_awarded, proof_image_path, success_variant_label, success_variant_points")
+        .select("challenge_id, completed_at, was_first_solver, points_awarded, proof_image_path")
         .eq("player_id", safePlayerId)
         .eq("game_id", safeGameId)
         .eq("status", "completed")
@@ -672,9 +706,6 @@ const DataService = (() => {
           completed_at,
           was_first_solver,
           proof_image_path,
-          points_awarded,
-          success_variant_label,
-          success_variant_points,
           players (
             username,
             display_name
@@ -1007,7 +1038,6 @@ const DataService = (() => {
         .select(`
           player_id,
           proof_image_path,
-          points_awarded,
           players (
             display_name,
             username
@@ -1472,6 +1502,7 @@ const logs = {
   return {
     games,
     players,
+    pushPreferences,
     challenges,
     playerState,
     playerChallenges,
