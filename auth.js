@@ -1470,8 +1470,10 @@ async function authBootstrapForAdminPage() {
  */
 async function authLogout({ redirectTo = AUTH_VIEW_GAME } = {}) {
   if (typeof logoutPlayerPushService === "function") {
-    await logoutPlayerPushService();
-  }
+  logoutPlayerPushService().catch(error => {
+    console.warn("Push-Logout fehlgeschlagen, normaler Logout wird trotzdem fortgesetzt:", error);
+  });
+}
 
   clearAuthSessionFromLocalStorage();
   clearAuthPreferredView();

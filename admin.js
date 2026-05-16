@@ -298,6 +298,13 @@ async function handleAdminTabActivated(tabName) {
     if (typeof initializeAdminGalleryTab === "function") {
       await initializeAdminGalleryTab();
     }
+    return;
+  }
+
+  if (tabName === "push") {
+    if (typeof initializeAdminPushTab === "function") {
+      await initializeAdminPushTab();
+    }
   }
 }
 
