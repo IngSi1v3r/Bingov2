@@ -26,6 +26,8 @@ let adminPushPlayers = [];
 let adminPushHistory = [];
 let adminPushSettings = null;
 let adminPushPreviewCount = 0;
+let adminPushSettingsSaveInProgress = false;
+let adminPushSettingsLocalLockUntil = 0;
 
 const ADMIN_PUSH_DEFAULT_LAUNCH_URL = "https://ingsi1v3r.github.io/Bingov2/";
 
@@ -154,14 +156,14 @@ function ensureAdminPushLayout() {
         </div>
 
         <p class="admin-details-empty">
-          Diese Einstellungen werden in Stufe 1 nur gespeichert. Die automatischen Pushs kommen in Stufe 2.
+          Diese Einstellungen werden automatisch gespeichert, sobald du eine Option umschaltest.
         </p>
 
         <div id="adminPushSettingsList" class="admin-push-settings-list"></div>
 
         <p id="adminPushSettingsStatusText" class="admin-push-status"></p>
 
-        <div class="admin-player-action-bar">
+        <div class="admin-player-action-bar hidden">
           <button id="adminPushSaveSettingsBtn" type="button">Einstellungen speichern</button>
         </div>
       </div>
@@ -223,6 +225,10 @@ async function loadAdminPushPlayers() {
 async function loadAdminPushSettings() {
   if (!adminCurrentGameId) {
     adminPushSettings = null;
+    return;
+  }
+
+  if (adminPushSettings && Date.now() < adminPushSettingsLocalLockUntil) {
     return;
   }
 
@@ -362,6 +368,8 @@ function renderAdminPushSettings() {
       </div>
     </label>
   `).join("");
+
+  attachAdminPushSettingAutoSaveEvents();
 }
 
 function renderAdminPushHistory() {
@@ -584,8 +592,8 @@ function buildManualPushPayload() {
   };
 }
 
-async function handleSavePushSettings() {
-  if (!adminCurrentGameId) return;
+async function handleSavePushSettings({ silent = false } = {}) {
+  if (!adminCurrentGameId) return null;
 
   const statusEl = document.getElementById("adminPushSettingsStatusText");
 
@@ -599,7 +607,12 @@ async function handleSavePushSettings() {
   });
 
   try {
-    if (statusEl) statusEl.textContent = "Speichere...";
+    adminPushSettingsSaveInProgress = true;
+
+    if (statusEl && !silent) {
+      statusEl.textContent = "Speichere...";
+      statusEl.className = "admin-push-status";
+    }
 
     const { data, error } = await supabaseClient
       .from("game_push_settings")
@@ -610,18 +623,70 @@ async function handleSavePushSettings() {
     if (error) throw error;
 
     adminPushSettings = data;
+    adminPushSettingsLocalLockUntil = 0;
+
     if (statusEl) {
-      statusEl.textContent = "Einstellungen gespeichert.";
+      statusEl.textContent = "Einstellungen automatisch gespeichert.";
       statusEl.className = "admin-push-status success";
     }
+
+    return data;
   } catch (error) {
     console.error("Push-Einstellungen konnten nicht gespeichert werden:", error);
+
     if (statusEl) {
-      statusEl.textContent = "Einstellungen konnten nicht gespeichert werden.";
+      statusEl.textContent = buildAdminPushErrorMessage(
+        error,
+        "Einstellungen konnten nicht gespeichert werden."
+      );
       statusEl.className = "admin-push-status error";
     }
+
+    return null;
+  } finally {
+    adminPushSettingsSaveInProgress = false;
   }
 }
+
+/* ============================================================
+ * SETTINGS AUTOSAVE
+ * ============================================================ */
+
+function attachAdminPushSettingAutoSaveEvents() {
+  document.querySelectorAll(".admin-push-setting-checkbox").forEach(input => {
+    if (input.dataset.bound === "true") return;
+
+    input.addEventListener("change", async () => {
+      await handleAdminPushSettingChanged(input);
+    });
+
+    input.dataset.bound = "true";
+  });
+}
+
+async function handleAdminPushSettingChanged(input) {
+  if (!input || !adminCurrentGameId) return;
+
+  const key = input.dataset.settingKey;
+  if (!key) return;
+
+  adminPushSettingsLocalLockUntil = Date.now() + 5000;
+
+  adminPushSettings = {
+    ...(adminPushSettings || buildDefaultAdminPushSettings(adminCurrentGameId)),
+    game_id: adminCurrentGameId,
+    [key]: input.checked === true
+  };
+
+  const statusEl = document.getElementById("adminPushSettingsStatusText");
+  if (statusEl) {
+    statusEl.textContent = "Speichere Änderung...";
+    statusEl.className = "admin-push-status";
+  }
+
+  await handleSavePushSettings({ silent: true });
+}
+
 
 
 /* ============================================================
