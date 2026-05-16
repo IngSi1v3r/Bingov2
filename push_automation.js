@@ -353,3 +353,89 @@ async function pushAutomationSendFirstGameBingo({ gameId, playerId, lineKey = nu
     }
   });
 }
+
+/* ============================================================
+ * TEST-TRIGGER: COOLDOWN-PUSH-CHECK
+ * ============================================================
+ * Hinweis:
+ * - Die eigentliche Cooldown-Logik laeuft serverseitig in der Edge Function
+ *   check-cooldowns.
+ * - Fuer Tests wird diese Function alle 10 Sekunden vom Adminpanel aus
+ *   angestossen, solange das Adminpanel offen ist.
+ * - Durch die Tabelle cooldown_push_notifications ist der Check idempotent:
+ *   Auch mehrere Tabs oder wiederholte Aufrufe erzeugen keine doppelten Pushs
+ *   fuer denselben Cooldown.
+ * - Fuer Produktion kann spaeter ein echter Supabase-Scheduler/Cron verwendet
+ *   und dieser Frontend-Test-Trigger entfernt oder deaktiviert werden.
+ */
+
+const PUSH_COOLDOWN_TEST_CHECK_ENABLED = true;
+const PUSH_COOLDOWN_TEST_CHECK_INTERVAL_MS = 10000;
+
+let pushCooldownTestCheckIntervalId = null;
+let pushCooldownTestCheckRunning = false;
+
+function pushAutomationIsAdminPage() {
+  return window.location.pathname.toLowerCase().includes("admin");
+}
+
+async function pushAutomationRunCooldownCheckOnce() {
+  if (pushCooldownTestCheckRunning) return null;
+  if (typeof supabaseClient === "undefined") return null;
+
+  pushCooldownTestCheckRunning = true;
+
+  try {
+    const { data, error } = await supabaseClient.functions.invoke("check-cooldowns", {
+      body: {
+        source: "admin_test_poll_10s",
+        limit: 100
+      }
+    });
+
+    if (error) {
+      console.warn("Cooldown-Push-Check fehlgeschlagen:", error);
+      return null;
+    }
+
+    if (data?.sent > 0 || data?.failed > 0) {
+      console.info("Cooldown-Push-Check:", data);
+    }
+
+    return data || null;
+  } catch (error) {
+    console.warn("Cooldown-Push-Check Fehler:", error);
+    return null;
+  } finally {
+    pushCooldownTestCheckRunning = false;
+  }
+}
+
+function startPushAutomationCooldownTestChecker() {
+  if (!PUSH_COOLDOWN_TEST_CHECK_ENABLED) return;
+  if (!pushAutomationIsAdminPage()) return;
+  if (pushCooldownTestCheckIntervalId) return;
+
+  // erster Lauf kurz nach dem Laden, danach alle 10 Sekunden
+  setTimeout(() => {
+    pushAutomationRunCooldownCheckOnce();
+  }, 2500);
+
+  pushCooldownTestCheckIntervalId = setInterval(() => {
+    pushAutomationRunCooldownCheckOnce();
+  }, PUSH_COOLDOWN_TEST_CHECK_INTERVAL_MS);
+
+  console.info(
+    `Cooldown-Push-Testchecker aktiv: alle ${PUSH_COOLDOWN_TEST_CHECK_INTERVAL_MS / 1000}s`
+  );
+}
+
+function stopPushAutomationCooldownTestChecker() {
+  if (!pushCooldownTestCheckIntervalId) return;
+  clearInterval(pushCooldownTestCheckIntervalId);
+  pushCooldownTestCheckIntervalId = null;
+}
+
+setTimeout(() => {
+  startPushAutomationCooldownTestChecker();
+}, 0);
