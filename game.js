@@ -549,6 +549,17 @@ async function completeChallenge(boardId, proofImagePath = null, successVariant 
   const bingoBonus = currentGame?.bingo_bonus_points ?? 5;
   const firstBingoBonus = getFirstBingoBonusPoints();
 
+  const { count: existingGameBingoCount, error: existingGameBingoError } = await supabaseClient
+    .from("player_bingos")
+    .select("id", { count: "exact", head: true })
+    .eq("game_id", currentGameId);
+
+  if (existingGameBingoError) {
+    console.warn("Fehler beim Prüfen des ersten Bingos im Spiel:", existingGameBingoError);
+  }
+
+  const isFirstBingoInGameBeforeThisMove = (existingGameBingoCount || 0) === 0;
+
   const newBingoAwards = [];
 
   for (const lineIndex of newBingoIndexes) {
@@ -685,6 +696,18 @@ if (proofImagePath) {
     award.lineKey,
     award.awardedBingoPoints
   );
+}
+
+if (
+  isFirstBingoInGameBeforeThisMove &&
+  newBingoAwards.length > 0 &&
+  typeof pushAutomationSendFirstGameBingo === "function"
+) {
+  await pushAutomationSendFirstGameBingo({
+    gameId: currentGameId,
+    playerId,
+    lineKey: newBingoAwards[0]?.lineKey || null
+  });
 }
 
   await loadGlobalChallengeStats();

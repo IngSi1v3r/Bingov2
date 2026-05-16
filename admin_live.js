@@ -1101,6 +1101,10 @@ async function activateAdminLiveChallenge(row) {
     return false;
   }
 
+  if (data && typeof pushAutomationSendLiveCreated === "function") {
+    await pushAutomationSendLiveCreated(data);
+  }
+
   return !!data;
 }
 
@@ -1165,6 +1169,12 @@ async function handleAdminEndActiveLiveChallenge() {
         admin_name: adminPlayer?.display_name || adminPlayer?.username || null,
         game_name: getAdminLiveGameName(activeRow.game_id)
       }
+    });
+  }
+
+  if (typeof pushAutomationSendLiveFinished === "function") {
+    await pushAutomationSendLiveFinished(data || activeRow, {
+      status: "manually_ended"
     });
   }
 
@@ -1270,6 +1280,18 @@ async function autoActivateScheduledLiveChallenges() {
     if (activateError) {
       console.error("Fehler beim automatischen Aktivieren:", activateError);
       continue;
+    }
+
+    if (typeof pushAutomationSendLiveCreated === "function") {
+      await pushAutomationSendLiveCreated({
+        ...challenge,
+        status: "active",
+        scheduled_start_at: null,
+        expires_at: expiresAt,
+        completed_at: null,
+        winner_player_id: null,
+        winner_completed_at: null
+      });
     }
 
     if (typeof logLiveChallengeCreated === "function") {

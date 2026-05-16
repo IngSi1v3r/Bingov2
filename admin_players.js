@@ -1070,6 +1070,13 @@ async function adminCreatePlayerState(player, game) {
     return;
   }
 
+  if (typeof pushAutomationSendPlayerAddedToGame === "function") {
+    await pushAutomationSendPlayerAddedToGame({
+      playerId: player.id,
+      gameId: game.id
+    });
+  }
+
   await initializeAdminPlayersTab();
 
   const refreshedPlayer = adminPlayers.find(p => Number(p.id) === Number(player.id));

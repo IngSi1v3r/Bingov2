@@ -378,6 +378,8 @@ function renderAdminPushHistory() {
       ${adminPushHistory.map(renderAdminPushHistoryRow).join("")}
     </div>
   `;
+
+  attachAdminPushHistoryDeleteEvents();
 }
 
 function renderAdminPushHistoryRow(row) {
@@ -391,6 +393,14 @@ function renderAdminPushHistoryRow(row) {
 
   return `
     <div class="admin-push-history-row ${statusClass}">
+      <button
+        type="button"
+        class="admin-push-history-delete-btn"
+        data-push-id="${row.id}"
+        title="Historieneintrag löschen"
+        aria-label="Historieneintrag löschen"
+      >🗑</button>
+
       <div class="admin-push-history-main">
         <div class="admin-push-history-title-row">
           <strong>${title}</strong>
@@ -552,7 +562,7 @@ async function handleSendManualPush() {
     renderAdminPushHistory();
   } catch (error) {
     console.error("Push-Versand fehlgeschlagen:", error);
-    setAdminPushStatus(error.message || "Push-Versand fehlgeschlagen.", "error");
+    setAdminPushStatus(buildAdminPushErrorMessage(error, "Push-Versand fehlgeschlagen."), "error");
   } finally {
     if (sendBtn) sendBtn.disabled = false;
   }
@@ -611,6 +621,84 @@ async function handleSavePushSettings() {
       statusEl.className = "admin-push-status error";
     }
   }
+}
+
+
+/* ============================================================
+ * HISTORY DELETE
+ * ============================================================ */
+
+function attachAdminPushHistoryDeleteEvents() {
+  document.querySelectorAll(".admin-push-history-delete-btn").forEach(btn => {
+    if (btn.dataset.bound === "true") return;
+
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+
+      const pushId = Number(btn.dataset.pushId);
+      if (!pushId) return;
+
+      await handleDeleteAdminPushHistoryEntry(pushId);
+    });
+
+    btn.dataset.bound = "true";
+  });
+}
+
+async function handleDeleteAdminPushHistoryEntry(pushId) {
+  const confirmed = confirm(
+    "Diesen Push-Historieneintrag wirklich löschen?\n\nDie bereits versendete Push-Nachricht wird dadurch nicht zurückgerufen."
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from("push_notifications")
+      .delete()
+      .eq("id", pushId);
+
+    if (error) {
+      throw error;
+    }
+
+    adminPushHistory = adminPushHistory.filter(row => Number(row.id) !== Number(pushId));
+    renderAdminPushHistory();
+    setAdminPushStatus("Historieneintrag gelöscht.", "success");
+  } catch (error) {
+    console.error("Push-Historieneintrag konnte nicht gelöscht werden:", error);
+    setAdminPushStatus(
+      buildAdminPushErrorMessage(error, "Historieneintrag konnte nicht gelöscht werden."),
+      "error"
+    );
+  }
+}
+
+function buildAdminPushErrorMessage(error, fallback = "Aktion fehlgeschlagen.") {
+  const raw = String(
+    error?.message ||
+    error?.context?.error ||
+    error?.details ||
+    error?.hint ||
+    error ||
+    ""
+  ).trim();
+
+  if (!raw) return fallback;
+
+  if (raw.includes("Failed to fetch")) {
+    return "Verbindung zur Edge Function fehlgeschlagen. Bitte Internetverbindung und Supabase-Deploy prüfen.";
+  }
+
+  if (raw.includes("non-2xx")) {
+    return "Edge Function hat einen Fehler zurückgegeben. Details stehen in der Push-Historie oder in den Supabase Function Logs.";
+  }
+
+  if (raw.includes("permission denied") || raw.includes("RLS")) {
+    return "Keine Berechtigung für diese Aktion. Prüfe Supabase/RLS bzw. Tabellenrechte.";
+  }
+
+  return raw;
 }
 
 /* ============================================================

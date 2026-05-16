@@ -1797,3 +1797,33 @@ button.danger-btn:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* Push-Historie: Löschbutton */
+.admin-push-history-row {
+  position: relative;
+}
+
+.admin-push-history-delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-push-history-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.24);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.admin-push-history-meta {
+  padding-right: 38px;
+}

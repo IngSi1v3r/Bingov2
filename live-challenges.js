@@ -658,6 +658,18 @@ async function handleCompleteLiveChallenge(challenge, proofImagePath = null) {
       }
     });
 
+    if (typeof pushAutomationSendLiveFinished === "function") {
+      await pushAutomationSendLiveFinished(
+        {
+          ...challenge,
+          game_id: currentGameId,
+          status: "completed",
+          winner_player_id: currentPlayer.id
+        },
+        { status: "completed" }
+      );
+    }
+
     if (updatedGameState) {
       gameState.score = newScore;
 
@@ -736,6 +748,12 @@ async function expireLiveChallenge(liveChallengeId) {
       game_name: effectiveGameName
     }
   });
+
+  if (data && typeof pushAutomationSendLiveFinished === "function") {
+    await pushAutomationSendLiveFinished(data, {
+      status: "expired"
+    });
+  }
 
   return data;
 }

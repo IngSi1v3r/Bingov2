@@ -998,6 +998,11 @@ async function handleAdminToggleGameActive(game) {
       new_value: nextValue
     }
   });
+
+  if (!oldActive && nextValue && typeof pushAutomationSendGameActivated === "function") {
+    await pushAutomationSendGameActivated(updated);
+  }
+
   await initializeAdminGamesTab();
 }
 
