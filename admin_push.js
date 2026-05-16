@@ -470,6 +470,7 @@ async function loadAdminPushRecipientPreviewCount() {
       .from("player_push_preferences")
       .select("player_id", { count: "exact", head: true })
       .eq("push_enabled", true)
+      .eq("admin_messages_enabled", true)
       .not("external_id", "is", null);
 
     if (error) throw error;
@@ -482,9 +483,10 @@ async function loadAdminPushRecipientPreviewCount() {
 
     const { data, error } = await supabaseClient
       .from("player_push_preferences")
-      .select("player_id")
+      .select("player_id, admin_messages_enabled")
       .eq("player_id", playerId)
       .eq("push_enabled", true)
+      .eq("admin_messages_enabled", true)
       .not("external_id", "is", null)
       .maybeSingle();
 
@@ -511,6 +513,7 @@ async function loadAdminPushRecipientPreviewCount() {
       .select("player_id", { count: "exact", head: true })
       .in("player_id", playerIds)
       .eq("push_enabled", true)
+      .eq("admin_messages_enabled", true)
       .not("external_id", "is", null);
 
     if (error) throw error;

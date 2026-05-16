@@ -1455,3 +1455,68 @@ body {
 .player-push-status-text.error {
   color: #fca5a5;
 }
+
+
+/* ===================== */
+/* PLAYER PUSH SETTINGS */
+/* ===================== */
+
+.player-push-preferences {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #374151;
+}
+
+.player-push-preferences-title {
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #d1d5db;
+}
+
+.player-push-pref-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 9px 10px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.player-push-pref-row:hover {
+  background: #24364f;
+  border-color: #3b82f6;
+}
+
+.player-push-pref-row input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.player-push-pref-row span {
+  color: white;
+  font-size: 0.95rem;
+}
+
+.player-push-pref-checkbox:disabled + span {
+  opacity: 0.6;
+}
+
+.player-push-preference-status {
+  min-height: 1.2em;
+  margin: 8px 0 0 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.player-push-preference-status.success {
+  color: #86efac;
+}
+
+.player-push-preference-status.error {
+  color: #fca5a5;
+}

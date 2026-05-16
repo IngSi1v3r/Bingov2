@@ -1827,3 +1827,39 @@ button.danger-btn:hover {
 .admin-push-history-meta {
   padding-right: 38px;
 }
+
+
+/* Logs: Push-Teilen-Button */
+.admin-log-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-log-main {
+  flex: 1;
+}
+
+.admin-log-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.admin-log-push-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-log-push-btn:hover {
+  background: rgba(59, 130, 246, 0.24);
+}

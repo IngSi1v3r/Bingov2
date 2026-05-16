@@ -33,6 +33,7 @@ async function initializePlayerPushService({ justRegistered = false } = {}) {
   if (!currentPlayer?.id) return;
 
   bindPlayerPushProfileButtons();
+  bindPlayerPushPreferenceCheckboxes();
 
   const oneSignal = await getOneSignalSafe();
 
@@ -129,8 +130,6 @@ async function logoutPlayerPushService() {
 function bindPlayerPushProfileButtons() {
   const enableBtn = document.getElementById("playerProfilePushEnableBtn");
   const disableBtn = document.getElementById("playerProfilePushDisableBtn");
-  const debugBtn = document.getElementById("playerProfilePushDebugBtn");
-
   if (enableBtn && !enableBtn.dataset.pushBound) {
     enableBtn.addEventListener("click", async () => {
       await enablePlayerPushNotifications();
@@ -143,13 +142,6 @@ function bindPlayerPushProfileButtons() {
       await disablePlayerPushNotifications();
     });
     disableBtn.dataset.pushBound = "true";
-  }
-
-  if (debugBtn && !debugBtn.dataset.pushBound) {
-    debugBtn.addEventListener("click", async () => {
-      await debugPlayerPushState({ showAlert: true });
-    });
-    debugBtn.dataset.pushBound = "true";
   }
 }
 
@@ -164,6 +156,7 @@ async function loadAndRenderPlayerPushPreference() {
   }
 
   await renderPlayerPushProfileState();
+  renderPlayerPushPreferenceCheckboxes();
 }
 
 async function syncOneSignalPushStateWithCurrentPreference(oneSignal = cachedOneSignalInstance) {
@@ -263,6 +256,94 @@ async function renderPlayerPushProfileState() {
   disableBtn.classList.add("hidden");
 }
 
+
+/* ============================================================
+ * PLAYER PUSH PREFERENCE CHECKBOXES
+ * ============================================================ */
+
+const PLAYER_PUSH_PREFERENCE_DEFAULTS = {
+  live_challenges_enabled: true,
+  live_results_enabled: true,
+  first_bingo_enabled: true,
+  game_updates_enabled: true,
+  cooldown_enabled: true,
+  admin_messages_enabled: true
+};
+
+function bindPlayerPushPreferenceCheckboxes() {
+  document.querySelectorAll(".player-push-pref-checkbox").forEach(input => {
+    if (input.dataset.pushPrefBound === "true") return;
+
+    input.addEventListener("change", async () => {
+      await handlePlayerPushPreferenceChanged(input);
+    });
+
+    input.dataset.pushPrefBound = "true";
+  });
+}
+
+function renderPlayerPushPreferenceCheckboxes() {
+  const settingsBox = document.getElementById("playerPushPreferenceSettings");
+  if (!settingsBox) return;
+
+  const pushEnabled = playerPushPreference?.push_enabled === true;
+
+  settingsBox.classList.toggle("hidden", !pushEnabled);
+
+  document.querySelectorAll(".player-push-pref-checkbox").forEach(input => {
+    const key = input.dataset.pushPrefKey;
+    if (!key) return;
+
+    const value = playerPushPreference?.[key];
+    input.checked = value !== false;
+    input.disabled = !pushEnabled;
+  });
+}
+
+async function handlePlayerPushPreferenceChanged(input) {
+  if (!input || !currentPlayer?.id) return;
+
+  const key = input.dataset.pushPrefKey;
+  if (!key) return;
+
+  const statusEl = document.getElementById("playerPushPreferenceStatusText");
+
+  try {
+    input.disabled = true;
+
+    if (statusEl) {
+      statusEl.textContent = "Speichere...";
+      statusEl.className = "player-push-preference-status";
+    }
+
+    const patch = {
+      [key]: input.checked === true
+    };
+
+    // Live-Challenges werden bewusst zusammengefasst:
+    // neue Live-Challenge + Live-Ergebnis/Ende.
+    if (key === "live_challenges_enabled") {
+      patch.live_results_enabled = input.checked === true;
+    }
+
+    playerPushPreference = await savePlayerPushPreference(patch);
+
+    if (statusEl) {
+      statusEl.textContent = "Einstellung gespeichert.";
+      statusEl.className = "player-push-preference-status success";
+    }
+  } catch (error) {
+    console.error("Push-Einstellung konnte nicht gespeichert werden:", error);
+
+    if (statusEl) {
+      statusEl.textContent = "Einstellung konnte nicht gespeichert werden.";
+      statusEl.className = "player-push-preference-status error";
+    }
+  } finally {
+    renderPlayerPushPreferenceCheckboxes();
+  }
+}
+
 /* ============================================================
  * ENABLE / DISABLE
  * ============================================================ */
@@ -313,8 +394,9 @@ async function enablePlayerPushNotifications() {
       live_challenges_enabled: true,
       live_results_enabled: true,
       first_bingo_enabled: true,
+      game_updates_enabled: true,
       admin_messages_enabled: true,
-      cooldown_enabled: false
+      cooldown_enabled: true
     });
 
     await renderPlayerPushProfileState();

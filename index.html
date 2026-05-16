@@ -212,10 +212,36 @@
       <div class="player-push-profile-box">
         <h3>Push-Benachrichtigungen</h3>
         <p id="playerPushStatusText" class="player-push-status-text">Push-Status wird geladen...</p>
+
         <div class="player-push-actions">
           <button id="playerProfilePushEnableBtn" type="button" class="secondary-btn">Push aktivieren</button>
           <button id="playerProfilePushDisableBtn" type="button" class="secondary-btn hidden">Push deaktivieren</button>
-          <button id="playerProfilePushDebugBtn" type="button" class="secondary-btn">Debug</button>
+        </div>
+
+        <div id="playerPushPreferenceSettings" class="player-push-preferences hidden">
+          <div class="player-push-preferences-title">Welche Nachrichten möchtest du bekommen?</div>
+
+          <label class="player-push-pref-row">
+            <input type="checkbox" class="player-push-pref-checkbox" data-push-pref-key="live_challenges_enabled" />
+            <span>Live-Challenges</span>
+          </label>
+
+          <label class="player-push-pref-row">
+            <input type="checkbox" class="player-push-pref-checkbox" data-push-pref-key="game_updates_enabled" />
+            <span>Neue Spiele & Einladungen</span>
+          </label>
+
+          <label class="player-push-pref-row">
+            <input type="checkbox" class="player-push-pref-checkbox" data-push-pref-key="cooldown_enabled" />
+            <span>Cooldown abgelaufen</span>
+          </label>
+
+          <label class="player-push-pref-row">
+            <input type="checkbox" class="player-push-pref-checkbox" data-push-pref-key="admin_messages_enabled" />
+            <span>Admin-Nachrichten</span>
+          </label>
+
+          <p id="playerPushPreferenceStatusText" class="player-push-preference-status"></p>
         </div>
       </div>
 

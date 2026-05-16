@@ -32,6 +32,7 @@ let adminLogsInitialized = false;
 let lastAdminLogsSignature = null;
 
 let adminLogsQuickFilter = "all";
+let adminLogsCurrentRows = [];
 
 /* ============================================================
  * EVENT TYPES
@@ -1267,6 +1268,8 @@ async function renderAdminLogsListFromData(logs) {
   const listEl = document.getElementById("adminLogsList");
   if (!listEl) return;
 
+  adminLogsCurrentRows = logs || [];
+
   const signature = JSON.stringify(
     (logs || []).map(log => [log.id, log.created_at])
   );
@@ -1285,13 +1288,23 @@ async function renderAdminLogsListFromData(logs) {
 
     html += `
       <div class="admin-log-row">
-        <div class="admin-log-main">${message}</div>
-        <div class="admin-log-time">${timeText}</div>
+        <div class="admin-log-main">${escapeActivityHtml(message)}</div>
+        <div class="admin-log-actions">
+          <button
+            type="button"
+            class="admin-log-push-btn"
+            data-log-id="${log.id}"
+            title="Als Push teilen"
+            aria-label="Logeintrag als Push teilen"
+          >📣</button>
+          <div class="admin-log-time">${escapeActivityHtml(timeText)}</div>
+        </div>
       </div>
     `;
   });
 
   listEl.innerHTML = html;
+  attachAdminLogPushShareEvents();
 }
 
 /**
@@ -1319,6 +1332,94 @@ async function refreshAdminLogsListIfNeeded() {
   }
 
   await renderAdminLogsListFromData(logs);
+}
+
+/* ============================================================
+ * LOGS TAB - PUSH SHARE
+ * ============================================================ */
+
+function attachAdminLogPushShareEvents() {
+  document.querySelectorAll(".admin-log-push-btn").forEach(btn => {
+    if (btn.dataset.bound === "true") return;
+
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+
+      const logId = Number(btn.dataset.logId);
+      if (!logId) return;
+
+      await handleAdminShareLogAsPush(logId);
+    });
+
+    btn.dataset.bound = "true";
+  });
+}
+
+async function handleAdminShareLogAsPush(logId) {
+  const log = adminLogsCurrentRows.find(row => Number(row.id) === Number(logId));
+
+  if (!log) {
+    alert("Logeintrag konnte nicht gefunden werden.");
+    return;
+  }
+
+  const payload = buildAdminPushPrefillFromLog(log);
+
+  if (typeof activateAdminTabByName === "function") {
+    await activateAdminTabByName("push");
+  }
+
+  if (typeof prefillAdminPushFormFromLog === "function") {
+    await prefillAdminPushFormFromLog(payload);
+    return;
+  }
+
+  alert("Push-Tab konnte nicht vorausgefüllt werden. Bitte prüfe, ob admin_push.js geladen ist.");
+}
+
+function buildAdminPushPrefillFromLog(log) {
+  const eventLabel = getActivityEventLabel(log.event_type);
+  const message = formatActivityLogMessage(log);
+  const gameName = getActivityGameLabel(log);
+
+  let title = eventLabel || "Bingo Update";
+
+  if (log.event_type === ACTIVITY_EVENT_TYPES.LIVE_CHALLENGE_CREATED) {
+    title = `Neue Live-Challenge: ${getActivityLiveChallengeLabel(log)}`;
+  } else if (log.event_type === ACTIVITY_EVENT_TYPES.LIVE_CHALLENGE_COMPLETED) {
+    title = `Live-Challenge gewonnen: ${getActivityLiveChallengeLabel(log)}`;
+  } else if (log.event_type === ACTIVITY_EVENT_TYPES.BINGO_AWARDED) {
+    title = "Bingo erreicht!";
+  } else if (log.event_type === ACTIVITY_EVENT_TYPES.ADMIN_GAME_UPDATED) {
+    title = `Spiel geändert: ${gameName}`;
+  }
+
+  return {
+    title,
+    message,
+    targetType: log.game_id ? "game" : "all",
+    targetGameId: log.game_id || null,
+    targetPlayerId: null,
+    launchUrl: "https://ingsi1v3r.github.io/Bingov2/",
+    metadata: {
+      source: "admin_logs_share",
+      activity_log_id: log.id,
+      event_type: log.event_type || null,
+      game_id: log.game_id || null,
+      player_id: log.player_id || null,
+      challenge_id: log.challenge_id || null,
+      live_challenge_id: log.live_challenge_id || null
+    }
+  };
+}
+
+function escapeActivityHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 /* ============================================================

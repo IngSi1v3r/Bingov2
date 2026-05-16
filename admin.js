@@ -256,6 +256,31 @@ function getActiveAdminTab() {
 }
 
 /**
+ * Aktiviert einen Admin-Tab programmatisch.
+ * Wird z.B. genutzt, um aus dem Logs-Tab direkt in den Push-Tab zu wechseln.
+ */
+async function activateAdminTabByName(tabName) {
+  if (!tabName) return false;
+
+  const tab = document.querySelector(`.admin-tab[data-tab="${tabName}"]`);
+  const content = document.getElementById(`tab-${tabName}`);
+
+  if (!tab || !content) {
+    console.warn("Admin-Tab nicht gefunden:", tabName);
+    return false;
+  }
+
+  tabs.forEach(t => t.classList.remove("active"));
+  tab.classList.add("active");
+
+  contents.forEach(c => c.classList.remove("active"));
+  content.classList.add("active");
+
+  await handleAdminTabActivated(tabName);
+  return true;
+}
+
+/**
  * Initialisiert oder aktualisiert den gewaehlten Tab.
  */
 async function handleAdminTabActivated(tabName) {
@@ -304,7 +329,10 @@ async function handleAdminTabActivated(tabName) {
   if (tabName === "push") {
     if (typeof initializeAdminPushTab === "function") {
       await initializeAdminPushTab();
+    } else {
+      console.warn("initializeAdminPushTab nicht gefunden. Bitte admin_push.js vor admin.js laden.");
     }
+    return;
   }
 }
 
