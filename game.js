@@ -761,7 +761,8 @@ async function failChallenge() {
 
   const updatedGameState = await updatePlayerGameState(playerId, {
     active_challenge_id: null,
-    cooldown_until: cooldownUntilDate.toISOString()
+    cooldown_until: cooldownUntilDate.toISOString(),
+    cooldown_last_until: cooldownUntilDate.toISOString()
   });
 
   if (!updatedGameState) {
