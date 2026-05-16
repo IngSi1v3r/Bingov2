@@ -166,11 +166,10 @@ async function syncOneSignalPushStateWithCurrentPreference(oneSignal = cachedOne
   const permissionState = getPlayerPushPermissionState(oneSignal);
 
   try {
+    // Wichtig:
+    // Hier NICHT automatisch optOut() aufrufen.
+    // optOut() darf nur beim bewussten Klick auf "Push deaktivieren" passieren.
     if (!shouldBeEnabled) {
-      if (oneSignal?.User?.PushSubscription?.optOut) {
-        await oneSignal.User.PushSubscription.optOut();
-      }
-
       await savePlayerPushPreference({
         push_enabled: false,
         permission_state: permissionState,
