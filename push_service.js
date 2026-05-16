@@ -93,7 +93,8 @@ async function loginCurrentPlayerToOneSignal(oneSignal) {
 
     await savePlayerPushPreference({
       external_id: String(currentPlayer.id),
-      permission_state: getPlayerPushPermissionState(oneSignal)
+      permission_state: getPlayerPushPermissionState(oneSignal),
+      last_subscription_id: getPlayerPushSubscriptionId(oneSignal)
     });
 
     return true;
@@ -107,10 +108,9 @@ async function logoutPlayerPushService() {
   try {
     const oneSignal = await getOneSignalSafe();
 
-    if (oneSignal?.User?.PushSubscription?.optOut) {
-      await oneSignal.User.PushSubscription.optOut();
-    }
-
+    // Wichtig: Beim normalen Spielerwechsel NICHT optOut aufrufen.
+    // optOut deaktiviert das Geraet dauerhaft fuer Push, bis es wieder explizit aktiviert wird.
+    // Fuer Spielerwechsel reicht OneSignal.logout(), damit die alte external_id geloest wird.
     if (oneSignal && typeof oneSignal.logout === "function") {
       await oneSignal.logout();
     }
@@ -119,7 +119,7 @@ async function logoutPlayerPushService() {
     playerPushRegistrationPromptPending = false;
     playerPushPreference = null;
   } catch (error) {
-    console.warn("OneSignal logout/optOut fehlgeschlagen:", error);
+    console.warn("OneSignal logout fehlgeschlagen:", error);
   }
 }
 
@@ -646,4 +646,40 @@ async function debugPlayerPushState({ showAlert = false } = {}) {
   }
 
   return debug;
+}
+
+
+async function repairCurrentPlayerPushRegistration() {
+  const oneSignal = await getOneSignalSafe();
+
+  if (!currentPlayer?.id || !oneSignal) {
+    console.warn("Push-Reparatur nicht moeglich: Spieler oder OneSignal fehlt.");
+    return false;
+  }
+
+  try {
+    await loginCurrentPlayerToOneSignal(oneSignal);
+
+    if (getPlayerPushPermissionState(oneSignal) === "granted") {
+      await optInOneSignalPush(oneSignal);
+    }
+
+    playerPushPreference = await savePlayerPushPreference({
+      push_enabled: true,
+      permission_state: getPlayerPushPermissionState(oneSignal),
+      external_id: String(currentPlayer.id),
+      last_subscription_id: getPlayerPushSubscriptionId(oneSignal),
+      enabled_at: new Date().toISOString(),
+      disabled_at: null
+    });
+
+    await renderPlayerPushProfileState();
+    renderPlayerPushPreferenceCheckboxes();
+
+    console.log("Push-Reparatur abgeschlossen:", await debugPlayerPushState({ showAlert: false }));
+    return true;
+  } catch (error) {
+    console.error("Push-Reparatur fehlgeschlagen:", error);
+    return false;
+  }
 }
