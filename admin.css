@@ -1863,3 +1863,10 @@ button.danger-btn:hover {
 .admin-log-push-btn:hover {
   background: rgba(59, 130, 246, 0.24);
 }
+
+
+.admin-badge.admin-role {
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.14);
+  border: 1px solid rgba(250, 204, 21, 0.45);
+}

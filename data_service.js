@@ -66,18 +66,23 @@ const DataService = (() => {
   `;
 
   const SELECT_CHALLENGES_DETAILED = `
-    id,
-    game_id,
-    position,
-    title,
-    task,
-    points,
-    is_active,
-    category_icon,
-    details,
-    success_text,
-    requires_photo_proof
-  `;
+  id,
+  game_id,
+  position,
+  title,
+  task,
+  points,
+  is_active,
+  category_icon,
+  details,
+  success_text,
+  requires_photo_proof,
+  photo_mode,
+  success_variant_1,
+  success_variant_2,
+  success_variant_3,
+  description_image_path
+`;
 
   const SELECT_LIVE_WITH_WINNER = `
     *,
@@ -679,7 +684,7 @@ const DataService = (() => {
 
       const { data, error } = await supabaseClient
         .from("player_challenges")
-        .select("challenge_id, completed_at, was_first_solver, points_awarded, proof_image_path")
+        .select("challenge_id, completed_at, was_first_solver, points_awarded, proof_image_path, success_variant_label, success_variant_points")
         .eq("player_id", safePlayerId)
         .eq("game_id", safeGameId)
         .eq("status", "completed")

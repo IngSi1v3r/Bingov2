@@ -1084,3 +1084,48 @@ async function adminCreatePlayerState(player, game) {
     await renderAdminPlayerDetails(refreshedPlayer);
   }
 }
+
+
+
+async function handleAdminPromotePlayer(player) {
+  if (!player) return;
+
+  if (player.role === "admin") {
+    alert("Spieler ist bereits Admin.");
+    return;
+  }
+
+  const confirmed = confirm(
+    `${player.display_name || player.username} wirklich zum Admin machen?`
+  );
+
+  if (!confirmed) return;
+
+  const adminConfirmed = await requireAdminPasswordOrAbort();
+  if (!adminConfirmed) return;
+
+  const { error } = await supabaseClient
+    .from("players")
+    .update({
+      role: "admin"
+    })
+    .eq("id", player.id);
+
+  if (error) {
+    console.error("Fehler beim Befördern zum Admin:", error);
+    alert("Spieler konnte nicht zum Admin gemacht werden.");
+    return;
+  }
+
+  alert(`${player.display_name || player.username} ist jetzt Admin.`);
+
+  await initializeAdminPlayersTab();
+
+  const refreshedPlayer = adminPlayers.find(
+    p => Number(p.id) === Number(player.id)
+  );
+
+  if (refreshedPlayer && typeof renderAdminPlayerDetails === "function") {
+    await renderAdminPlayerDetails(refreshedPlayer);
+  }
+}

@@ -121,7 +121,8 @@ function mapChallengeRowForGameUi(row) {
     successVariant2: row.success_variant_2 || "",
     successVariant3: row.success_variant_3 || "",
     descriptionImagePath: row.description_image_path || null,
-    requiresPhotoProof: row.requires_photo_proof === true,
+    photoMode: row.photo_mode || (row.requires_photo_proof ? "required" : "none"),
+    requiresPhotoProof: row.photo_mode === "required" || row.requires_photo_proof === true,
     isActive: row.is_active === true,
     solvedCount: 0,
     activeCount: 0

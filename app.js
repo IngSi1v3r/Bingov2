@@ -47,7 +47,10 @@ const detailsContent = document.getElementById("detailsContent");
 const closeDetailsBtn = document.getElementById("closeDetailsBtn");
 const uploadOverlay = document.getElementById("uploadOverlay");
 const uploadChallengeTitle = document.getElementById("uploadChallengeTitle");
-const uploadPhotoInput = document.getElementById("uploadPhotoInput");
+const uploadPhotoCameraInput = document.getElementById("uploadPhotoCameraInput");
+const uploadPhotoGalleryInput = document.getElementById("uploadPhotoGalleryInput");
+const chooseCameraBtn = document.getElementById("chooseCameraBtn");
+const chooseGalleryBtn = document.getElementById("chooseGalleryBtn");
 const uploadStatusText = document.getElementById("uploadStatusText");
 const doUploadBtn = document.getElementById("doUploadBtn");
 const cancelUploadBtn = document.getElementById("cancelUploadBtn");
@@ -78,6 +81,7 @@ const cooldownDisplay = document.getElementById("cooldownDisplay");
 const cooldownTimerText = document.getElementById("cooldownTimerText");
 const scoreValue = document.getElementById("scoreValue");
 
+
 // =======================
 // Globale Variablen
 // =======================
@@ -94,6 +98,8 @@ let currentPlayerProfileGalleryIndex = 0;
 
 let displayedScore = 0;
 let freezeScoreDisplay = false;
+
+let selectedUploadFile = null;
 
 
 
@@ -168,31 +174,39 @@ function openChallengeModal(challenge) {
 
   modalTitle.textContent = challenge.title;
 
+  const photoMode = challenge.photoMode || (challenge.requiresPhotoProof ? "required" : "none");
+  const photoRequired = photoMode === "required";
+  const photoOptional = photoMode === "optional";
+
   const descriptionImageUrl = challenge.descriptionImagePath
-  ? DataService.storage.getChallengeImagePublicUrl(challenge.descriptionImagePath)
-  : null;
+    ? DataService.storage.getChallengeImagePublicUrl(challenge.descriptionImagePath)
+    : null;
 
-modalTask.innerHTML = `
-  <div class="challenge-description-wrapper">
-    <div class="challenge-description-text">
-      ${challenge.task}
+  modalTask.innerHTML = `
+    <div class="challenge-description-wrapper">
+      <div class="challenge-description-text">
+        ${challenge.task}
+      </div>
+
+      ${photoRequired ? `
+        <div class="challenge-photo-icon">📷</div>
+      ` : ""}
+
+      ${photoOptional ? `
+        <div class="challenge-photo-icon">📷?</div>
+      ` : ""}
     </div>
 
-    ${challenge.requiresPhotoProof ? `
-      <div class="challenge-photo-icon">📷</div>
+    ${descriptionImageUrl ? `
+      <div class="challenge-description-image-frame">
+        <img
+          src="${descriptionImageUrl}"
+          class="challenge-description-image"
+          alt="Aufgabenbild"
+        />
+      </div>
     ` : ""}
-  </div>
-
-  ${descriptionImageUrl ? `
-    <div class="challenge-description-image-frame">
-      <img
-        src="${descriptionImageUrl}"
-        class="challenge-description-image"
-        alt="Aufgabenbild"
-      />
-    </div>
-  ` : ""}
-`;
+  `;
 
   const isVariable = isVariablePointsChallenge(challenge);
   const successVariants = getChallengeSuccessVariants(challenge);
@@ -206,26 +220,47 @@ modalTask.innerHTML = `
   if (isVariable) {
     modalActions.innerHTML = `
       ${hasDetails ? `<button id="detailsBtn">Hinweise</button>` : ""}
+
       <div class="success-variant-actions">
         <div class="success-variant-heading">Welche Stufe hast du geschafft?</div>
+
         ${successVariants.map((variant, index) => `
-          <button
-            id="successVariantBtn${index}"
-            class="success-variant-btn"
-            type="button"
-          >
-            ${variant.points}P · ${variant.label}
-          </button>
+          <div class="success-variant-row">
+            <button
+              id="successVariantBtn${index}"
+              class="success-variant-btn"
+              type="button"
+            >
+              ${variant.points}P · ${variant.label}
+            </button>
+
+            ${photoOptional ? `
+              <button
+                id="successVariantPhotoBtn${index}"
+                class="success-variant-photo-btn secondary-btn"
+                type="button"
+                title="Mit Foto abschließen"
+              >
+                📷
+              </button>
+            ` : ""}
+          </div>
         `).join("")}
       </div>
+
       <button id="failBtn">Aufgeben</button>
     `;
   } else {
     modalActions.innerHTML = `
       ${hasDetails ? `<button id="detailsBtn">Hinweise</button>` : ""}
-      <button id="completeBtn">
-        ${challenge.requiresPhotoProof ? "Foto hochladen" : "Bestanden"}
-      </button>
+
+      ${photoRequired ? `
+        <button id="completeBtn">Foto hochladen</button>
+      ` : `
+        <button id="completeBtn">Bestanden</button>
+        ${photoOptional ? `<button id="optionalPhotoBtn" type="button" class="secondary-btn">Optional Foto hochladen</button>` : ""}
+      `}
+
       <button id="failBtn">Aufgeben</button>
     `;
   }
@@ -239,21 +274,30 @@ modalTask.innerHTML = `
   if (isVariable) {
     successVariants.forEach((variant, index) => {
       const btn = document.getElementById(`successVariantBtn${index}`);
-      if (!btn) return;
+      const photoBtn = document.getElementById(`successVariantPhotoBtn${index}`);
 
-      btn.onclick = async () => {
-        if (challenge.requiresPhotoProof) {
+      if (btn) {
+        btn.onclick = async () => {
+          if (photoRequired) {
+            closeModal();
+            openUploadModal(challenge, "normal", variant);
+            return;
+          }
+
+          await completeChallenge(challenge.boardId, null, variant);
+        };
+      }
+
+      if (photoBtn) {
+        photoBtn.onclick = () => {
           closeModal();
           openUploadModal(challenge, "normal", variant);
-          return;
-        }
-
-        await completeChallenge(challenge.boardId, null, variant);
-      };
+        };
+      }
     });
   } else {
     document.getElementById("completeBtn").onclick = async () => {
-      if (challenge.requiresPhotoProof) {
+      if (photoRequired) {
         closeModal();
         openUploadModal(challenge);
         return;
@@ -261,6 +305,15 @@ modalTask.innerHTML = `
 
       await completeChallenge(challenge.boardId);
     };
+
+    const optionalPhotoBtn = document.getElementById("optionalPhotoBtn");
+
+    if (optionalPhotoBtn) {
+      optionalPhotoBtn.onclick = () => {
+        closeModal();
+        openUploadModal(challenge);
+      };
+    }
   }
 
   document.getElementById("failBtn").onclick = () => {
@@ -270,6 +323,7 @@ modalTask.innerHTML = `
   lockBodyScroll();
   modalOverlay.classList.remove("hidden");
 }
+
 
 function renderCompletionGallery() {
   const galleryContainer = document.getElementById("completionGallery");
@@ -501,7 +555,9 @@ function openUploadModal(challenge, type = "normal", successVariant = null) {
     <strong>Aufgabe:</strong> ${challenge.title}
     ${successVariant ? `<br><strong>Stufe:</strong> ${successVariant.points}P · ${successVariant.label}` : ""}
   `;
-  uploadPhotoInput.value = "";
+  selectedUploadFile = null;
+    if (uploadPhotoCameraInput) uploadPhotoCameraInput.value = "";
+    if (uploadPhotoGalleryInput) uploadPhotoGalleryInput.value = "";
   uploadStatusText.textContent = "";
   doUploadBtn.textContent = "Hochladen";
   setUploadButtonsDisabled(false);
@@ -516,7 +572,9 @@ function closeUploadModal() {
   pendingUploadChallenge = null;
   pendingUploadType = null;
   pendingUploadSuccessVariant = null;
-  uploadPhotoInput.value = "";
+  selectedUploadFile = null;
+    if (uploadPhotoCameraInput) uploadPhotoCameraInput.value = "";
+    if (uploadPhotoGalleryInput) uploadPhotoGalleryInput.value = "";
   uploadStatusText.textContent = "";
   doUploadBtn.textContent = "Hochladen";
   setUploadButtonsDisabled(false);
@@ -1661,7 +1719,7 @@ cancelUploadBtn.addEventListener("click", () => {
 doUploadBtn.addEventListener("click", async () => {
   if (!pendingUploadChallenge) return;
 
-  const file = uploadPhotoInput.files[0];
+  const file = selectedUploadFile;
 
   if (!file) {
     uploadStatusText.textContent = "Bitte zuerst ein Bild auswählen.";
@@ -1728,21 +1786,51 @@ doUploadBtn.addEventListener("click", async () => {
 // FOTO-UPLOAD - VORSCHAU
 // =======================
 
-uploadPhotoInput.addEventListener("change", () => {
-  const file = uploadPhotoInput.files[0];
 
-  resetUploadPreview();
-  uploadStatusText.textContent = "";
 
+if (chooseCameraBtn && uploadPhotoCameraInput) {
+  chooseCameraBtn.addEventListener("click", () => {
+    uploadPhotoCameraInput.click();
+  });
+}
+
+if (chooseGalleryBtn && uploadPhotoGalleryInput) {
+  chooseGalleryBtn.addEventListener("click", () => {
+    uploadPhotoGalleryInput.click();
+  });
+}
+
+if (uploadPhotoCameraInput) {
+  uploadPhotoCameraInput.addEventListener("change", () => {
+    selectedUploadFile = uploadPhotoCameraInput.files?.[0] || null;
+    if (selectedUploadFile) {
+      handleUploadFileSelected(selectedUploadFile);
+    }
+  });
+}
+
+if (uploadPhotoGalleryInput) {
+  uploadPhotoGalleryInput.addEventListener("change", () => {
+    selectedUploadFile = uploadPhotoGalleryInput.files?.[0] || null;
+    if (selectedUploadFile) {
+      handleUploadFileSelected(selectedUploadFile);
+    }
+  });
+}
+
+function handleUploadFileSelected(file) {
   if (!file) return;
 
+  uploadStatusText.textContent = `Ausgewählt: ${file.name}`;
+
   if (!file.type.startsWith("image/")) {
-    uploadStatusText.textContent = "Bitte nur Bilddateien auswählen.";
-    uploadPhotoInput.value = "";
+    uploadStatusText.textContent = "Bitte ein Bild auswählen.";
+    selectedUploadFile = null;
+    resetUploadPreview();
     return;
   }
 
-  const objectUrl = URL.createObjectURL(file);
-  uploadPreviewImage.src = objectUrl;
+  const previewUrl = URL.createObjectURL(file);
+  uploadPreviewImage.src = previewUrl;
   uploadPreviewContainer.classList.remove("hidden");
-});
+}

@@ -1520,3 +1520,70 @@ body {
 .player-push-preference-status.error {
   color: #fca5a5;
 }
+
+
+.upload-source-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.upload-source-actions button {
+  width: 100%;
+}
+
+.upload-hidden-input {
+  position: fixed;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player-activity-toast-container {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  z-index: 99999;
+  pointer-events: none;
+
+  width: min(90vw, 600px);
+  align-items: center;
+}
+
+.player-activity-toast {
+  width: 100%;
+  padding: 18px 24px;
+
+  background: rgba(20, 20, 20, 0.95);
+  color: white;
+
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: center;
+
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.player-activity-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.player-activity-toast.hide {
+  opacity: 0;
+  transform: translateY(-10px);
+}

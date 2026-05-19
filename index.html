@@ -288,7 +288,26 @@
         <p id="uploadChallengeTitle"><strong>Aufgabe:</strong> -</p>
         <p>Bitte lade ein Beweisfoto hoch, um die Aufgabe abzuschließen.</p>
 
-        <input id="uploadPhotoInput" type="file" accept="image/*" />
+
+        <div class="upload-source-actions">
+          <button id="chooseCameraBtn" type="button" class="secondary-btn">📷 Foto aufnehmen</button>
+          <button id="chooseGalleryBtn" type="button" class="secondary-btn">🖼 Bild auswählen</button>
+        </div>
+
+        <input
+          id="uploadPhotoCameraInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          class="upload-hidden-input"
+        />
+
+        <input
+          id="uploadPhotoGalleryInput"
+          type="file"
+          accept="image/*"
+          class="upload-hidden-input"
+        />
 
         <div id="uploadPreviewContainer" class="upload-preview-container hidden">
           <img id="uploadPreviewImage" class="upload-preview-image" alt="Bildvorschau" />
@@ -537,6 +556,7 @@
   <script src="push_automation.js"></script>
   <script src="data.js"></script>
   <script src="admin_logs.js"></script>
+  <script src="player_activity_toasts.js"></script>
   <script src="game.js"></script>
   <script src="app.js"></script>
   <script src="live-challenges.js"></script>

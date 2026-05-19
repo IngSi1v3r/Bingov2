@@ -80,9 +80,16 @@ function ensureAdminPlayersTabLayout() {
         </div>
 
         <div id="adminPlayerActionBar" class="admin-player-action-bar hidden">
+
+          <button id="adminPromotePlayerBtn" type="button" class="secondary-btn">
+            Zu Admin machen
+          </button>
+
           <button id="adminResetPlayerPasswordBtn" type="button" class="secondary-btn">
             Passwort zurücksetzen
           </button>
+
+
           <button id="adminResetPlayerGameBtn" type="button">
             Fortschritt zurücksetzen
           </button>
@@ -271,6 +278,7 @@ function renderAdminPlayersList() {
           <div class="admin-list-meta">@${player.username || "-"}</div>
 
           <div class="admin-status-row">
+            ${player.role === "admin" ? `<span class="admin-badge admin-role">Admin</span>` : ""}
             ${player.is_blocked ? `<span class="admin-badge blocked">Gesperrt</span>` : ""}
             ${displayGame ? `<span class="admin-badge ingame">${displayGame.name}</span>` : ""}
             ${cooldownActive ? `<span class="admin-badge cooldown">Cooldown</span>` : ""}
@@ -576,6 +584,8 @@ function attachAdminPlayerAlwaysAvailableActions(player) {
   const toggleBlockedBtn = document.getElementById("adminToggleBlockedBtn");
   const resetPasswordBtn = document.getElementById("adminResetPlayerPasswordBtn");
   const deletePlayerBtn = document.getElementById("adminDeletePlayerBtn");
+  const promotePlayerBtn = document.getElementById("adminPromotePlayerBtn");
+
 
   if (toggleBlockedBtn) {
     toggleBlockedBtn.onclick = async () => {
@@ -592,6 +602,12 @@ function attachAdminPlayerAlwaysAvailableActions(player) {
   if (deletePlayerBtn) {
     deletePlayerBtn.onclick = async () => {
       await adminDeletePlayerCompletely(player);
+    };
+  }
+
+  if (promotePlayerBtn) {
+    promotePlayerBtn.onclick = async () => {
+      await handleAdminPromotePlayer(player);
     };
   }
 }

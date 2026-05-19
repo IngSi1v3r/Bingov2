@@ -298,6 +298,10 @@ function startGlobalStatsPolling() {
       renderGrid();
       await renderLeaderboard();
       await checkLiveChallengeStatus();
+
+      if (typeof refreshPlayerActivityToasts === "function") {
+        await refreshPlayerActivityToasts();
+      }
     }
   });
 
@@ -471,6 +475,10 @@ async function loadCurrentGameIntoApp() {
   clearFinalSeenIfNeeded();
   await renderLeaderboard();
 
+  if (typeof initializePlayerActivityToasts === "function") {
+  await initializePlayerActivityToasts();
+  }
+
   startGlobalStatsPolling();
 
   if (isCooldownActive()) {
@@ -486,6 +494,8 @@ async function loadCurrentGameIntoApp() {
       openChallengeModal(activeChallenge);
     }
   }
+
+  
 }
 
 /* ============================================================
