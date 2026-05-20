@@ -1423,7 +1423,20 @@ function createBingoLineIndicator(lineIndex, title) {
 
 function renderGrid(updateScore = true) {
   grid.innerHTML = "";
+
+const showBingoIndicators =
+  (currentGame?.bingo_bonus_points ?? 0) > 0 ||
+  (currentGame?.first_bingo_bonus_points ?? 0) > 0;
+
+const bingoShell = document.querySelector(".bingo-board-shell");
+
+if (bingoShell) {
+  bingoShell.classList.toggle("no-bingo-indicators", !showBingoIndicators);
+}
+
+if (showBingoIndicators) {
   renderBingoLineIndicators();
+}
 
   const gridSize = currentGame?.grid_size || 5;
   grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
@@ -1468,10 +1481,16 @@ function renderGrid(updateScore = true) {
     const isFirstSolverCell = gameState.firstSolved.includes(challenge.boardId);
     const isChallengeDisabled = challenge.isActive === false;
 
+    const isGloballySolvedByOther =
+      currentGame?.single_use_challenges === true &&
+      challenge.solvedCount > 0 &&
+      !isCompleted;
+
     cell.style.background = "";
     cell.style.border = "";
     cell.style.opacity = "";
     cell.style.boxShadow = "";
+    cell.style.cursor = "";
 
     if (isCompleted) {
       cell.style.background = "#16a34a";
@@ -1484,7 +1503,8 @@ function renderGrid(updateScore = true) {
       cell.style.boxShadow = "0 0 0 3px gold inset";
     }
 
-    if (isChallengeDisabled && !isCompleted) {
+    if ((isChallengeDisabled || isGloballySolvedByOther) && !isCompleted) {
+      cell.classList.add("single-use-locked");
       cell.style.opacity = "0.28";
       cell.style.background = "#1f2937";
       cell.style.cursor = "not-allowed";
@@ -1494,41 +1514,38 @@ function renderGrid(updateScore = true) {
       cell.style.opacity = "0.5";
     }
 
-    if (cooldown && !isCompleted) {
-      cell.style.opacity = "0.3";
-    } else if (hasActiveChallenge && !isActive && !isCompleted) {
-      cell.style.opacity = "0.5";
-    }
-
-        cell.innerHTML = `
+    cell.innerHTML = `
       ${challenge.activeCount > 0 ? `<div class="cell-active-banner">Wird versucht (${challenge.activeCount})</div>` : ""}
       ${isFirstSolverCell ? `<div class="cell-first-solver">⭐</div>` : ""}
       ${challenge.categoryIcon ? `<div class="cell-category-icon">${challenge.categoryIcon}</div>` : ""}
       ${cooldown && !isCompleted && !isActive ? `<div class="cell-lock-icon">🔒</div>` : ""}
       ${isChallengeDisabled && !isCompleted ? `<div class="cell-lock-icon">🚫</div>` : ""}
+      ${isGloballySolvedByOther ? `<div class="cell-lock-icon">✅</div>` : ""}
 
       <div class="cell-title">${challenge.title}</div>
       <div class="cell-points">${getChallengePointsDisplay(challenge)}</div>
       <div class="cell-solved-count">${challenge.solvedCount}</div>
     `;
 
-           cell.addEventListener("click", async () => {
+    cell.addEventListener("click", async () => {
       if (isCompleted) {
         await openCompletedChallengeModal(challenge);
         return;
       }
 
+      if (isGloballySolvedByOther) return;
       if (isChallengeDisabled) return;
       if (isCooldownActive()) return;
 
-      // Wenn bereits irgendeine Aufgabe aktiv ist, keine zweite öffnen
       if (gameState.activeChallengeId !== null) {
         const activeChallenge = getChallengeByBoardId(gameState.activeChallengeId);
+
         if (activeChallenge) {
           if (!isChallengeModalOpen()) {
             openChallengeModal(activeChallenge);
           }
         }
+
         return;
       }
 

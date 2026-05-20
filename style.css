@@ -1587,3 +1587,17 @@ body {
   opacity: 0;
   transform: translateY(-10px);
 }
+
+.single-use-locked {
+  opacity: 0.15;
+}
+
+.bingo-board-shell.no-bingo-indicators .bingo-board-top,
+.bingo-board-shell.no-bingo-indicators .bingo-row-indicators,
+.bingo-board-shell.no-bingo-indicators .bingo-board-bottom {
+  display: none;
+}
+
+.bingo-board-shell.no-bingo-indicators .bingo-board-main {
+  display: block;
+}

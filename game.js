@@ -425,6 +425,14 @@ async function activateChallenge(boardId) {
   if (!challenge) return;
   if (challenge.isActive === false) return;
 
+  if (
+    currentGame?.single_use_challenges === true &&
+    challenge.solvedCount > 0 &&
+    !gameState.completed.includes(boardId)
+  ) {
+    return;
+  }
+
   const playerId = currentPlayer.id;
 
   const updatedGameState = await updatePlayerGameState(playerId, {
@@ -456,7 +464,7 @@ async function activateChallenge(boardId) {
 
   gameState.activeChallengeId = boardId;
 
-    await logChallengeStarted({
+  await logChallengeStarted({
     gameId: currentGameId,
     playerId: playerId,
     challengeId: challenge.dbId,
@@ -516,7 +524,13 @@ async function completeChallenge(boardId, proofImagePath = null, successVariant 
   }
 
   const isFirstSolver = count === 0;
-  const awardedPoints = isFirstSolver ? Number(basePoints) * 2 : Number(basePoints);
+
+    const awardedPoints =
+      currentGame?.single_use_challenges === true
+        ? Number(basePoints)
+        : isFirstSolver
+          ? Number(basePoints) * 2
+          : Number(basePoints);
 
   const wasAlreadyCompleted = gameState.completed.includes(boardId);
 

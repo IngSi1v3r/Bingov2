@@ -574,6 +574,17 @@ async function renderAdminGameDetails(game) {
       </div>
 
       <div class="admin-detail-card">
+        <div class="admin-detail-label">Aufgaben nur einmal lösbar</div>
+        <div
+          id="adminToggleSingleUseChallengesBtn"
+          class="admin-detail-value clickable ${game.single_use_challenges ? "" : "muted"}"
+          title="Zum Umschalten klicken"
+        >
+          ${game.single_use_challenges ? "Ja" : "Nein"}
+        </div>
+      </div>
+
+      <div class="admin-detail-card">
         <div class="admin-detail-label">Sichtbarkeit</div>
         <div
           id="adminEditGameVisibilityBtn"
@@ -672,6 +683,7 @@ async function renderAdminGameDetails(game) {
   const toggleActiveBtn = document.getElementById("adminToggleGameActiveBtn");
   const editVisibilityBtn = document.getElementById("adminEditGameVisibilityBtn");
   const editPasswordBtn = document.getElementById("adminEditGamePasswordBtn");
+  const singleUseBtn = document.getElementById("adminToggleSingleUseChallengesBtn");
 
   if (editNameBtn) {
     editNameBtn.addEventListener("click", async () => {
@@ -722,6 +734,37 @@ async function renderAdminGameDetails(game) {
 
   if (gridWrapper) gridWrapper.classList.remove("hidden");
   if (leaderboardWrapper) leaderboardWrapper.classList.remove("hidden");
+
+  if (singleUseBtn) {
+  singleUseBtn.onclick = async () => {
+    const updated = await updateAdminGameFields(game.id, {
+      single_use_challenges: !game.single_use_challenges
+    });
+
+    if (!updated) return;
+
+    await logAdminGameUpdated({
+      gameId: game.id,
+      adminPlayerId: adminPlayer?.id || null,
+      metadata: {
+        admin_name: adminPlayer?.display_name || adminPlayer?.username || null,
+        game_name: game.name || null,
+        field: "single_use_challenges",
+        old_value: game.single_use_challenges,
+        new_value: !game.single_use_challenges
+      }
+    });
+
+    await loadAllGamesForAdmin();
+    renderAdminGamesList();
+
+    const refreshedGame = adminGames.find(g => g.id === game.id);
+
+    if (refreshedGame) {
+      renderAdminGameDetails(refreshedGame);
+    }
+  };
+}
 }
 
 /* ============================================================
