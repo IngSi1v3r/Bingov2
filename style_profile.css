@@ -1,0 +1,356 @@
+/* ============================================================
+   style_profile.css
+   Aus der bisherigen style.css logisch ausgelagert.
+   Keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* COMPLETION LISTS / GALLERY */
+/* ===================== */
+
+.completion-list {
+  margin-top: 18px;
+  text-align: left;
+}
+
+.completion-list h3 {
+  margin: 0 0 10px 0;
+  font-size: 1rem;
+  color: white;
+}
+
+.completion-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  background: #374151;
+  border-radius: 10px;
+}
+
+.completion-row.current-player {
+  background: #24364f;
+  border: 2px solid #3b82f6;
+}
+
+.completion-name {
+  font-weight: bold;
+  color: white;
+}
+
+.completion-name.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.completion-name.clickable:hover {
+  color: #93c5fd;
+}
+
+.completion-time {
+  font-size: 0.9rem;
+  color: #d1d5db;
+  white-space: nowrap;
+}
+
+.completion-star {
+  margin-left: 6px;
+}
+
+.completion-live {
+  margin-left: 6px;
+}
+
+.completion-points {
+  font-weight: bold;
+  color: #facc15;
+  white-space: nowrap;
+}
+
+.gallery-wrapper {
+  margin-top: 16px;
+}
+
+.gallery-caption {
+  margin-bottom: 8px;
+  color: #d1d5db;
+}
+
+.gallery-time {
+  margin-left: 6px;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.gallery-image-container {
+  position: relative;
+}
+
+.gallery-image {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+}
+
+.gallery-arrow {
+  position: absolute;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  cursor: pointer;
+  user-select: none;
+  transform: translateY(-50%);
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.gallery-arrow:hover {
+  background: rgba(0, 0, 0, 0.6);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.gallery-arrow.left {
+  left: 8px;
+}
+
+.gallery-arrow.right {
+  right: 8px;
+}
+
+/* ===================== */
+/* PROFILE */
+/* ===================== */
+
+#playerProfileStats,
+#playerProfileGallery,
+#playerProfileCompletedList {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 12px;
+}
+
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.profile-stat-card {
+  padding: 14px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 12px;
+}
+
+.profile-stat-label {
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.profile-stat-value {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: white;
+}
+
+/* ===================== */
+/* PUSH PREFERENCES */
+/* ===================== */
+
+.player-push-profile-box {
+  margin: 16px 0;
+  padding: 12px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 12px;
+}
+
+.player-push-profile-box h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+}
+
+.player-push-status-text {
+  margin: 0 0 12px 0;
+  color: #d1d5db;
+  line-height: 1.4;
+}
+
+.player-push-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.player-push-actions button {
+  flex: 1;
+  min-width: 130px;
+}
+
+.player-push-status-text.success {
+  color: #86efac;
+}
+
+.player-push-status-text.warning {
+  color: #fcd34d;
+}
+
+.player-push-status-text.error {
+  color: #fca5a5;
+}
+
+/* ===================== */
+/* PLAYER PUSH SETTINGS */
+/* ===================== */
+
+.player-push-preferences {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #374151;
+}
+
+.player-push-preferences-title {
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #d1d5db;
+}
+
+.player-push-pref-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 9px 10px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.player-push-pref-row:hover {
+  background: #24364f;
+  border-color: #3b82f6;
+}
+
+.player-push-pref-row input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.player-push-pref-row span {
+  color: white;
+  font-size: 0.95rem;
+}
+
+.player-push-pref-checkbox:disabled + span {
+  opacity: 0.6;
+}
+
+.player-push-preference-status {
+  min-height: 1.2em;
+  margin: 8px 0 0 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.player-push-preference-status.success {
+  color: #86efac;
+}
+
+.player-push-preference-status.error {
+  color: #fca5a5;
+}
+
+
+.upload-source-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.upload-source-actions button {
+  width: 100%;
+}
+
+.upload-hidden-input {
+  position: fixed;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player-activity-toast-container {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  z-index: 99999;
+  pointer-events: none;
+
+  width: min(90vw, 600px);
+  align-items: center;
+}
+
+.player-activity-toast {
+  width: 100%;
+  padding: 18px 24px;
+
+  background: rgba(20, 20, 20, 0.95);
+  color: white;
+
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: center;
+
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.player-activity-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.player-activity-toast.hide {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.single-use-locked {
+  opacity: 0.45;
+}
+
+.bingo-board-shell.no-bingo-indicators .bingo-board-top,
+.bingo-board-shell.no-bingo-indicators .bingo-row-indicators,
+.bingo-board-shell.no-bingo-indicators .bingo-board-bottom {
+  display: none;
+}
+
+.bingo-board-shell.no-bingo-indicators .bingo-board-main {
+  display: block;
+}

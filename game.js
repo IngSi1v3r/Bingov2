@@ -681,7 +681,18 @@ if (proofImagePath) {
     }
   });
 
- 
+ if (
+      currentGame?.single_use_challenges === true &&
+      typeof pushAutomationSendSingleUseChallengeCompleted === "function"
+    ) {
+      await pushAutomationSendSingleUseChallengeCompleted({
+        gameId: currentGameId,
+        playerId,
+        challengeId: challenge.dbId,
+        challengeTitle: challenge.title || null,
+        pointsAwarded: awardedPoints
+      });
+    }
 
   for (const award of newBingoAwards) {
   await logBingoAwarded({
@@ -732,7 +743,10 @@ freezeScoreDisplay = true;
 closeModal();
 renderGrid(false);
 
-  if (isFirstSolver) {
+  if (
+    isFirstSolver &&
+    currentGame?.single_use_challenges !== true
+  ) {
     await showFirstSolverAnimation();
   }
 

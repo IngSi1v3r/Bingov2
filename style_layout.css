@@ -1,0 +1,370 @@
+/* ============================================================
+   style_layout.css
+   Aus der bisherigen style.css logisch ausgelagert.
+   Keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* APP LAYOUT */
+/* ===================== */
+
+.app {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ===================== */
+/* GAME HEADER */
+/* ===================== */
+
+.header-card {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.header-controls {
+  width: 100%;
+  box-sizing: border-box;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+
+  margin-bottom: 10px;
+}
+
+.header-info-card {
+  appearance: none;
+  -webkit-appearance: none;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 52px;
+  box-sizing: border-box;
+
+  padding: 9px 11px;
+
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 14px;
+
+  color: white;
+  cursor: pointer;
+}
+
+.header-info-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #374151;
+
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.header-info-text {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.score-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  box-sizing: border-box;
+
+  margin-bottom: 8px;
+  padding: 10px 12px;
+
+  background: #172033;
+  border: 1px solid #2e3a52;
+  border-radius: 14px;
+}
+
+.score-number {
+  font-size: 1.55rem;
+  font-weight: 900;
+  line-height: 1;
+  color: white;
+}
+
+.score-unit {
+  margin-left: 4px;
+  font-size: inherit;
+  font-weight: inherit;
+  opacity: 1;
+}
+
+#scoreValue {
+  display: inline-block;
+  transform-origin: center;
+}
+
+.profile-header-card {
+  justify-content: space-between;
+}
+
+/* ===================== */
+/* COOLDOWN */
+/* ===================== */
+
+.cooldown-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-width: 90px;
+  box-sizing: border-box;
+
+  padding: 10px 12px;
+  background: rgba(127, 29, 29, 0.22);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 14px;
+}
+
+.cooldown-label {
+  font-size: 0.75rem;
+  color: #fca5a5;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cooldown-timer-text {
+  font-size: 1.7rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #ef4444;
+}
+
+/* ===================== */
+/* LEADERBOARD */
+/* ===================== */
+
+.leaderboard {
+  margin-top: 28px;
+  padding: 20px;
+  background: #1f2937;
+  border: 1px solid #4b5563;
+  border-radius: 16px;
+}
+
+.leaderboard h2 {
+  margin-top: 0;
+  margin-bottom: 14px;
+  font-size: 1.3rem;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 70px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  background: #374151;
+  border-radius: 10px;
+}
+
+.leaderboard-row.current-player {
+  background: #24364f;
+  border: 2px solid #3b82f6;
+}
+
+.leaderboard-row.player-active {
+  background: #4b3620;
+  border: 2px solid #f59e0b;
+}
+
+.leaderboard-row.player-cooldown {
+  background: #4a2323;
+  border: 2px solid #ef4444;
+}
+
+.leaderboard-rank {
+  font-weight: bold;
+  color: #d1d5db;
+}
+
+.leaderboard-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: bold;
+  color: white;
+}
+
+.leaderboard-score {
+  text-align: right;
+  font-weight: bold;
+  color: #facc15;
+}
+
+/* ===================== */
+/* BOTTOM ACTIONS */
+/* ===================== */
+
+.bottom-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* ===================== */
+/* LOG FEED */
+/* ===================== */
+
+.admin-log-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: start;
+  padding: 12px 14px;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.admin-log-main {
+  color: white;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.admin-log-time {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  text-align: right;
+}
+
+@media (max-width: 700px) {
+  .admin-log-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .admin-log-time {
+    text-align: left;
+  }
+}
+
+/* ===================== */
+/* GAME SELECT */
+/* ===================== */
+
+.game-select-section {
+  margin-top: 18px;
+}
+
+.game-select-section h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: white;
+}
+
+.game-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.game-select-entry {
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.game-select-entry strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-select-entry span {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.game-select-main-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.game-select-main-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-select-score {
+  flex-shrink: 0;
+  font-weight: 900;
+  color: #facc15;
+}
+
+.game-select-meta-row {
+  margin-top: 5px;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.game-select-entry-rich {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 12px;
+}
+
+.game-select-entry-rich:hover {
+  background: #24364f;
+  border-color: #3b82f6;
+}

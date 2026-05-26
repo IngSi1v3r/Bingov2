@@ -1,0 +1,171 @@
+/* ============================================================
+   style_animations.css
+   Aus der bisherigen style.css logisch ausgelagert.
+   Keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* ANIMATIONS */
+/* ===================== */
+
+.bingo-banner,
+.first-solver-banner {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bingo-banner {
+  z-index: 2000;
+}
+
+.first-solver-banner {
+  z-index: 2100;
+}
+
+.bingo-card {
+  padding: 28px 40px;
+  text-align: center;
+  color: #111827;
+  background: linear-gradient(135deg, #facc15, #f59e0b);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  transform: scale(0.7) rotate(-6deg);
+  opacity: 0;
+}
+
+.bingo-card h2 {
+  margin: 0 0 8px 0;
+  font-size: 3rem;
+  letter-spacing: 0.08em;
+}
+
+.bingo-card p {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.bingo-banner.show .bingo-card {
+  animation: bingoPop 1.8s ease forwards;
+}
+
+.first-solver-card {
+  padding: 24px 36px;
+  text-align: center;
+  color: white;
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  transform: scale(0.7);
+  opacity: 0;
+}
+
+.first-solver-card h2 {
+  margin: 0 0 8px 0;
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+}
+
+.first-solver-card p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #dbeafe;
+}
+
+.first-solver-banner.show .first-solver-card {
+  animation: firstSolverPop 1.8s ease forwards;
+}
+
+.score-pop {
+  animation: scorePulse 1.5s ease;
+}
+
+.gallery-fade-in {
+  animation: galleryFadeIn 0.52s ease;
+}
+
+@keyframes bingoPop {
+  0% {
+    transform: scale(0.6) rotate(-8deg);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.08) rotate(2deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+@keyframes firstSolverPop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+@keyframes cellPointsPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -38%) scale(0.92);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -58%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -82%) scale(0.98);
+  }
+}
+
+@keyframes scorePulse {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes galleryFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

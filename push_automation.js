@@ -31,7 +31,8 @@ const PUSH_AUTOMATION_TYPES = {
   LIVE_FINISHED: "automatic_live_finished",
   GAME_ACTIVATED: "automatic_game_activated",
   PLAYER_ADDED: "automatic_player_added",
-  FIRST_GAME_BINGO: "automatic_first_game_bingo"
+  FIRST_GAME_BINGO: "automatic_first_game_bingo",
+  SINGLE_USE_COMPLETED: "automatic_single_use_completed"
 };
 
 /* ============================================================
@@ -350,6 +351,44 @@ async function pushAutomationSendFirstGameBingo({ gameId, playerId, lineKey = nu
       player_id: playerId,
       player_name: pushAutomationGetPlayerName(player),
       line_key: lineKey
+    }
+  });
+}
+
+async function pushAutomationSendSingleUseChallengeCompleted({
+  gameId,
+  playerId,
+  challengeId,
+  challengeTitle,
+  pointsAwarded = null
+}) {
+  if (!gameId || !playerId || !challengeId) return null;
+
+  const [game, player] = await Promise.all([
+    pushAutomationLoadGame(gameId),
+    pushAutomationLoadPlayer(playerId)
+  ]);
+
+  if (game?.single_use_challenges !== true) return null;
+
+  const playerName = pushAutomationGetPlayerName(player);
+  const title = challengeTitle || "eine Aufgabe";
+  const pointsText = pointsAwarded ? ` (+${pointsAwarded}P)` : "";
+
+  return await pushAutomationSendIfEnabled({
+    gameId,
+    settingKey: "push_single_use_completed_enabled",
+    type: PUSH_AUTOMATION_TYPES.SINGLE_USE_COMPLETED,
+    title: "Aufgabe erledigt",
+    message: `${playerName} hat "${title}" erledigt${pointsText}.`,
+    targetType: "game",
+    targetGameId: gameId,
+    metadata: {
+      player_id: playerId,
+      player_name: playerName,
+      challenge_id: challengeId,
+      challenge_title: title,
+      points_awarded: pointsAwarded
     }
   });
 }

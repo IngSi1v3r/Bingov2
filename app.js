@@ -178,9 +178,14 @@ function openChallengeModal(challenge) {
   const photoRequired = photoMode === "required";
   const photoOptional = photoMode === "optional";
 
-  const descriptionImageUrl = challenge.descriptionImagePath
-    ? DataService.storage.getChallengeImagePublicUrl(challenge.descriptionImagePath)
-    : null;
+  const hasCooldownPenalty = (currentGame?.cooldown_seconds ?? 0) > 0;
+  const failButtonLabel = hasCooldownPenalty ? "Aufgeben" : "Später";
+
+  const descriptionImageUrl =
+    challenge.descriptionImagePath &&
+    DataService?.storage?.getChallengeImagePublicUrl
+      ? DataService.storage.getChallengeImagePublicUrl(challenge.descriptionImagePath)
+      : null;
 
   modalTask.innerHTML = `
     <div class="challenge-description-wrapper">
@@ -248,7 +253,7 @@ function openChallengeModal(challenge) {
         `).join("")}
       </div>
 
-      <button id="failBtn">Aufgeben</button>
+      <button id="failBtn">${failButtonLabel}</button>
     `;
   } else {
     modalActions.innerHTML = `
@@ -261,7 +266,7 @@ function openChallengeModal(challenge) {
         ${photoOptional ? `<button id="optionalPhotoBtn" type="button" class="secondary-btn">Optional Foto hochladen</button>` : ""}
       `}
 
-      <button id="failBtn">Aufgeben</button>
+      <button id="failBtn">${failButtonLabel}</button>
     `;
   }
 
@@ -316,7 +321,12 @@ function openChallengeModal(challenge) {
     }
   }
 
-  document.getElementById("failBtn").onclick = () => {
+  document.getElementById("failBtn").onclick = async () => {
+    if (!hasCooldownPenalty) {
+      await failChallenge();
+      return;
+    }
+
     openFailConfirmModal();
   };
 
@@ -645,6 +655,18 @@ async function openPlayerProfileModal() {
       logoutPlayer();
     };
   }
+
+  const adminPanelBtn = document.getElementById("openAdminPanelBtn");
+
+    if (adminPanelBtn) {
+      const isAdmin = currentPlayer?.role === "admin";
+
+      adminPanelBtn.classList.toggle("hidden", !isAdmin);
+
+      adminPanelBtn.onclick = () => {
+        window.location.href = "admin.html";
+      };
+    }
 
   currentPlayerProfileGalleryIndex = 0;
 
@@ -1424,22 +1446,32 @@ function createBingoLineIndicator(lineIndex, title) {
 function renderGrid(updateScore = true) {
   grid.innerHTML = "";
 
-const showBingoIndicators =
-  (currentGame?.bingo_bonus_points ?? 0) > 0 ||
-  (currentGame?.first_bingo_bonus_points ?? 0) > 0;
-
-const bingoShell = document.querySelector(".bingo-board-shell");
-
-if (bingoShell) {
-  bingoShell.classList.toggle("no-bingo-indicators", !showBingoIndicators);
-}
-
-if (showBingoIndicators) {
-  renderBingoLineIndicators();
-}
-
   const gridSize = currentGame?.grid_size || 5;
-  grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+
+  grid.classList.remove(
+    "grid-size-3",
+    "grid-size-4",
+    "grid-size-5",
+    "grid-size-6",
+    "grid-size-7"
+  );
+
+  grid.classList.add(`grid-size-${gridSize}`);
+  grid.style.gridTemplateColumns = `repeat(${gridSize}, minmax(0, 1fr))`;
+
+  const showBingoIndicators =
+    (currentGame?.bingo_bonus_points ?? 0) > 0 ||
+    (currentGame?.first_bingo_bonus_points ?? 0) > 0;
+
+  const bingoShell = document.querySelector(".bingo-board-shell");
+
+  if (bingoShell) {
+    bingoShell.classList.toggle("no-bingo-indicators", !showBingoIndicators);
+  }
+
+  if (showBingoIndicators) {
+    renderBingoLineIndicators();
+  }
 
   const expectedCount = gridSize * gridSize;
   if (challenges.length !== expectedCount) {
@@ -1480,11 +1512,16 @@ if (showBingoIndicators) {
     const isBingoCell = gameState.bingoCells.includes(challenge.boardId);
     const isFirstSolverCell = gameState.firstSolved.includes(challenge.boardId);
     const isChallengeDisabled = challenge.isActive === false;
+    const isSolvedByAnyone = challenge.solvedCount > 0;
 
     const isGloballySolvedByOther =
       currentGame?.single_use_challenges === true &&
       challenge.solvedCount > 0 &&
       !isCompleted;
+
+    if (isSolvedByAnyone && !isCompleted && !isGloballySolvedByOther) {
+      cell.classList.add("solved-by-others");
+    }
 
     cell.style.background = "";
     cell.style.border = "";
@@ -1524,7 +1561,6 @@ if (showBingoIndicators) {
 
       <div class="cell-title">${challenge.title}</div>
       <div class="cell-points">${getChallengePointsDisplay(challenge)}</div>
-      <div class="cell-solved-count">${challenge.solvedCount}</div>
     `;
 
     cell.addEventListener("click", async () => {
@@ -1659,7 +1695,17 @@ function closeFinalOverlay() {
 // =======================
 
 
-rulesBtn.addEventListener("click", openRulesModal);
+if (rulesBtn) {
+  rulesBtn.addEventListener("click", openRulesModal);
+}
+
+const profileRulesBtn = document.getElementById("profileRulesBtn");
+
+if (profileRulesBtn) {
+  profileRulesBtn.addEventListener("click", openRulesModal);
+}
+
+
 closeRulesBtn.addEventListener("click", closeRulesModal);
 closeDetailsBtn.addEventListener("click", closeDetailsModal);
 closePhotoViewerBtn.addEventListener("click", closePhotoViewer);

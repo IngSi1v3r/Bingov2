@@ -1,0 +1,91 @@
+/* ============================================================
+   style_base.css
+   Aus der bisherigen style.css logisch ausgelagert.
+   Keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* BASE / GLOBAL */
+/* ===================== */
+
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background: #111827;
+  color: white;
+}
+
+
+
+.hidden {
+  display: none !important;
+}
+
+/* ===================== */
+/* BUTTONS */
+/* ===================== */
+
+.secondary-btn {
+  background: #1f2937;
+  color: white;
+  border: 1px solid #4b5563;
+  border-radius: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.secondary-btn:hover {
+  background: #374151;
+}
+
+.danger-btn-soft {
+  background: #7f1d1d;
+  color: white;
+}
+
+.danger-btn-soft:hover {
+  background: #991b1b;
+}
+
+.danger-btn {
+  background: #b91c1c;
+  color: white;
+}
+
+.danger-btn:hover {
+  background: #991b1b;
+}
+
+/* ===================== */
+/* RULES / GENERIC CONTENT */
+/* ===================== */
+
+.rules-content {
+  text-align: left;
+  color: #d1d5db;
+}
+
+.rules-content p {
+  margin-bottom: 10px;
+}
+
+.rules-content ul {
+  margin-top: 6px;
+  margin-bottom: 16px;
+  padding-left: 20px;
+}
+
+.rules-content li {
+  margin-bottom: 6px;
+}
+
+.success-text {
+  margin-top: 12px;
+  padding: 10px 12px;
+  font-weight: bold;
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
+  border-radius: 10px;
+}

@@ -33,27 +33,23 @@
 
   <div class="app">
     <div class="header-card">
-      <h1>Flos Party Bingo</h1>
 
       <div class="header-controls">
-        <div class="header-item">
-          <div class="header-label">Aktives Spiel</div>
-          <button id="gameSelectBtn" class="secondary-btn header-button">
-            <span id="gameNameInline">Lade...</span>
-          </button>
-        </div>
+        <button id="gameSelectBtn" class="header-info-card">
+          <span class="header-info-icon">🎲</span>
+          <span id="gameNameInline" class="header-info-text">Lade...</span>
+        </button>
 
-        <div class="header-item">
-          <div class="header-label">Eingeloggt als</div>
-          <button id="playerProfileBtn" class="secondary-btn header-button">
-            <span id="playerNameInline">-</span>
-          </button>
-        </div>
+        <button id="playerProfileBtn" class="header-info-card profile-header-card">
+          <span id="playerNameInline" class="header-info-text">-</span>
+          <span class="header-info-icon">👤</span>
+        </button>
       </div>
 
       <div id="scoreDisplay" class="score-card">
-        <div class="score-label">Score</div>
-        <div class="score-number"><span id="scoreValue">0</span></div>
+        <div class="score-number">
+          <span id="scoreValue">0</span><span class="score-unit">P</span>
+        </div>
       </div>
 
       <div id="cooldownDisplay" class="cooldown-display hidden">
@@ -62,23 +58,23 @@
       </div>
     </div>
 
-   <div class="bingo-board-shell">
+    <div class="bingo-board-shell">
 
-  <div class="bingo-board-top">
-    <div></div>
-    <div id="bingoDiagonalTopIndicator" class="bingo-diagonal-single"></div>
-  </div>
+      <div class="bingo-board-top">
+        <div></div>
+        <div id="bingoDiagonalTopIndicator" class="bingo-diagonal-single"></div>
+      </div>
 
-  <div class="bingo-board-main">
-    <div id="grid" class="grid"></div>
-    <div id="bingoRowIndicators" class="bingo-row-indicators"></div>
-  </div>
+      <div class="bingo-board-main">
+        <div id="grid" class="grid"></div>
+        <div id="bingoRowIndicators" class="bingo-row-indicators"></div>
+      </div>
 
-  <div class="bingo-board-bottom">
-    <div id="bingoColumnIndicators" class="bingo-column-indicators"></div>
-    <div id="bingoDiagonalBottomIndicator" class="bingo-diagonal-single"></div>
-  </div>
-</div>
+      <div class="bingo-board-bottom">
+        <div id="bingoColumnIndicators" class="bingo-column-indicators"></div>
+        <div id="bingoDiagonalBottomIndicator" class="bingo-diagonal-single"></div>
+      </div>
+    </div>
 
     <!-- LEADERBOARD -->
     <div class="leaderboard">
@@ -86,11 +82,7 @@
       <div id="leaderboardList" class="leaderboard-list"></div>
     </div>
 
-    <!-- BOTTOM ACTIONS -->
-    <div class="bottom-actions">
-      <button id="rulesBtn" class="secondary-btn">Regeln anzeigen</button>
-    </div>
-  </div>
+    
 
   <!-- ===================== -->
   <!-- MODAL (CHALLENGE) -->
@@ -245,7 +237,12 @@
         </div>
       </div>
 
-      <div class="modal-actions">
+      <div class="modal-actions profile-meta-actions">
+        <button id="profileRulesBtn" class="secondary-btn">Anleitung</button>
+        <button id="openAdminPanelBtn" class="secondary-btn hidden">Adminpanel</button>
+      </div>
+
+      <div class="modal-actions profile-danger-actions">
         <button id="playerProfileLogoutBtn" class="secondary-btn">Logout</button>
         <button id="resetProgressBtn" class="danger-btn-soft">Fortschritt zurücksetzen</button>
         <button id="deletePlayerBtn" class="danger-btn">Profil löschen</button>

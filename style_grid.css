@@ -1,0 +1,326 @@
+/* ============================================================
+   style_grid.css
+   Aus der bisherigen style.css logisch ausgelagert.
+   Keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* BINGO LINE INDICATORS */
+/* ===================== */
+
+.bingo-board-shell {
+  margin-top: 20px;
+}
+
+.bingo-board-main {
+  display: grid;
+  grid-template-columns: 1fr 52px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.bingo-row-indicators {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  align-items: center;
+}
+
+.bingo-board-bottom {
+  display: grid;
+  grid-template-columns: 1fr 104px;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.bingo-column-indicators {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  align-items: center;
+}
+
+.bingo-diagonal-indicators {
+  display: grid;
+  grid-template-columns: repeat(2, 42px);
+  gap: 6px;
+  justify-content: end;
+}
+
+.bingo-line-indicator {
+  width: 42px;
+  height: 42px;
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 3px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.05;
+  text-align: center;
+
+  color: #d1d5db;
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 10px;
+}
+
+.bingo-line-indicator.own {
+  color: white;
+  background: #16a34a;
+  border-color: #22c55e;
+}
+
+.bingo-line-points {
+  display: block;
+}
+
+.bingo-line-count {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.bingo-board-top {
+  display: grid;
+  grid-template-columns: 1fr 52px;
+  margin-bottom: 8px;
+}
+
+.bingo-diagonal-single {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===================== */
+/* GRID / CELLS */
+/* ===================== */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 12px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.cell-title {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+}
+
+/* ===================== */
+/* GRID SIZE TYPOGRAPHY */
+/* ===================== */
+
+.grid.grid-size-3 .cell-title {
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.grid.grid-size-4 .cell-title {
+  font-size: 0.9rem;
+  line-height: 1.08;
+}
+
+.grid.grid-size-5 .cell-title {
+  font-size: 0.78rem;
+  line-height: 1.06;
+}
+
+.grid.grid-size-6 .cell-title {
+  font-size: 0.68rem;
+  line-height: 1.04;
+}
+
+.grid.grid-size-7 .cell-title {
+  font-size: 0.6rem;
+  line-height: 1.02;
+}
+
+.cell:hover {
+  transform: translateY(-2px);
+  background: #445066;
+}
+
+
+.cell-points {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  font-size: 0.85rem;
+  color: #d1d5db;
+}
+
+.cell-solved-count {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  font-size: 0.75rem;
+  color: #d1d5db;
+}
+
+.cell-active-banner {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  padding: 3px 6px;
+  font-size: 0.68rem;
+  font-weight: bold;
+  text-align: center;
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-radius: 999px;
+}
+
+.cell-first-solver {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.cell-category-icon {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.cell-lock-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.7rem;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.cell-points-popup {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  z-index: 20;
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: #facc15;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: cellPointsPop 3s ease forwards;
+}
+
+
+.bingo-board-top,
+.bingo-row-indicators,
+.bingo-board-bottom {
+  display: none;
+}
+
+.bingo-board-main {
+  display: block;
+}
+
+.grid {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 12px;
+}
+
+.cell.solved-by-others {
+  background: #313b4c;
+  border: 1px solid #7c8da6;
+}
+
+.cell.solved-by-others::after {
+  content: "✓";
+  position: absolute;
+  left: 6px;
+  bottom: 4px;
+
+  font-size: 0.78rem;
+  font-weight: 900;
+
+  color: #cbd5e1;
+  opacity: 0.9;
+}
+
+/* ===================== */
+/* GRID SIZE CORNER ELEMENTS */
+/* ===================== */
+
+/* 3x3 */
+.grid.grid-size-3 .cell-points,
+.grid.grid-size-3 .cell-first-solver,
+.grid.grid-size-3 .cell-category-icon,
+.grid.grid-size-3 .cell.solved-by-others::after {
+  font-size: 0.95rem;
+}
+
+/* 4x4 */
+.grid.grid-size-4 .cell-points,
+.grid.grid-size-4 .cell-first-solver,
+.grid.grid-size-4 .cell-category-icon,
+.grid.grid-size-4 .cell.solved-by-others::after {
+  font-size: 0.85rem;
+}
+
+/* 5x5 */
+.grid.grid-size-5 .cell-points,
+.grid.grid-size-5 .cell-first-solver,
+.grid.grid-size-5 .cell-category-icon,
+.grid.grid-size-5 .cell.solved-by-others::after {
+  font-size: 0.72rem;
+}
+
+/* 6x6 */
+.grid.grid-size-6 .cell-points,
+.grid.grid-size-6 .cell-first-solver,
+.grid.grid-size-6 .cell-category-icon,
+.grid.grid-size-6 .cell.solved-by-others::after {
+  font-size: 0.65rem;
+}
+
+/* 7x7 */
+.grid.grid-size-7 .cell-points,
+.grid.grid-size-7 .cell-first-solver,
+.grid.grid-size-7 .cell-category-icon,
+.grid.grid-size-7 .cell.solved-by-others::after {
+  font-size: 0.55rem;
+}
