@@ -73,7 +73,7 @@
   }
 
   .score-number {
-    font-size: 1.8rem;
+    font-size: 1.2rem;
   }
 }
 
@@ -101,5 +101,11 @@
 
   .header-info-text {
     font-size: 0.88rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .upload-preview-image {
+    max-height: 34dvh;
   }
 }

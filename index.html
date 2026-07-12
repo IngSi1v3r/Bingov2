@@ -34,29 +34,34 @@
   <div class="app">
     <div class="header-card">
 
-      <div class="header-controls">
-        <button id="gameSelectBtn" class="header-info-card">
+        <button id="gameSelectBtn" class="header-info-card game-header-card">
           <span class="header-info-icon">🎲</span>
           <span id="gameNameInline" class="header-info-text">Lade...</span>
         </button>
 
-        <button id="playerProfileBtn" class="header-info-card profile-header-card">
-          <span id="playerNameInline" class="header-info-text">-</span>
+        <div class="header-bottom-row">
+          <button id="playerProfileBtn" class="header-info-card profile-header-card">
           <span class="header-info-icon">👤</span>
+          <span id="playerNameInline" class="header-info-text">-</span>
         </button>
-      </div>
 
-      <div id="scoreDisplay" class="score-card">
-        <div class="score-number">
-          <span id="scoreValue">0</span><span class="score-unit">P</span>
+          <button
+            id="scoreDisplay"
+            class="score-card"
+            type="button"
+            aria-label="Eigenen Fortschritt anzeigen"
+          >
+            <span class="score-number">
+              <span id="scoreValue">0</span><span class="score-unit">P</span>
+            </span>
+          </button>
+        </div>
+
+        <div id="cooldownDisplay" class="cooldown-display hidden">
+          <span class="cooldown-label">Cooldown</span>
+          <span id="cooldownTimerText" class="cooldown-timer-text">00:00</span>
         </div>
       </div>
-
-      <div id="cooldownDisplay" class="cooldown-display hidden">
-        <span class="cooldown-label">Cooldown</span>
-        <span id="cooldownTimerText" class="cooldown-timer-text">00:00</span>
-      </div>
-    </div>
 
     <div class="bingo-board-shell">
 
@@ -175,80 +180,185 @@
   </div>
 
   <!-- ===================== -->
-  <!-- PLAYER PROFILE -->
-  <!-- ===================== -->
-  <div id="playerProfileOverlay" class="modal-overlay hidden">
-    <div class="modal">
-      <button id="closePlayerProfileBtn" class="modal-close-btn" type="button">×</button>
-      <h2>Dein Profil</h2>
+<!-- PLAYER PROGRESS -->
+<!-- ===================== -->
+<div id="playerProfileOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <button
+      id="closePlayerProfileBtn"
+      class="modal-close-btn"
+      type="button"
+    >
+      ×
+    </button>
 
-      <p id="playerProfileName"><strong>Spieler:</strong> -</p>
+    <h2>Dein Fortschritt</h2>
 
-      <div class="rules-content">
-        <h3>Statistik</h3>
-        <div id="playerProfileStats">
-          <p>Noch keine Statistik eingebaut.</p>
-        </div>
+    <div class="rules-content">
+      <h3>Statistik</h3>
 
-        <h3>Galerie</h3>
-        <div id="playerProfileGallery">
-          <p>Noch keine Galerie eingebaut.</p>
-        </div>
+      <div id="playerProfileStats">
+        <p>Statistik wird geladen...</p>
       </div>
 
-      <h3>Abgeschlossene Aufgaben</h3>
-      <div id="playerProfileCompletedList">
-        <p>Noch keine Aufgaben abgeschlossen.</p>
-      </div>
+      <h3>Galerie</h3>
 
-      <div class="player-push-profile-box">
-        <h3>Push-Benachrichtigungen</h3>
-        <p id="playerPushStatusText" class="player-push-status-text">Push-Status wird geladen...</p>
-
-        <div class="player-push-actions">
-          <button id="playerProfilePushEnableBtn" type="button" class="secondary-btn">Push aktivieren</button>
-          <button id="playerProfilePushDisableBtn" type="button" class="secondary-btn hidden">Push deaktivieren</button>
-        </div>
-
-        <div id="playerPushPreferenceSettings" class="player-push-preferences hidden">
-          <div class="player-push-preferences-title">Welche Nachrichten möchtest du bekommen?</div>
-
-          <label class="player-push-pref-row">
-            <input type="checkbox" class="player-push-pref-checkbox" data-push-pref-key="live_challenges_enabled" />
-            <span>Live-Challenges</span>
-          </label>
-
-          <label class="player-push-pref-row">
-            <input type="checkbox" class="player-push-pref-checkbox" data-push-pref-key="game_updates_enabled" />
-            <span>Neue Spiele & Einladungen</span>
-          </label>
-
-          <label class="player-push-pref-row">
-            <input type="checkbox" class="player-push-pref-checkbox" data-push-pref-key="cooldown_enabled" />
-            <span>Cooldown abgelaufen</span>
-          </label>
-
-          <label class="player-push-pref-row">
-            <input type="checkbox" class="player-push-pref-checkbox" data-push-pref-key="admin_messages_enabled" />
-            <span>Admin-Nachrichten</span>
-          </label>
-
-          <p id="playerPushPreferenceStatusText" class="player-push-preference-status"></p>
-        </div>
-      </div>
-
-      <div class="modal-actions profile-meta-actions">
-        <button id="profileRulesBtn" class="secondary-btn">Anleitung</button>
-        <button id="openAdminPanelBtn" class="secondary-btn hidden">Adminpanel</button>
-      </div>
-
-      <div class="modal-actions profile-danger-actions">
-        <button id="playerProfileLogoutBtn" class="secondary-btn">Logout</button>
-        <button id="resetProgressBtn" class="danger-btn-soft">Fortschritt zurücksetzen</button>
-        <button id="deletePlayerBtn" class="danger-btn">Profil löschen</button>
+      <div id="playerProfileGallery">
+        <p>Noch keine Bilder vorhanden.</p>
       </div>
     </div>
+
+    <h3>Abgeschlossene Aufgaben</h3>
+
+    <div id="playerProfileCompletedList">
+      <p>Noch keine Aufgaben abgeschlossen.</p>
+    </div>
   </div>
+</div>
+
+<!-- ===================== -->
+<!-- PLAYER SETTINGS -->
+<!-- ===================== -->
+<div id="playerSettingsOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <button
+      id="closePlayerSettingsBtn"
+      class="modal-close-btn"
+      type="button"
+    >
+      ×
+    </button>
+
+    <h2>Profil & Einstellungen</h2>
+
+    <p id="playerSettingsName">
+      <strong>Spieler:</strong> -
+    </p>
+
+    <div class="player-push-profile-box">
+      <h3>Push-Benachrichtigungen</h3>
+
+      <p
+        id="playerPushStatusText"
+        class="player-push-status-text"
+      >
+        Push-Status wird geladen...
+      </p>
+
+      <div class="player-push-actions">
+        <button
+          id="playerProfilePushEnableBtn"
+          type="button"
+          class="secondary-btn"
+        >
+          Push aktivieren
+        </button>
+
+        <button
+          id="playerProfilePushDisableBtn"
+          type="button"
+          class="secondary-btn hidden"
+        >
+          Push deaktivieren
+        </button>
+      </div>
+
+      <div
+        id="playerPushPreferenceSettings"
+        class="player-push-preferences hidden"
+      >
+        <div class="player-push-preferences-title">
+          Welche Nachrichten möchtest du bekommen?
+        </div>
+
+        <label class="player-push-pref-row">
+          <input
+            type="checkbox"
+            class="player-push-pref-checkbox"
+            data-push-pref-key="live_challenges_enabled"
+          />
+          <span>Live-Challenges</span>
+        </label>
+
+        <label class="player-push-pref-row">
+          <input
+            type="checkbox"
+            class="player-push-pref-checkbox"
+            data-push-pref-key="game_updates_enabled"
+          />
+          <span>Neue Spiele & Einladungen</span>
+        </label>
+
+        <label class="player-push-pref-row">
+          <input
+            type="checkbox"
+            class="player-push-pref-checkbox"
+            data-push-pref-key="cooldown_enabled"
+          />
+          <span>Cooldown abgelaufen</span>
+        </label>
+
+        <label class="player-push-pref-row">
+          <input
+            type="checkbox"
+            class="player-push-pref-checkbox"
+            data-push-pref-key="admin_messages_enabled"
+          />
+          <span>Admin-Nachrichten</span>
+        </label>
+
+        <p
+          id="playerPushPreferenceStatusText"
+          class="player-push-preference-status"
+        ></p>
+      </div>
+    </div>
+
+    <div class="modal-actions profile-meta-actions">
+      <button
+        id="profileRulesBtn"
+        type="button"
+        class="secondary-btn"
+      >
+        Anleitung
+      </button>
+
+      <button
+        id="openAdminPanelBtn"
+        type="button"
+        class="secondary-btn hidden"
+      >
+        Adminpanel
+      </button>
+    </div>
+
+    <div class="modal-actions profile-danger-actions">
+      <button
+        id="playerProfileLogoutBtn"
+        type="button"
+        class="secondary-btn"
+      >
+        Logout
+      </button>
+
+      <button
+        id="resetProgressBtn"
+        type="button"
+        class="danger-btn-soft"
+      >
+        Fortschritt zurücksetzen
+      </button>
+
+      <button
+        id="deletePlayerBtn"
+        type="button"
+        class="danger-btn"
+      >
+        Profil löschen
+      </button>
+    </div>
+  </div>
+</div>
 
   <!-- ===================== -->
   <!-- HINWEISE -->

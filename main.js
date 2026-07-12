@@ -331,6 +331,9 @@ function closeAllGameOverlaysSafely() {
   } catch (err) {
     console.warn("Fehler beim Schliessen der Overlays:", err);
   }
+    if (typeof closePlayerSettingsModal === "function") {
+      closePlayerSettingsModal();
+    }
 }
 
 /**

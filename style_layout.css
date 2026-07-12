@@ -29,16 +29,17 @@
   border-radius: 0;
 }
 
-.header-controls {
-  width: 100%;
-  box-sizing: border-box;
+/* Obere Zeile: Spielname über die volle Breite */
+.game-header-card {
+  margin-bottom: 10px;
+}
 
+/* Untere Zeile: Spieler links, Score rechts */
+.header-bottom-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
   gap: 10px;
-
-  margin-bottom: 10px;
 }
 
 .header-info-card {
@@ -61,12 +62,25 @@
   font-size: inherit;
   text-align: left;
 
-  background: #1f2937;
-  border: 1px solid #374151;
-  border-radius: 14px;
-
   color: white;
   cursor: pointer;
+
+  background:
+    linear-gradient(
+      180deg,
+      #435976 0%,
+      #2c3f5b 42%,
+      #1d2d45 100%
+    );
+
+  border: 1px solid #6680a2;
+  border-radius: 14px;
+
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.46),
+    0 2px 4px rgba(0, 0, 0, 0.30),
+    inset 0 2px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.24);
 }
 
 .header-info-icon {
@@ -78,15 +92,27 @@
   align-items: center;
   justify-content: center;
 
-  background: #374151;
-
-  font-size: 0.9rem;
   flex-shrink: 0;
+  font-size: 0.9rem;
+
+  background:
+    linear-gradient(
+      180deg,
+      #8099bb 0%,
+      #536d8f 48%,
+      #3d526f 100%
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.20);
+
+  box-shadow:
+    0 4px 9px rgba(0, 0, 0, 0.40),
+    inset 0 2px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
 }
 
 .header-info-text {
   min-width: 0;
-
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -95,31 +121,56 @@
   font-weight: 700;
 }
 
+/* Profil-Kachel: */
+.profile-header-card {
+  justify-content: flex-start;
+}
+
+/* Kompakter Score rechts neben dem Profil */
 .score-card {
   display: flex;
   align-items: center;
   justify-content: center;
 
-  width: 100%;
+  min-width: 112px;
   box-sizing: border-box;
 
-  margin-bottom: 8px;
-  padding: 10px 12px;
+  margin: 0;
+  padding: 9px 14px;
 
-  background: #172033;
-  border: 1px solid #2e3a52;
+  background:
+    linear-gradient(
+      180deg,
+      #354a6a 0%,
+      #223650 48%,
+      #17253b 100%
+    );
+
+  border: 1px solid #587395;
   border-radius: 14px;
+
+  box-shadow:
+    0 11px 24px rgba(0, 0, 0, 0.48),
+    0 2px 5px rgba(0, 0, 0, 0.30),
+    inset 0 2px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.24);
+
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
 }
 
 .score-number {
-  font-size: 1.55rem;
-  font-weight: 900;
+  font-size: 1.2rem;
+  font-weight: 700;
   line-height: 1;
   color: white;
 }
 
 .score-unit {
-  margin-left: 4px;
+  margin-left: 1px;
   font-size: inherit;
   font-weight: inherit;
   opacity: 1;
@@ -128,10 +179,6 @@
 #scoreValue {
   display: inline-block;
   transform-origin: center;
-}
-
-.profile-header-card {
-  justify-content: space-between;
 }
 
 /* ===================== */
@@ -175,9 +222,47 @@
 .leaderboard {
   margin-top: 28px;
   padding: 20px;
-  background: #1f2937;
-  border: 1px solid #4b5563;
+
+  background:
+    linear-gradient(
+      180deg,
+      #3b4e6b 0%,
+      #283b57 42%,
+      #1b2b43 100%
+    );
+
+  border: 1px solid #647d9f;
   border-radius: 16px;
+
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.50),
+    0 3px 7px rgba(0, 0, 0, 0.30),
+    inset 0 2px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22);
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 70px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #68778f 0%,
+      #4b5b73 46%,
+      #39495f 100%
+    );
+
+  border: 1px solid #8191aa;
+  border-radius: 10px;
+
+  box-shadow:
+    0 7px 15px rgba(0, 0, 0, 0.42),
+    inset 0 2px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.18);
 }
 
 .leaderboard h2 {

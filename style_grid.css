@@ -126,10 +126,28 @@
   padding: 8px;
   text-align: center;
   cursor: pointer;
-  background: #374151;
-  border: 1px solid #4b5563;
+  color: #f8fafc;
+
+  background:
+    linear-gradient(
+      180deg,
+      #5b687d 0%,
+      #3d4b60 100%
+    );
+
+  border: 1px solid #718099;
   border-radius: 12px;
-  transition: transform 0.15s ease, background 0.15s ease;
+
+  box-shadow:
+    0 7px 15px rgba(0, 0, 0, 0.42),
+    inset 0 2px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22);
+
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .cell-title {
@@ -171,7 +189,19 @@
 
 .cell:hover {
   transform: translateY(-2px);
-  background: #445066;
+
+  background:
+    linear-gradient(
+      180deg,
+      #68778f 0%,
+      #47566c 100%
+    );
+
+  border-color: #8fa0ba;
+
+  box-shadow:
+    0 9px 18px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.20);
 }
 
 
@@ -263,22 +293,63 @@
   margin-top: 12px;
 }
 
-.cell.solved-by-others {
-  background: #313b4c;
-  border: 1px solid #7c8da6;
+
+.cell.completed {
+  background:
+    linear-gradient(
+      180deg,
+      #42dc7d 0%,
+      #1fad58 48%,
+      #168a46 100%
+    );
+
+  border-color: #61ec93;
+
+  box-shadow:
+    0 8px 17px rgba(0, 0, 0, 0.42),
+    0 0 20px rgba(34, 197, 94, 0.28),
+    inset 0 2px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.20);
+}
+
+.cell.bingo-cell {
+  border-top: 2px solid #fff2ad;
+  border-left: 2px solid #f4d54d;
+  border-right: 2px solid #d4a51b;
+  border-bottom: 2px solid #a97400;
+
+  box-shadow:
+    /* normaler Zellschatten */
+    0 7px 15px rgba(0, 0, 0, 0.42),
+
+    /* Lichtkante der Zelle */
+    inset 0 2px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+
+    /* dezenter goldener Glow */
+    0 0 8px rgba(250, 204, 21, 0.28),
+
+    /* feine äußere Goldkante */
+    0 0 0 1px rgba(255, 235, 140, 0.35);
 }
 
 .cell.solved-by-others::after {
   content: "✓";
   position: absolute;
   left: 6px;
-  bottom: 4px;
+  bottom: 2px;
 
   font-size: 0.78rem;
   font-weight: 900;
+  line-height: 1;
 
-  color: #cbd5e1;
-  opacity: 0.9;
+  color: #dbeafe;
+
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.65),
+    0 0 4px rgba(255, 255, 255, 0.10);
+
+  opacity: 0.95;
 }
 
 /* ===================== */

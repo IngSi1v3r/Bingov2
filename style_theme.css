@@ -1,0 +1,317 @@
+/* ============================================================
+   style_theme.css
+   Zentrale Farben, Oberflaechen und Tiefenwirkung.
+   Diese Datei am besten als LETZTE CSS-Datei importieren.
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  --color-bg-top: #14213a;
+  --color-bg-main: #0f172a;
+  --color-bg-bottom: #0a1020;
+
+  --color-surface-1: #182337;
+  --color-surface-2: #202c40;
+  --color-surface-3: #2d394c;
+
+  --color-cell-top: #3d485b;
+  --color-cell-bottom: #343f52;
+  --color-cell-border: rgba(148, 163, 184, 0.34);
+
+  --color-cell-seen-top: #354255;
+  --color-cell-seen-bottom: #2e394b;
+  --color-cell-seen-border: #8290a4;
+
+  --color-success-top: #20b95a;
+  --color-success-bottom: #159447;
+  --color-success-border: rgba(74, 222, 128, 0.72);
+
+  --color-accent: #3b82f6;
+  --color-accent-soft: rgba(59, 130, 246, 0.18);
+  --color-gold: #facc15;
+  --color-danger: #ef4444;
+
+  --color-text: #f8fafc;
+  --color-text-muted: #cbd5e1;
+  --color-text-soft: #94a3b8;
+
+  --color-border-soft: rgba(148, 163, 184, 0.22);
+  --color-highlight-line: rgba(255, 255, 255, 0.07);
+
+  --shadow-panel:
+    0 10px 28px rgba(0, 0, 0, 0.20),
+    inset 0 1px 0 var(--color-highlight-line);
+
+  --shadow-card:
+    0 3px 8px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 var(--color-highlight-line);
+
+  --shadow-cell:
+    0 2px 5px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 var(--color-highlight-line),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16);
+
+  --shadow-success:
+    0 3px 8px rgba(0, 0, 0, 0.22),
+    0 0 12px rgba(34, 197, 94, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  --radius-panel: 16px;
+  --radius-card: 14px;
+  --radius-cell: 12px;
+}
+
+body.theme-light {
+  color-scheme: light;
+
+  --color-bg-top: #eef6ff;
+  --color-bg-main: #f7fbff;
+  --color-bg-bottom: #edf3f9;
+
+  --color-surface-1: #ffffff;
+  --color-surface-2: #f4f8fc;
+  --color-surface-3: #e8eff7;
+
+  --color-cell-top: #ffffff;
+  --color-cell-bottom: #edf4fb;
+  --color-cell-border: rgba(71, 104, 137, 0.22);
+
+  --color-cell-seen-top: #f3f7fb;
+  --color-cell-seen-bottom: #e5edf5;
+  --color-cell-seen-border: #9badc0;
+
+  --color-success-top: #42c873;
+  --color-success-bottom: #27a958;
+  --color-success-border: rgba(22, 163, 74, 0.55);
+
+  --color-accent: #1976d2;
+  --color-accent-soft: rgba(25, 118, 210, 0.12);
+  --color-gold: #d69e00;
+  --color-danger: #dc2626;
+
+  --color-text: #172033;
+  --color-text-muted: #42526a;
+  --color-text-soft: #6b7d92;
+
+  --color-border-soft: rgba(71, 104, 137, 0.18);
+  --color-highlight-line: rgba(255, 255, 255, 0.78);
+
+  --shadow-panel:
+    0 12px 30px rgba(31, 67, 103, 0.12),
+    inset 0 1px 0 var(--color-highlight-line);
+
+  --shadow-card:
+    0 4px 10px rgba(31, 67, 103, 0.12),
+    inset 0 1px 0 var(--color-highlight-line);
+
+  --shadow-cell:
+    0 2px 6px rgba(31, 67, 103, 0.12),
+    inset 0 1px 0 var(--color-highlight-line),
+    inset 0 -1px 0 rgba(31, 67, 103, 0.06);
+
+  --shadow-success:
+    0 3px 9px rgba(22, 163, 74, 0.16),
+    0 0 12px rgba(34, 197, 94, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+body {
+  color: var(--color-text);
+  background:
+    radial-gradient(
+      circle at 50% -10%,
+      var(--color-bg-top) 0%,
+      var(--color-bg-main) 46%,
+      var(--color-bg-bottom) 100%
+    );
+  background-attachment: fixed;
+}
+
+.header-info-card {
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface-1) 100%);
+  border-color: var(--color-border-soft);
+  box-shadow: var(--shadow-card);
+}
+
+.header-info-card:hover {
+  border-color: rgba(59, 130, 246, 0.46);
+}
+
+.header-info-icon {
+  background: linear-gradient(180deg, var(--color-surface-3) 0%, var(--color-surface-2) 100%);
+  box-shadow:
+    inset 0 1px 0 var(--color-highlight-line),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.score-card {
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-surface-1) 0%, #141f33 100%);
+  border-color: var(--color-border-soft);
+  box-shadow: var(--shadow-card);
+}
+
+body.theme-light .score-card {
+  background: linear-gradient(180deg, #ffffff 0%, #eef5fb 100%);
+}
+
+.score-number {
+  color: var(--color-text);
+}
+
+.cell {
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-cell-top) 0%, var(--color-cell-bottom) 100%);
+  border-color: var(--color-cell-border);
+  box-shadow: var(--shadow-cell);
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.cell:hover {
+  background: linear-gradient(180deg, #465267 0%, #39465a 100%);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+body.theme-light .cell:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #e5f0fa 100%);
+}
+
+.cell.solved-by-others {
+  background: linear-gradient(180deg, var(--color-cell-seen-top) 0%, var(--color-cell-seen-bottom) 100%);
+  border-color: var(--color-cell-seen-border);
+}
+
+.cell.solved-by-others::after {
+  color: var(--color-text-muted);
+}
+
+.cell[style*="background"] {
+  box-shadow: var(--shadow-success);
+}
+
+.cell-points {
+  color: var(--color-text-muted);
+}
+
+.cell-first-solver {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.42));
+}
+
+.leaderboard {
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface-1) 100%);
+  border-color: var(--color-border-soft);
+  box-shadow: var(--shadow-panel);
+}
+
+.leaderboard-row {
+  background: linear-gradient(180deg, var(--color-cell-top) 0%, var(--color-cell-bottom) 100%);
+  border: 1px solid var(--color-border-soft);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 var(--color-highlight-line);
+}
+
+.leaderboard-row.current-player {
+  background: linear-gradient(180deg, #2e425f 0%, #253752 100%);
+  border-color: var(--color-accent);
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.34),
+    0 4px 12px rgba(0, 0, 0, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+body.theme-light .leaderboard-row.current-player {
+  background: linear-gradient(180deg, #f4f9ff 0%, #e6f1fd 100%);
+}
+
+.leaderboard-name {
+  color: var(--color-text);
+}
+
+.leaderboard-rank {
+  color: var(--color-text-muted);
+}
+
+.leaderboard-score {
+  color: var(--color-gold);
+}
+
+.modal,
+.overlay-content {
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface-1) 100%);
+  border-color: var(--color-border-soft);
+  box-shadow: var(--shadow-panel);
+}
+
+.modal > h2,
+.overlay-content > h2 {
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface-1) 100%);
+  border-bottom-color: var(--color-border-soft);
+}
+
+.modal p,
+.overlay-content p,
+.rules-content {
+  color: var(--color-text-muted);
+}
+
+.modal-close-btn {
+  color: var(--color-text);
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--color-border-soft);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 var(--color-highlight-line);
+}
+
+.secondary-btn {
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-surface-3) 0%, var(--color-surface-2) 100%);
+  border-color: var(--color-border-soft);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 var(--color-highlight-line);
+}
+
+.secondary-btn:hover {
+  background: linear-gradient(180deg, #3b485c 0%, #303c50 100%);
+}
+
+body.theme-light .secondary-btn:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #e5eef7 100%);
+}
+
+#playerProfileStats,
+#playerProfileGallery,
+#playerProfileCompletedList,
+.profile-stat-card,
+.player-push-profile-box,
+.live-stat-box {
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface-1) 100%);
+  border-color: var(--color-border-soft);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 var(--color-highlight-line);
+}
+
+.profile-stat-label,
+.player-push-status-text,
+.player-push-preferences-title {
+  color: var(--color-text-soft);
+}
+
+.profile-stat-value {
+  color: var(--color-text);
+}

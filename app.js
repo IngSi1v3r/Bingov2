@@ -65,11 +65,13 @@ const closeFinalBtn = document.getElementById("closeFinalBtn");
 const finalOverlay = document.getElementById("finalOverlay");
 const finalScoreText = document.getElementById("finalScoreText");
 const playerProfileOverlay = document.getElementById("playerProfileOverlay");
-const playerProfileName = document.getElementById("playerProfileName");
 const playerProfileStats = document.getElementById("playerProfileStats");
 const playerProfileGallery = document.getElementById("playerProfileGallery");
 const closePlayerProfileBtn = document.getElementById("closePlayerProfileBtn");
 const playerProfileCompletedList = document.getElementById("playerProfileCompletedList");
+const playerSettingsOverlay = document.getElementById("playerSettingsOverlay");
+const playerSettingsName = document.getElementById("playerSettingsName");
+const closePlayerSettingsBtn = document.getElementById("closePlayerSettingsBtn");
 const playerProfileLogoutBtn = document.getElementById("playerProfileLogoutBtn");
 const resetProgressBtn = document.getElementById("resetProgressBtn");
 const deletePlayerBtn = document.getElementById("deletePlayerBtn");
@@ -605,8 +607,6 @@ function setUploadButtonsDisabled(disabled) {
 async function openPlayerProfileModal() {
   if (!currentPlayer) return;
 
-  playerProfileName.innerHTML = `<strong>Spieler:</strong> ${currentPlayer.display_name || currentPlayer.username}`;
-
   const completedRows = await loadCompletedChallengesForCurrentPlayer(currentPlayer.id);
   const liveRows = await loadCompletedLiveChallengesForPlayer(currentPlayer.id);
 
@@ -647,27 +647,6 @@ async function openPlayerProfileModal() {
     ...liveGalleryEntries
   ].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
 
-  const logoutBtn = document.getElementById("playerProfileLogoutBtn");
-
-  if (logoutBtn) {
-    logoutBtn.onclick = () => {
-      closePlayerProfileModal();
-      logoutPlayer();
-    };
-  }
-
-  const adminPanelBtn = document.getElementById("openAdminPanelBtn");
-
-    if (adminPanelBtn) {
-      const isAdmin = currentPlayer?.role === "admin";
-
-      adminPanelBtn.classList.toggle("hidden", !isAdmin);
-
-      adminPanelBtn.onclick = () => {
-        window.location.href = "admin.html";
-      };
-    }
-
   currentPlayerProfileGalleryIndex = 0;
 
   await renderPlayerProfileStats();
@@ -679,7 +658,41 @@ async function openPlayerProfileModal() {
 }
 
 function closePlayerProfileModal() {
+  if (!playerProfileOverlay) return;
+
   playerProfileOverlay.classList.add("hidden");
+  unlockBodyScroll();
+}
+
+function openPlayerSettingsModal() {
+  if (!currentPlayer || !playerSettingsOverlay) return;
+
+  if (playerSettingsName) {
+    playerSettingsName.innerHTML = `
+      <strong>Spieler:</strong>
+      ${currentPlayer.display_name || currentPlayer.username}
+    `;
+  }
+
+  const adminPanelBtn = document.getElementById("openAdminPanelBtn");
+
+  if (adminPanelBtn) {
+    const isAdmin = currentPlayer?.role === "admin";
+
+    adminPanelBtn.classList.toggle("hidden", !isAdmin);
+    adminPanelBtn.onclick = () => {
+      window.location.href = "admin.html";
+    };
+  }
+
+  lockBodyScroll();
+  playerSettingsOverlay.classList.remove("hidden");
+}
+
+function closePlayerSettingsModal() {
+  if (!playerSettingsOverlay) return;
+
+  playerSettingsOverlay.classList.add("hidden");
   unlockBodyScroll();
 }
 
@@ -1303,6 +1316,7 @@ async function deleteCurrentPlayerProfile() {
 
   // Alle offenen Overlays schließen
   closePlayerProfileModal();
+  closePlayerSettingsModal();
   closeModal();
   closeUploadModal();
   closePhotoViewer();
@@ -1512,14 +1526,16 @@ function renderGrid(updateScore = true) {
     const isBingoCell = gameState.bingoCells.includes(challenge.boardId);
     const isFirstSolverCell = gameState.firstSolved.includes(challenge.boardId);
     const isChallengeDisabled = challenge.isActive === false;
-    const isSolvedByAnyone = challenge.solvedCount > 0;
+    const solvedCount = challenge.solvedCount || 0;
+    const isSolvedByOtherPlayer =
+      solvedCount > (isCompleted ? 1 : 0);
 
     const isGloballySolvedByOther =
       currentGame?.single_use_challenges === true &&
       challenge.solvedCount > 0 &&
       !isCompleted;
 
-    if (isSolvedByAnyone && !isCompleted && !isGloballySolvedByOther) {
+    if (isSolvedByOtherPlayer) {
       cell.classList.add("solved-by-others");
     }
 
@@ -1530,14 +1546,14 @@ function renderGrid(updateScore = true) {
     cell.style.cursor = "";
 
     if (isCompleted) {
-      cell.style.background = "#16a34a";
+      cell.classList.add("completed");
       cell.style.opacity = "1";
     } else if (isActive) {
       cell.style.border = "2px solid #3b82f6";
     }
 
     if (isBingoCell) {
-      cell.style.boxShadow = "0 0 0 3px gold inset";
+      cell.classList.add("bingo-cell");
     }
 
     if ((isChallengeDisabled || isGloballySolvedByOther) && !isCompleted) {
@@ -1557,19 +1573,18 @@ function renderGrid(updateScore = true) {
       ${challenge.categoryIcon ? `<div class="cell-category-icon">${challenge.categoryIcon}</div>` : ""}
       ${cooldown && !isCompleted && !isActive ? `<div class="cell-lock-icon">🔒</div>` : ""}
       ${isChallengeDisabled && !isCompleted ? `<div class="cell-lock-icon">🚫</div>` : ""}
-      ${isGloballySolvedByOther ? `<div class="cell-lock-icon">✅</div>` : ""}
+      
 
       <div class="cell-title">${challenge.title}</div>
       <div class="cell-points">${getChallengePointsDisplay(challenge)}</div>
     `;
 
     cell.addEventListener("click", async () => {
-      if (isCompleted) {
+      if (isCompleted || isGloballySolvedByOther) {
         await openCompletedChallengeModal(challenge);
         return;
       }
 
-      if (isGloballySolvedByOther) return;
       if (isChallengeDisabled) return;
       if (isCooldownActive()) return;
 
@@ -1712,23 +1727,33 @@ closePhotoViewerBtn.addEventListener("click", closePhotoViewer);
 modalCloseBtn.addEventListener("click", closeModal);
 closeFinalBtn.addEventListener("click", closeFinalOverlay);
 
-closePlayerProfileBtn.addEventListener("click", closePlayerProfileModal);
+if (closePlayerProfileBtn) {
+  closePlayerProfileBtn.addEventListener("click", closePlayerProfileModal);
+}
+
+if (closePlayerSettingsBtn) {
+  closePlayerSettingsBtn.addEventListener("click", closePlayerSettingsModal);
+}
 
 const playerProfileBtn = document.getElementById("playerProfileBtn");
 
 if (playerProfileBtn) {
-  playerProfileBtn.addEventListener("click", openPlayerProfileModal);
+  playerProfileBtn.addEventListener("click", openPlayerSettingsModal);
+}
+
+if (scoreDisplay) {
+  scoreDisplay.addEventListener("click", openPlayerProfileModal);
 }
 
 if (logoutBtn) {
   logoutBtn.addEventListener("click", logoutPlayer);
+}
 
-  if (playerProfileLogoutBtn) {
+if (playerProfileLogoutBtn) {
   playerProfileLogoutBtn.addEventListener("click", () => {
-    closePlayerProfileModal();
+    closePlayerSettingsModal();
     logoutPlayer();
   });
-}
 }
 
 if (resetProgressBtn) {

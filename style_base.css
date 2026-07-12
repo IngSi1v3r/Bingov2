@@ -12,8 +12,19 @@ body {
   margin: 0;
   padding: 20px;
   font-family: Arial, sans-serif;
-  background: #111827;
-  color: white;
+  color: #f8fafc;
+
+  background:
+    radial-gradient(
+      circle at 50% -18%,
+      #315f91 0%,
+      #1d395c 24%,
+      #12243d 48%,
+      #0a1628 74%,
+      #050a13 100%
+    );
+
+  background-attachment: fixed;
 }
 
 
