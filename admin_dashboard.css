@@ -1,0 +1,424 @@
+/* ============================================================================
+   DATEI: admin_dashboard.css
+   ============================================================================
+
+   ZWECK
+   -----
+   Diese Datei enthält das komponentenspezifische Styling für den Dashboard-Tab
+   des Adminpanels. Sie definiert Aufbau, Abstände, Karten, Listen, Mini-Grid,
+   Modals sowie die kompakten Einstellungen am unteren Ende des Dashboards.
+
+   AUFBAU
+   -------
+   1. Dashboard-Grundlayout und gemeinsame Sektionen
+   2. Globale Statistik-Kacheln
+   3. Zweispaltige Übersicht mit Mini-Grid und Top-5
+   4. Gemeinsame Listen- und Log-Zeilen
+   5. Einstellungsbereich
+   6. Generisches Dashboard-Listenmodal
+   7. Polling-Auswahl und Polling-Infomodal
+   8. Zugangskarten für Session-Passwort, Datenbank und OneSignal
+
+   ABHÄNGIGKEITEN
+   --------------
+   Die Datei ergänzt bestehende globale Admin-Styles. Insbesondere werden
+   folgende Klassen vorausgesetzt und hier teilweise nur erweitert:
+
+   - .admin-detail-card, .admin-detail-label, .admin-detail-value
+   - .admin-details-empty
+   - .modal, .modal-overlay, .modal-close-btn
+   - .secondary-btn
+
+   Responsive Umbauten, insbesondere für kleinere Bildschirmbreiten, können
+   zusätzlich in admin_responsive.css definiert sein.
+
+   DESIGNPRINZIPIEN
+   ----------------
+   - kompakte Informationsdichte ohne unnötige Wrapper
+   - drei gleich breite globale Kennzahlen pro Zeile
+   - klar sichtbare Klickbarkeit durch Unterstreichung und Hoverzustände
+   - dunkle, ruhige Admin-Farbwelt mit Blau als Interaktionsfarbe
+   - quadratisches Mini-Grid mit reiner Farbcodierung
+   - möglichst wenige feste Breiten; stattdessen minmax(0, 1fr)
+
+   HINWEIS
+   -------
+   Selektoren sind bewusst auf das Präfix .admin-dashboard- begrenzt, damit
+   andere Tabs des Adminpanels nicht unbeabsichtigt beeinflusst werden.
+   ============================================================================ */
+
+/* ============================================================================
+   KAPITEL 1: GRUNDLAYOUT UND GEMEINSAME SEKTIONEN
+   ============================================================================ */
+
+.admin-dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* ============================================================================
+   KAPITEL 2: GLOBALE STATISTIK-KACHELN
+   ============================================================================ */
+
+.admin-dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-dashboard-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 9px 10px;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-dashboard-stat-card .admin-detail-label {
+  margin-bottom: 2px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.admin-dashboard-stat-card .admin-detail-value {
+  font-size: 0.96rem;
+  line-height: 1.1;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* Auffälligkeiten erhalten bewusst eine eigene, volle Zeile. */
+.admin-dashboard-warning-card {
+  grid-column: 1 / -1;
+}
+
+.admin-dashboard-stat-card:hover,
+.admin-dashboard-row:hover,
+.admin-dashboard-modal-row:hover {
+  border-color: #3b82f6;
+  background: #263750;
+}
+
+/* ============================================================================
+   KAPITEL 3: MINI-GRID UND TOP-5-ÜBERSICHT
+   ============================================================================ */
+
+.admin-dashboard-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.admin-dashboard-section {
+  min-width: 0;
+  padding: 10px;
+  background: #111d31;
+  border: 1px solid #2b3b53;
+  border-radius: 12px;
+}
+
+.admin-dashboard-section-label {
+  margin-bottom: 8px;
+  color: #9ca3af;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.admin-dashboard-grid-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.admin-dashboard-game-grid {
+  display: grid;
+  gap: 3px;
+  width: min(100%, 240px);
+  min-width: 0;
+  cursor: pointer;
+}
+
+.admin-dashboard-game-cell {
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: #263244;
+}
+
+/* Statusfarben des textlosen Mini-Grids. */
+.admin-dashboard-game-cell.open { background: #374151; }
+.admin-dashboard-game-cell.solved { background: #16a34a; }
+.admin-dashboard-game-cell.active { background: #2563eb; }
+.admin-dashboard-game-cell.inactive { background: #475569; opacity: 0.45; }
+.admin-dashboard-game-cell.placeholder { background: rgba(255, 255, 255, 0.025); opacity: 0.3; }
+
+/* ============================================================================
+   KAPITEL 4: LISTEN, RANGLISTE UND LOG-ZEILEN
+   ============================================================================ */
+
+.admin-dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-dashboard-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  color: white;
+  font-family: inherit;
+  text-align: left;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.admin-dashboard-rank {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.admin-dashboard-row-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-dashboard-row-right {
+  color: #facc15;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Logs benötigen im Gegensatz zur Rangliste nur Text und Zeitpunkt. */
+.admin-dashboard-log-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.admin-dashboard-row-meta {
+  color: #94a3b8;
+  font-size: 0.64rem;
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   KAPITEL 5: EINSTELLUNGSBEREICH – GRUNDSTRUKTUR
+   ============================================================================ */
+
+.admin-dashboard-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-dashboard-settings-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 9px;
+}
+
+.admin-dashboard-settings-summary span,
+.admin-dashboard-password-summary div {
+  padding: 7px;
+  color: #cbd5e1;
+  font-size: 0.68rem;
+  text-align: center;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 7px;
+}
+
+.admin-dashboard-password-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 9px;
+}
+
+.admin-dashboard-password-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-dashboard-password-summary strong {
+  color: white;
+  font-size: 0.76rem;
+}
+
+.admin-dashboard-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.admin-dashboard-settings-actions button {
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 0.68rem;
+}
+
+/* ============================================================================
+   KAPITEL 6: GENERISCHES DASHBOARD-LISTENMODAL
+   ============================================================================ */
+
+.admin-dashboard-list-modal {
+  max-width: 560px;
+}
+
+.admin-dashboard-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-dashboard-modal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 11px;
+  color: white;
+  font-family: inherit;
+  text-align: left;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.admin-dashboard-modal-row-main {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-dashboard-modal-row-meta {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   KAPITEL 7: POLLING-AUSWAHL UND INTERVALL-INFORMATION
+   ============================================================================ */
+
+.admin-dashboard-polling-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.admin-dashboard-polling-buttons button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 6px;
+  font-size: 0.7rem;
+}
+
+/* Das aktive Preset wird als einziger Button deutlich blau hervorgehoben. */
+.admin-dashboard-polling-buttons button.active {
+  color: white;
+  background: #2563eb;
+  border-color: #3b82f6;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.admin-dashboard-polling-info-modal {
+  max-width: 420px;
+}
+
+.admin-dashboard-polling-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-dashboard-polling-info-grid .admin-detail-card {
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.admin-dashboard-polling-info-grid .admin-detail-label {
+  font-size: 0.68rem;
+}
+
+.admin-dashboard-polling-info-grid .admin-detail-value {
+  font-size: 0.88rem;
+}
+
+/* ============================================================================
+   KAPITEL 8: ZUGANGSKARTEN
+   ============================================================================ */
+
+.admin-dashboard-access-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.admin-dashboard-access-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+
+  min-width: 0;
+  min-height: 58px;
+  padding: 9px 10px;
+
+  color: white;
+  font-family: inherit;
+  text-align: left;
+
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.admin-dashboard-access-card:hover {
+  border-color: #3b82f6;
+  background: #263850;
+}
+
+.admin-dashboard-access-label {
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
+
+.admin-dashboard-access-card strong {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

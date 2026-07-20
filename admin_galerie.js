@@ -67,7 +67,6 @@ let adminGalleryFilters = {
  */
 
 async function initializeAdminGalleryTab() {
-  ensureAdminGalleryStyles();
   ensureAdminGalleryLayout();
   ensureAdminGalleryViewerModal();
 
@@ -101,6 +100,7 @@ async function loadAdminGalleryBaseData() {
  * ============================================================
  */
 
+
 function ensureAdminGalleryLayout() {
   const tabEl = document.getElementById("tab-grid");
   if (!tabEl) return;
@@ -109,89 +109,91 @@ function ensureAdminGalleryLayout() {
   if (alreadyBuilt) return;
 
   tabEl.innerHTML = `
-    <h2>Galerie</h2>
+    <div id="adminGalleryLayout" class="admin-gallery-layout">
 
-    <div id="adminGalleryLayout">
-      <div class="admin-panel" style="margin-bottom: 20px;">
-        <div class="admin-panel-header">
-          <h3>Filter</h3>
+      <div class="admin-gallery-filter-grid">
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Spiel</div>
+          <select id="adminGalleryGameFilter" class="admin-gallery-select">
+            <option value="">Alle Spiele</option>
+          </select>
         </div>
 
-        <div class="admin-details-grid">
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Spiel</div>
-            <select id="adminGalleryGameFilter" class="admin-gallery-select">
-              <option value="">Alle Spiele</option>
-            </select>
-          </div>
-
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Spieler</div>
-            <select id="adminGalleryPlayerFilter" class="admin-gallery-select">
-              <option value="">Alle Spieler</option>
-            </select>
-          </div>
-
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Aufgabe</div>
-            <select id="adminGalleryChallengeFilter" class="admin-gallery-select">
-              <option value="">Alle Aufgaben</option>
-            </select>
-          </div>
-
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Typ</div>
-            <select id="adminGalleryTypeFilter" class="admin-gallery-select">
-              <option value="">Alle</option>
-              <option value="normal">Normal</option>
-              <option value="live">Live</option>
-            </select>
-          </div>
-
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Von</div>
-            <input id="adminGalleryDateFromFilter" class="admin-gallery-input" type="date" />
-          </div>
-
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Bis</div>
-            <input id="adminGalleryDateToFilter" class="admin-gallery-input" type="date" />
-          </div>
-
-          <div class="admin-detail-card admin-detail-wide">
-            <div class="admin-detail-label">Suche</div>
-            <input
-              id="adminGallerySearchFilter"
-              class="admin-gallery-input"
-              type="text"
-              placeholder="z. B. Peter Flo oder Bier"
-            />
-          </div>
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Spieler</div>
+          <select id="adminGalleryPlayerFilter" class="admin-gallery-select">
+            <option value="">Alle Spieler</option>
+          </select>
         </div>
 
-                <div class="admin-player-action-bar" style="margin-top: 16px;">
-          <button id="adminGalleryResetFiltersBtn" type="button" class="secondary-btn">Filter zurücksetzen</button>
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Aufgabe</div>
+          <select id="adminGalleryChallengeFilter" class="admin-gallery-select">
+            <option value="">Alle Aufgaben</option>
+          </select>
+        </div>
+
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Typ</div>
+          <select id="adminGalleryTypeFilter" class="admin-gallery-select">
+            <option value="">Alle</option>
+            <option value="normal">Normal</option>
+            <option value="live">Live</option>
+          </select>
+        </div>
+
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Von</div>
+          <input id="adminGalleryDateFromFilter" class="admin-gallery-input" type="date" />
+        </div>
+
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Bis</div>
+          <input id="adminGalleryDateToFilter" class="admin-gallery-input" type="date" />
+        </div>
+
+        <div class="admin-detail-card admin-gallery-search-card">
+          <div class="admin-detail-label">Suche</div>
+          <input
+            id="adminGallerySearchFilter"
+            class="admin-gallery-input"
+            type="text"
+            placeholder="z. B. Peter Flo oder Bier"
+          />
         </div>
       </div>
 
-      <div class="admin-panel">
-        <div class="admin-panel-header">
-          <h3 id="adminGalleryResultsTitle">Bilder</h3>
-        </div>
+      <div class="admin-gallery-main-actions">
+        <button id="adminGalleryResetFiltersBtn" type="button" class="secondary-btn">
+          Filter zurücksetzen
+        </button>
 
-        <div id="adminGalleryResultsInfo" class="admin-details-empty" style="margin-bottom: 14px;"></div>
-
-        <div class="admin-gallery-selection-toolbar">
-          <button id="adminGallerySelectModeBtn" type="button" class="secondary-btn">Bilder auswählen</button>
-          <button id="adminGallerySelectAllVisibleBtn" type="button" class="secondary-btn hidden">Alle sichtbaren auswählen</button>
-          <button id="adminGalleryShareSelectedBtn" type="button" class="secondary-btn hidden">Auswahl teilen</button>
-          <button id="adminGalleryDownloadSelectedBtn" type="button" class="secondary-btn hidden">Auswahl downloaden</button>
-          <button id="adminGalleryCancelSelectionBtn" type="button" class="secondary-btn hidden">Abbrechen</button>
-          <span id="adminGallerySelectionInfo" class="admin-gallery-selection-info hidden">0 Bilder ausgewählt</span>
-        </div>
-
-        <div id="adminGalleryGrid" class="admin-gallery-grid"></div>
+        <button id="adminGallerySelectModeBtn" type="button" class="secondary-btn">
+          Bilder auswählen
+        </button>
       </div>
+
+      <div id="adminGalleryResultsInfo" class="admin-details-empty admin-gallery-results-info"></div>
+
+      <div class="admin-gallery-selection-toolbar">
+        <button id="adminGallerySelectAllVisibleBtn" type="button" class="secondary-btn hidden">
+          Alle sichtbaren auswählen
+        </button>
+        <button id="adminGalleryShareSelectedBtn" type="button" class="secondary-btn hidden">
+          Auswahl teilen
+        </button>
+        <button id="adminGalleryDownloadSelectedBtn" type="button" class="secondary-btn hidden">
+          Auswahl downloaden
+        </button>
+        <button id="adminGalleryCancelSelectionBtn" type="button" class="secondary-btn hidden">
+          Abbrechen
+        </button>
+        <span id="adminGallerySelectionInfo" class="admin-gallery-selection-info hidden">
+          0 Bilder ausgewählt
+        </span>
+      </div>
+
+      <div id="adminGalleryGrid" class="admin-gallery-grid"></div>
     </div>
   `;
 
@@ -248,7 +250,7 @@ function ensureAdminGalleryLayout() {
 
   const searchInput = document.getElementById("adminGallerySearchFilter");
   if (searchInput) {
-    searchInput.addEventListener("keydown", (event) => {
+    searchInput.addEventListener("keydown", event => {
       if (event.key === "Enter") {
         readAdminGalleryFiltersFromUI();
         renderAdminGalleryGrid();
@@ -269,15 +271,45 @@ function ensureAdminGalleryViewerModal() {
   overlay.id = "adminGalleryViewerOverlay";
   overlay.className = "modal-overlay hidden";
 
-    overlay.innerHTML = `
+  overlay.innerHTML = `
     <div class="modal admin-gallery-viewer-modal">
       <button id="closeAdminGalleryViewerBtn" class="modal-close-btn" type="button">×</button>
 
-      <h2 id="adminGalleryViewerTitle">Bild</h2>
+      <div id="adminGalleryViewerImageWrap" class="admin-gallery-viewer-image-wrap">
+        <div
+          id="adminGalleryViewerLoading"
+          class="admin-gallery-viewer-loading"
+          aria-hidden="true"
+        >
+          <div class="admin-gallery-viewer-spinner"></div>
+        </div>
 
-      <div id="adminGalleryViewerImageWrap" class="admin-gallery-viewer-image-wrap"></div>
+        <img
+          id="adminGalleryViewerImage"
+          class="admin-gallery-viewer-image"
+          alt="Beweisfoto"
+        />
 
-      <div id="adminGalleryViewerMeta" class="admin-gallery-viewer-meta"></div>
+        <button
+          id="adminGalleryImagePrevBtn"
+          class="admin-gallery-arrow left hidden"
+          type="button"
+          aria-label="Vorheriges Bild"
+        >
+          ‹
+        </button>
+
+        <button
+          id="adminGalleryImageNextBtn"
+          class="admin-gallery-arrow right hidden"
+          type="button"
+          aria-label="Nächstes Bild"
+        >
+          ›
+        </button>
+      </div>
+
+      <div id="adminGalleryViewerMeta" class="admin-gallery-viewer-info-grid"></div>
 
       <div class="modal-actions">
         <button id="adminGalleryOpenImageBtn" type="button" class="secondary-btn">Bild öffnen</button>
@@ -291,6 +323,16 @@ function ensureAdminGalleryViewerModal() {
   document.getElementById("closeAdminGalleryViewerBtn")?.addEventListener("click", closeAdminGalleryViewer);
   document.getElementById("adminGalleryOpenImageBtn")?.addEventListener("click", openCurrentAdminGalleryImageInNewTab);
   document.getElementById("adminGalleryCopyLinkBtn")?.addEventListener("click", copyCurrentAdminGalleryImageLink);
+
+  document.getElementById("adminGalleryImagePrevBtn")?.addEventListener("click", event => {
+    event.stopPropagation();
+    showPreviousAdminGalleryEntry();
+  });
+
+  document.getElementById("adminGalleryImageNextBtn")?.addEventListener("click", event => {
+    event.stopPropagation();
+    showNextAdminGalleryEntry();
+  });
 
   overlay.addEventListener("click", (event) => {
     if (event.target === overlay) {
@@ -316,293 +358,7 @@ function ensureAdminGalleryViewerModal() {
   });
 }
 
-function ensureAdminGalleryStyles() {
-  if (document.getElementById("adminGalleryStyles")) return;
 
-  const style = document.createElement("style");
-  style.id = "adminGalleryStyles";
-  style.textContent = `
-    .admin-gallery-select,
-    .admin-gallery-input {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid #4b5563;
-      background: #111827;
-      color: white;
-      font-size: 0.95rem;
-    }
-
-    .admin-gallery-select:focus,
-    .admin-gallery-input:focus {
-      outline: 2px solid #3b82f6;
-    }
-
-    .admin-gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 14px;
-    }
-
-    .admin-gallery-card {
-      position: relative;
-      overflow: hidden;
-      border-radius: 14px;
-      border: 1px solid #334155;
-      background: #0f172a;
-      cursor: pointer;
-      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .admin-gallery-card:hover {
-      transform: translateY(-2px);
-      border-color: #3b82f6;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
-    }
-
-    .admin-gallery-card-image-wrap {
-      aspect-ratio: 1 / 1;
-      background: #0b1220;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    .admin-gallery-card-image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .admin-gallery-card-overlay {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      padding: 10px;
-      background: linear-gradient(to top, rgba(2, 6, 23, 0.92), rgba(2, 6, 23, 0.08));
-    }
-
-    .admin-gallery-card-player {
-      font-weight: 700;
-      font-size: 0.92rem;
-      color: white;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .admin-gallery-card-challenge {
-      margin-top: 2px;
-      font-size: 0.82rem;
-      color: #cbd5e1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .admin-gallery-card-live-badge {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 30px;
-      height: 30px;
-      border-radius: 999px;
-      background: rgba(37, 99, 235, 0.92);
-      color: white;
-      font-size: 1rem;
-      font-weight: 700;
-      border: 1px solid rgba(255,255,255,0.16);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.22);
-    }
-
-    .admin-gallery-selection-toolbar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 14px;
-      padding: 10px 0;
-      background: #09152d;
-    }
-
-    .admin-gallery-selection-info {
-      color: #cbd5e1;
-      font-weight: 700;
-    }
-
-    .admin-gallery-card.selection-mode::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.18);
-      pointer-events: none;
-    }
-
-    .admin-gallery-card.selected {
-      border-color: #facc15;
-      box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.45);
-    }
-
-    .admin-gallery-card-check {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      z-index: 4;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      color: white;
-      background: rgba(15, 23, 42, 0.82);
-      border: 1px solid rgba(255,255,255,0.22);
-      font-size: 1.05rem;
-      font-weight: 900;
-    }
-
-    .admin-gallery-card.selected .admin-gallery-card-check {
-      color: #111827;
-      background: #facc15;
-      border-color: #facc15;
-    }
-
-    .admin-gallery-empty {
-      padding: 24px;
-      border-radius: 14px;
-      background: #111827;
-      border: 1px dashed #374151;
-      color: #9ca3af;
-      text-align: center;
-    }
-
-    .admin-gallery-viewer-modal {
-      max-width: 980px;
-    }
-
-    .admin-gallery-viewer-image-wrap {
-      position: relative;
-      margin-bottom: 16px;
-      border-radius: 14px;
-      overflow: hidden;
-      background: #0b1220;
-      border: 1px solid #334155;
-    }
-
-    .admin-gallery-viewer-image {
-      width: 100%;
-      max-height: 68vh;
-      object-fit: contain;
-      display: block;
-      background: #0b1220;
-    }
-
-    .admin-gallery-viewer-meta {
-      display: grid;
-      gap: 10px;
-      margin-top: 4px;
-      padding: 14px;
-      border-radius: 14px;
-      background: #111827;
-      border: 1px solid #334155;
-    }
-
-    .admin-gallery-meta-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: baseline;
-    }
-
-    .admin-gallery-meta-label {
-      color: #9ca3af;
-      font-size: 0.9rem;
-      min-width: 90px;
-    }
-
-    .admin-gallery-meta-value {
-      color: white;
-      font-weight: 700;
-      word-break: break-word;
-    }
-
-    .admin-gallery-meta-value.clickable {
-      cursor: pointer;
-      text-decoration: underline;
-      text-decoration-color: rgba(147, 197, 253, 0.55);
-    }
-
-    .admin-gallery-meta-value.clickable:hover {
-      color: #93c5fd;
-    }
-
-    @media (max-width: 700px) {
-      .admin-gallery-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-      }
-
-      .admin-gallery-meta-row {
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      .admin-gallery-meta-label {
-        min-width: 0;
-      }
-    }
-
-    @media (max-width: 420px) {
-      .admin-gallery-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-        .admin-gallery-arrow {
-      position: absolute;
-      top: 50%;
-      width: 42px;
-      height: 42px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      color: white;
-      background: rgba(0, 0, 0, 0.35);
-      border-radius: 50%;
-      cursor: pointer;
-      user-select: none;
-      transform: translateY(-50%);
-      transition: background 0.2s ease, transform 0.1s ease;
-      z-index: 5;
-    }
-
-    .admin-gallery-arrow:hover {
-      background: rgba(0, 0, 0, 0.6);
-      transform: translateY(-50%) scale(1.08);
-    }
-
-    .admin-gallery-arrow.left {
-      left: 8px;
-    }
-
-    .admin-gallery-arrow.right {
-      right: 8px;
-    }
-  `;
-
-
-  document.head.appendChild(style);
-}
 
 /* ============================================================
  * ENTRY BUILDING
@@ -920,17 +676,12 @@ function normalizeAdminGallerySearchTokens(text) {
 function renderAdminGalleryGrid() {
   const gridEl = document.getElementById("adminGalleryGrid");
   const infoEl = document.getElementById("adminGalleryResultsInfo");
-  const titleEl = document.getElementById("adminGalleryResultsTitle");
 
   if (!gridEl) return;
 
   adminGalleryFilteredEntries = getFilteredAdminGalleryEntries();
   pruneAdminGallerySelectionToFilteredEntries();
   updateAdminGallerySelectionToolbar();
-
-  if (titleEl) {
-    titleEl.textContent = "Bilder";
-  }
 
   if (infoEl) {
     infoEl.textContent = `${adminGalleryFilteredEntries.length} Bild${adminGalleryFilteredEntries.length === 1 ? "" : "er"} gefunden`;
@@ -1018,63 +769,101 @@ function closeAdminGalleryViewer() {
 }
 
 function renderAdminGalleryViewerCurrent() {
-  const titleEl = document.getElementById("adminGalleryViewerTitle");
-  const imageWrapEl = document.getElementById("adminGalleryViewerImageWrap");
+  const imageEl = document.getElementById("adminGalleryViewerImage");
+  const loadingEl = document.getElementById("adminGalleryViewerLoading");
+  const prevBtn = document.getElementById("adminGalleryImagePrevBtn");
+  const nextBtn = document.getElementById("adminGalleryImageNextBtn");
   const metaEl = document.getElementById("adminGalleryViewerMeta");
 
-
   const entry = adminGalleryFilteredEntries[adminGallerySelectedIndex];
-  if (!entry) return;
+
+  if (!entry || !imageEl || !loadingEl || !prevBtn || !nextBtn) {
+    return;
+  }
 
   adminGallerySelectedEntryId = entry.id;
 
-  if (titleEl) {
-    titleEl.textContent = entry.challengeTitle;
-  }
+  prevBtn.classList.toggle("hidden", adminGallerySelectedIndex <= 0);
+  nextBtn.classList.toggle(
+    "hidden",
+    adminGallerySelectedIndex >= adminGalleryFilteredEntries.length - 1
+  );
 
-    if (imageWrapEl) {
-    imageWrapEl.innerHTML = `
-      ${adminGallerySelectedIndex > 0 ? `<div class="admin-gallery-arrow left" id="adminGalleryImagePrevBtn">‹</div>` : ""}
-      <img src="${entry.imageUrl}" class="admin-gallery-viewer-image" alt="Beweisfoto" />
-      ${adminGallerySelectedIndex < adminGalleryFilteredEntries.length - 1 ? `<div class="admin-gallery-arrow right" id="adminGalleryImageNextBtn">›</div>` : ""}
-    `;
+  loadingEl.classList.add("visible");
+  imageEl.classList.add("loading");
 
-    document.getElementById("adminGalleryImagePrevBtn")?.addEventListener("click", (event) => {
-      event.stopPropagation();
-      showPreviousAdminGalleryEntry();
+  const requestedEntryId = entry.id;
+  const nextImage = new Image();
+
+  nextImage.onload = () => {
+    if (adminGallerySelectedEntryId !== requestedEntryId) return;
+
+    imageEl.src = entry.imageUrl;
+    imageEl.alt = entry.challengeTitle || "Beweisfoto";
+
+    requestAnimationFrame(() => {
+      imageEl.classList.remove("loading");
+      loadingEl.classList.remove("visible");
     });
+  };
 
-    document.getElementById("adminGalleryImageNextBtn")?.addEventListener("click", (event) => {
-      event.stopPropagation();
-      showNextAdminGalleryEntry();
-    });
-  }
+  nextImage.onerror = () => {
+    if (adminGallerySelectedEntryId !== requestedEntryId) return;
+
+    imageEl.removeAttribute("src");
+    imageEl.alt = "Bild konnte nicht geladen werden";
+    imageEl.classList.remove("loading");
+    loadingEl.classList.remove("visible");
+  };
+
+  nextImage.src = entry.imageUrl;
 
   if (metaEl) {
     metaEl.innerHTML = `
-      <div class="admin-gallery-meta-row">
-        <div class="admin-gallery-meta-label">Spieler</div>
-        <div class="admin-gallery-meta-value clickable" id="adminGalleryMetaPlayerLink">${escapeHtmlAdminGallery(entry.playerName)}</div>
+      <div class="admin-gallery-viewer-info-card admin-gallery-viewer-info-wide">
+        <div class="admin-gallery-viewer-info-label">
+          ${entry.type === "live" ? "Live" : "Aufgabe"}
+        </div>
+        <div
+          class="admin-gallery-viewer-info-value clickable"
+          id="adminGalleryMetaChallengeLink"
+        >
+          ${escapeHtmlAdminGallery(entry.challengeTitle)}
+        </div>
       </div>
 
-      <div class="admin-gallery-meta-row">
-        <div class="admin-gallery-meta-label">${entry.type === "live" ? "Live" : "Aufgabe"}</div>
-        <div class="admin-gallery-meta-value clickable" id="adminGalleryMetaChallengeLink">${escapeHtmlAdminGallery(entry.challengeTitle)}</div>
+      <div class="admin-gallery-viewer-info-card">
+        <div class="admin-gallery-viewer-info-label">Spieler</div>
+        <div
+          class="admin-gallery-viewer-info-value clickable"
+          id="adminGalleryMetaPlayerLink"
+        >
+          ${escapeHtmlAdminGallery(entry.playerName)}
+        </div>
       </div>
 
-      <div class="admin-gallery-meta-row">
-        <div class="admin-gallery-meta-label">Spiel</div>
-        <div class="admin-gallery-meta-value clickable" id="adminGalleryMetaGameLink">${escapeHtmlAdminGallery(entry.gameName)}</div>
+      <div class="admin-gallery-viewer-info-card">
+        <div class="admin-gallery-viewer-info-label">Zeit</div>
+        <div class="admin-gallery-viewer-info-value">
+          ${formatAdminDateTime(entry.createdAt)}
+        </div>
       </div>
 
-      <div class="admin-gallery-meta-row">
-        <div class="admin-gallery-meta-label">Typ</div>
-        <div class="admin-gallery-meta-value">${entry.type === "live" ? "Live-Challenge" : "Normale Challenge"}</div>
+      <div class="admin-gallery-viewer-info-card">
+        <div class="admin-gallery-viewer-info-label">Spiel</div>
+        <div
+          class="admin-gallery-viewer-info-value clickable"
+          id="adminGalleryMetaGameLink"
+        >
+          ${escapeHtmlAdminGallery(entry.gameName)}
+        </div>
       </div>
 
-      <div class="admin-gallery-meta-row">
-        <div class="admin-gallery-meta-label">Datum</div>
-        <div class="admin-gallery-meta-value">${formatAdminDateTime(entry.createdAt)}</div>
+      <div class="admin-gallery-viewer-info-card">
+        <div class="admin-gallery-viewer-info-label">Typ</div>
+        <div class="admin-gallery-viewer-info-value">
+          ${entry.type === "live" ? "Live-Challenge" : "Normale Challenge"}
+        </div>
       </div>
     `;
 

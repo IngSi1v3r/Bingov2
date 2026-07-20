@@ -26,12 +26,15 @@
 let adminLogsFilterPlayerId = "";
 let adminLogsFilterEventType = "";
 let adminLogsFilterGameId = "";
-let adminLogsLimit = 100;
+let adminLogsQuickFilter = "all";
+let adminLogsSearch = "";
+let adminLogsDateFrom = "";
+let adminLogsDateTo = "";
+const ADMIN_LOGS_FETCH_LIMIT = 500;
 
 let adminLogsInitialized = false;
 let lastAdminLogsSignature = null;
 
-let adminLogsQuickFilter = "all";
 let adminLogsCurrentRows = [];
 
 /* ============================================================
@@ -956,6 +959,7 @@ async function initializeAdminLogsTab() {
  * LOGS TAB - LAYOUT
  * ============================================================ */
 
+
 function ensureAdminLogsTabLayout() {
   const tabEl = document.getElementById("tab-logs");
   if (!tabEl) return;
@@ -964,68 +968,72 @@ function ensureAdminLogsTabLayout() {
   if (alreadyBuilt) return;
 
   tabEl.innerHTML = `
-    <h2>Logs</h2>
-
-    <div id="adminLogsLayout">
-      <div class="admin-panel" style="margin-bottom: 20px;">
-        <div class="admin-panel-header">
-          <h3>Filter</h3>
+    <div id="adminLogsLayout" class="admin-logs-layout">
+      <div class="admin-logs-filter-grid">
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Spiel</div>
+          <select id="adminLogsGameFilter" class="admin-logs-select">
+            <option value="">Alle Spiele</option>
+          </select>
         </div>
 
-        <div class="admin-details-grid">
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Spiel</div>
-            <select id="adminLogsGameFilter" class="admin-logs-select">
-              <option value="">Alle Spiele</option>
-            </select>
-          </div>
-
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Spieler</div>
-            <select id="adminLogsPlayerFilter" class="admin-logs-select">
-              <option value="">Alle Spieler</option>
-            </select>
-          </div>
-
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Event-Typ</div>
-            <select id="adminLogsEventTypeFilter" class="admin-logs-select">
-              <option value="">Alle Events</option>
-            </select>
-          </div>
-
-          <div class="admin-detail-card">
-            <div class="admin-detail-label">Anzahl</div>
-            <select id="adminLogsLimitFilter" class="admin-logs-select">
-              <option value="50">50</option>
-              <option value="100" selected>100</option>
-              <option value="200">200</option>
-              <option value="500">500</option>
-            </select>
-          </div>
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Spieler</div>
+          <select id="adminLogsPlayerFilter" class="admin-logs-select">
+            <option value="">Alle Spieler</option>
+          </select>
         </div>
 
-        <div class="admin-logs-quick-filters">
-          <button id="adminLogsQuickAllBtn" type="button" class="secondary-btn admin-logs-quick-btn active">Alle</button>
-          <button id="adminLogsQuickGameplayBtn" type="button" class="secondary-btn admin-logs-quick-btn">Nur Gameplay</button>
-          <button id="adminLogsQuickLiveBtn" type="button" class="secondary-btn admin-logs-quick-btn">Nur Live</button>
-          <button id="adminLogsQuickAdminBtn" type="button" class="secondary-btn admin-logs-quick-btn">Nur Admin</button>
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Event-Typ</div>
+          <select id="adminLogsEventTypeFilter" class="admin-logs-select">
+            <option value="">Alle Events</option>
+          </select>
         </div>
 
-        <div class="admin-player-action-bar" style="margin-top: 16px;">
-          <button id="adminLogsApplyFiltersBtn" type="button">Filter anwenden</button>
-          <button id="adminLogsResetFiltersBtn" type="button" class="secondary-btn">Zurücksetzen</button>
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Kategorie</div>
+          <select id="adminLogsCategoryFilter" class="admin-logs-select">
+            <option value="all">Alle</option>
+            <option value="gameplay">Gameplay</option>
+            <option value="live">Live</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Von</div>
+          <input id="adminLogsDateFromFilter" class="admin-logs-select" type="date" />
+        </div>
+
+        <div class="admin-detail-card">
+          <div class="admin-detail-label">Bis</div>
+          <input id="adminLogsDateToFilter" class="admin-logs-select" type="date" />
+        </div>
+
+        <div class="admin-detail-card admin-logs-search-card">
+          <div class="admin-detail-label">Suche</div>
+          <input
+            id="adminLogsSearchFilter"
+            class="admin-logs-select"
+            type="search"
+            placeholder="Spieler, Spiel, Aufgabe oder Ereignis"
+          />
         </div>
       </div>
 
-      <div class="admin-panel">
-        <div class="admin-panel-header">
-          <h3>Activity Feed</h3>
-        </div>
+      <div class="admin-logs-controls">
+        <button id="adminLogsResetFiltersBtn" type="button" class="secondary-btn">
+          Filter zurücksetzen
+        </button>
 
-        <div id="adminLogsList">
-          <p class="admin-details-empty">Logs werden geladen...</p>
+        <div id="adminLogsResultsInfo" class="admin-logs-results-info">
+          Logs werden geladen...
         </div>
+      </div>
+
+      <div id="adminLogsList">
+        <p class="admin-details-empty">Logs werden geladen...</p>
       </div>
     </div>
   `;
@@ -1035,269 +1043,277 @@ function renderAdminLogsFilterOptions() {
   const gameSelect = document.getElementById("adminLogsGameFilter");
   const playerSelect = document.getElementById("adminLogsPlayerFilter");
   const eventTypeSelect = document.getElementById("adminLogsEventTypeFilter");
-  const limitSelect = document.getElementById("adminLogsLimitFilter");
+  const categorySelect = document.getElementById("adminLogsCategoryFilter");
+  const searchInput = document.getElementById("adminLogsSearchFilter");
+  const dateFromInput = document.getElementById("adminLogsDateFromFilter");
+  const dateToInput = document.getElementById("adminLogsDateToFilter");
 
   if (gameSelect) {
     gameSelect.innerHTML = `<option value="">Alle Spiele</option>`;
 
-    adminGames.forEach(game => {
-      const option = document.createElement("option");
-      option.value = String(game.id);
-      option.textContent = game.name || `Spiel ${game.id}`;
-
-      if (String(adminLogsFilterGameId) === String(game.id)) {
-        option.selected = true;
-      }
-
-      gameSelect.appendChild(option);
-    });
+    adminGames
+      .slice()
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "de"))
+      .forEach(game => {
+        const option = document.createElement("option");
+        option.value = String(game.id);
+        option.textContent = game.name || `Spiel ${game.id}`;
+        option.selected = String(adminLogsFilterGameId) === String(game.id);
+        gameSelect.appendChild(option);
+      });
   }
 
   if (playerSelect) {
     playerSelect.innerHTML = `<option value="">Alle Spieler</option>`;
 
-    adminPlayers.forEach(player => {
-      const option = document.createElement("option");
-      option.value = String(player.id);
-      option.textContent = player.display_name || player.username || `Spieler ${player.id}`;
-
-      if (String(adminLogsFilterPlayerId) === String(player.id)) {
-        option.selected = true;
-      }
-
-      playerSelect.appendChild(option);
-    });
+    adminPlayers
+      .slice()
+      .sort((a, b) => {
+        const aName = a.display_name || a.username || "";
+        const bName = b.display_name || b.username || "";
+        return String(aName).localeCompare(String(bName), "de");
+      })
+      .forEach(player => {
+        const option = document.createElement("option");
+        option.value = String(player.id);
+        option.textContent = player.display_name || player.username || `Spieler ${player.id}`;
+        option.selected = String(adminLogsFilterPlayerId) === String(player.id);
+        playerSelect.appendChild(option);
+      });
   }
 
   if (eventTypeSelect) {
     eventTypeSelect.innerHTML = `<option value="">Alle Events</option>`;
 
-    Object.values(ACTIVITY_EVENT_TYPES).forEach(eventType => {
-      const option = document.createElement("option");
-      option.value = eventType;
-      option.textContent = getActivityEventLabel(eventType);
-
-      if (adminLogsFilterEventType === eventType) {
-        option.selected = true;
-      }
-
-      eventTypeSelect.appendChild(option);
-    });
+    Object.values(ACTIVITY_EVENT_TYPES)
+      .slice()
+      .sort((a, b) =>
+        getActivityEventLabel(a).localeCompare(getActivityEventLabel(b), "de")
+      )
+      .forEach(eventType => {
+        const option = document.createElement("option");
+        option.value = eventType;
+        option.textContent = getActivityEventLabel(eventType);
+        option.selected = adminLogsFilterEventType === eventType;
+        eventTypeSelect.appendChild(option);
+      });
   }
 
-  if (limitSelect) {
-    limitSelect.value = String(adminLogsLimit || 100);
-  }
+  if (categorySelect) categorySelect.value = adminLogsQuickFilter || "all";
+  if (searchInput) searchInput.value = adminLogsSearch || "";
+  if (dateFromInput) dateFromInput.value = adminLogsDateFrom || "";
+  if (dateToInput) dateToInput.value = adminLogsDateTo || "";
 }
 
 function attachAdminLogsFilterEvents() {
   const gameSelect = document.getElementById("adminLogsGameFilter");
   const playerSelect = document.getElementById("adminLogsPlayerFilter");
   const eventTypeSelect = document.getElementById("adminLogsEventTypeFilter");
-  const limitSelect = document.getElementById("adminLogsLimitFilter");
-  const applyBtn = document.getElementById("adminLogsApplyFiltersBtn");
+  const categorySelect = document.getElementById("adminLogsCategoryFilter");
+  const searchInput = document.getElementById("adminLogsSearchFilter");
+  const dateFromInput = document.getElementById("adminLogsDateFromFilter");
+  const dateToInput = document.getElementById("adminLogsDateToFilter");
   const resetBtn = document.getElementById("adminLogsResetFiltersBtn");
-  const quickAllBtn = document.getElementById("adminLogsQuickAllBtn");
-  const quickGameplayBtn = document.getElementById("adminLogsQuickGameplayBtn");
-  const quickLiveBtn = document.getElementById("adminLogsQuickLiveBtn");
-  const quickAdminBtn = document.getElementById("adminLogsQuickAdminBtn");
 
-  if (gameSelect && !gameSelect.dataset.logsBound) {
-    gameSelect.addEventListener("change", async () => {
-      adminLogsFilterGameId = gameSelect.value || "";
+  const bindChange = (element, update) => {
+    if (!element || element.dataset.logsBound === "true") return;
+
+    element.addEventListener("change", async () => {
+      update(element.value || "");
       await renderAdminLogsList();
     });
-    gameSelect.dataset.logsBound = "true";
-  }
 
-  if (playerSelect && !playerSelect.dataset.logsBound) {
-    playerSelect.addEventListener("change", async () => {
-      adminLogsFilterPlayerId = playerSelect.value || "";
+    element.dataset.logsBound = "true";
+  };
+
+  bindChange(gameSelect, value => {
+    adminLogsFilterGameId = value;
+  });
+
+  bindChange(playerSelect, value => {
+    adminLogsFilterPlayerId = value;
+  });
+
+  bindChange(eventTypeSelect, value => {
+    adminLogsFilterEventType = value;
+  });
+
+  bindChange(categorySelect, value => {
+    adminLogsQuickFilter = value || "all";
+  });
+
+  bindChange(dateFromInput, value => {
+    adminLogsDateFrom = value;
+  });
+
+  bindChange(dateToInput, value => {
+    adminLogsDateTo = value;
+  });
+
+  if (searchInput && searchInput.dataset.logsBound !== "true") {
+    let searchTimer = null;
+
+    searchInput.addEventListener("input", () => {
+      adminLogsSearch = searchInput.value || "";
+
+      window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(() => {
+        renderAdminLogsList();
+      }, 180);
+    });
+
+    searchInput.addEventListener("keydown", async event => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      adminLogsSearch = searchInput.value || "";
       await renderAdminLogsList();
     });
-    playerSelect.dataset.logsBound = "true";
+
+    searchInput.dataset.logsBound = "true";
   }
 
-  if (eventTypeSelect && !eventTypeSelect.dataset.logsBound) {
-    eventTypeSelect.addEventListener("change", async () => {
-      adminLogsFilterEventType = eventTypeSelect.value || "";
-      await renderAdminLogsList();
-    });
-    eventTypeSelect.dataset.logsBound = "true";
-  }
-
-  if (limitSelect && !limitSelect.dataset.logsBound) {
-    limitSelect.addEventListener("change", async () => {
-      adminLogsLimit = Number(limitSelect.value || 100);
-      await renderAdminLogsList();
-    });
-    limitSelect.dataset.logsBound = "true";
-  }
-
-  if (applyBtn && !applyBtn.dataset.logsBound) {
-    applyBtn.addEventListener("click", async () => {
-      adminLogsFilterGameId = document.getElementById("adminLogsGameFilter")?.value || "";
-      adminLogsFilterPlayerId = document.getElementById("adminLogsPlayerFilter")?.value || "";
-      adminLogsFilterEventType = document.getElementById("adminLogsEventTypeFilter")?.value || "";
-      adminLogsLimit = Number(document.getElementById("adminLogsLimitFilter")?.value || 100);
-
-      await renderAdminLogsList();
-    });
-    applyBtn.dataset.logsBound = "true";
-  }
-
-  if (resetBtn && !resetBtn.dataset.logsBound) {
+  if (resetBtn && resetBtn.dataset.logsBound !== "true") {
     resetBtn.addEventListener("click", async () => {
       adminLogsFilterGameId = "";
       adminLogsFilterPlayerId = "";
       adminLogsFilterEventType = "";
-      adminLogsLimit = 100;
       adminLogsQuickFilter = "all";
-
-      if (typeof adminCurrentGameId !== "undefined" && adminCurrentGameId) {
-        adminLogsFilterGameId = String(adminCurrentGameId);
-      }
+      adminLogsSearch = "";
+      adminLogsDateFrom = "";
+      adminLogsDateTo = "";
 
       renderAdminLogsFilterOptions();
       await renderAdminLogsList();
     });
+
     resetBtn.dataset.logsBound = "true";
   }
-
-    if (quickAllBtn && !quickAllBtn.dataset.logsBound) {
-    quickAllBtn.addEventListener("click", async () => {
-      adminLogsQuickFilter = "all";
-      updateAdminLogsQuickFilterButtons();
-      await renderAdminLogsList();
-    });
-    quickAllBtn.dataset.logsBound = "true";
-  }
-
-  if (quickGameplayBtn && !quickGameplayBtn.dataset.logsBound) {
-    quickGameplayBtn.addEventListener("click", async () => {
-      adminLogsQuickFilter = "gameplay";
-      updateAdminLogsQuickFilterButtons();
-      await renderAdminLogsList();
-    });
-    quickGameplayBtn.dataset.logsBound = "true";
-  }
-
-  if (quickLiveBtn && !quickLiveBtn.dataset.logsBound) {
-    quickLiveBtn.addEventListener("click", async () => {
-      adminLogsQuickFilter = "live";
-      updateAdminLogsQuickFilterButtons();
-      await renderAdminLogsList();
-    });
-    quickLiveBtn.dataset.logsBound = "true";
-  }
-
-  if (quickAdminBtn && !quickAdminBtn.dataset.logsBound) {
-    quickAdminBtn.addEventListener("click", async () => {
-      adminLogsQuickFilter = "admin";
-      updateAdminLogsQuickFilterButtons();
-      await renderAdminLogsList();
-    });
-    quickAdminBtn.dataset.logsBound = "true";
-  }
-
-  updateAdminLogsQuickFilterButtons();
-
-}
-
-function updateAdminLogsQuickFilterButtons() {
-  const mapping = [
-    { id: "adminLogsQuickAllBtn", value: "all" },
-    { id: "adminLogsQuickGameplayBtn", value: "gameplay" },
-    { id: "adminLogsQuickLiveBtn", value: "live" },
-    { id: "adminLogsQuickAdminBtn", value: "admin" }
-  ];
-
-  mapping.forEach(entry => {
-    const btn = document.getElementById(entry.id);
-    if (!btn) return;
-
-    if (adminLogsQuickFilter === entry.value) {
-      btn.classList.add("active");
-    } else {
-      btn.classList.remove("active");
-    }
-  });
 }
 
 function getEffectiveAdminLogsEventFilter() {
   const dropdownFilter = adminLogsFilterEventType || "";
 
-  // Wenn im Dropdown konkret etwas gewählt wurde, hat das Vorrang
-  if (dropdownFilter) {
-    return dropdownFilter;
-  }
-
-  if (adminLogsQuickFilter === "gameplay") {
-    return ACTIVITY_EVENT_GROUPS.gameplay;
-  }
-
-  if (adminLogsQuickFilter === "live") {
-    return ACTIVITY_EVENT_GROUPS.live;
-  }
-
-  if (adminLogsQuickFilter === "admin") {
-    return ACTIVITY_EVENT_GROUPS.admin;
-  }
+  if (dropdownFilter) return dropdownFilter;
+  if (adminLogsQuickFilter === "gameplay") return ACTIVITY_EVENT_GROUPS.gameplay;
+  if (adminLogsQuickFilter === "live") return ACTIVITY_EVENT_GROUPS.live;
+  if (adminLogsQuickFilter === "admin") return ACTIVITY_EVENT_GROUPS.admin;
 
   return null;
 }
 
-/* ============================================================
- * LOGS TAB - RENDER
- * ============================================================ */
+function filterAdminLogsClientSide(logs) {
+  const searchTokens = String(adminLogsSearch || "")
+    .toLowerCase()
+    .split(/[,\s]+/)
+    .map(token => token.trim())
+    .filter(Boolean);
 
-async function renderAdminLogsList() {
+  const fromTime = adminLogsDateFrom
+    ? new Date(`${adminLogsDateFrom}T00:00:00`).getTime()
+    : null;
+
+  const toTime = adminLogsDateTo
+    ? new Date(`${adminLogsDateTo}T23:59:59.999`).getTime()
+    : null;
+
+  return (logs || []).filter(log => {
+    const createdTime = new Date(log.created_at).getTime();
+
+    if (fromTime !== null && createdTime < fromTime) return false;
+    if (toTime !== null && createdTime > toTime) return false;
+
+    if (searchTokens.length) {
+      const haystack = [
+        formatActivityLogMessage(log),
+        getActivityEventLabel(log.event_type),
+        getActivityPlayerNameFromLogOrMetadata(log),
+        getActivityAdminNameFromLogOrMetadata(log),
+        getActivityChallengeLabel(log),
+        getActivityLiveChallengeLabel(log),
+        getActivityGameLabel(log),
+        log.event_type
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      if (!searchTokens.every(token => haystack.includes(token))) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+async function loadFilteredAdminLogs() {
   const effectiveEventFilter = getEffectiveAdminLogsEventFilter();
 
   const logs = await loadActivityLogs({
     gameId: adminLogsFilterGameId || null,
     playerId: adminLogsFilterPlayerId || null,
     eventType: effectiveEventFilter,
-    limit: adminLogsLimit || 100
+    limit: ADMIN_LOGS_FETCH_LIMIT
   });
 
+  return filterAdminLogsClientSide(logs);
+}
+
+async function renderAdminLogsList() {
+  const logs = await loadFilteredAdminLogs();
   await renderAdminLogsListFromData(logs);
 }
 
 async function renderAdminLogsListFromData(logs) {
   const listEl = document.getElementById("adminLogsList");
+  const infoEl = document.getElementById("adminLogsResultsInfo");
+
   if (!listEl) return;
 
   adminLogsCurrentRows = logs || [];
 
   const signature = JSON.stringify(
-    (logs || []).map(log => [log.id, log.created_at])
+    adminLogsCurrentRows.map(log => [log.id, log.created_at])
   );
   lastAdminLogsSignature = signature;
 
-  if (!logs || !logs.length) {
+  if (infoEl) {
+    const count = adminLogsCurrentRows.length;
+    infoEl.textContent = `${count} Log${count === 1 ? "" : "s"} gefunden`;
+  }
+
+  if (!adminLogsCurrentRows.length) {
     listEl.innerHTML = `<p class="admin-details-empty">Keine Logs gefunden.</p>`;
     return;
   }
 
   let html = "";
 
-  logs.forEach(log => {
+  adminLogsCurrentRows.forEach(log => {
     const timeText = formatActivityDateTime(log.created_at);
     const message = formatActivityLogMessage(log);
 
     html += `
-      <div class="admin-log-row">
+      <div class="admin-log-row" data-log-id="${log.id}">
         <div class="admin-log-main">${escapeActivityHtml(message)}</div>
-        <div class="admin-log-actions">
+
+        <div class="admin-log-side">
+          <div class="admin-log-time">${escapeActivityHtml(timeText)}</div>
+
           <button
             type="button"
             class="admin-log-push-btn"
             data-log-id="${log.id}"
             title="Als Push teilen"
             aria-label="Logeintrag als Push teilen"
-          >📣</button>
-          <div class="admin-log-time">${escapeActivityHtml(timeText)}</div>
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="18" cy="5" r="2.5"></circle>
+              <circle cx="6" cy="12" r="2.5"></circle>
+              <circle cx="18" cy="19" r="2.5"></circle>
+              <path d="M8.2 10.9 15.8 6.2"></path>
+              <path d="M8.2 13.1 15.8 17.8"></path>
+            </svg>
+          </button>
         </div>
       </div>
     `;
@@ -1307,30 +1323,44 @@ async function renderAdminLogsListFromData(logs) {
   attachAdminLogPushShareEvents();
 }
 
-/**
- * Soft refresh für Polling:
- * - lädt Logs
- * - rendert nur neu, wenn sich wirklich etwas geändert hat
- * - verhindert Flackern und Scroll-Sprünge
- */
-async function refreshAdminLogsListIfNeeded() {
-  const effectiveEventFilter = getEffectiveAdminLogsEventFilter();
+async function openAdminLogEntry(log) {
+  if (!log) return;
 
-  const logs = await loadActivityLogs({
-    gameId: adminLogsFilterGameId || null,
-    playerId: adminLogsFilterPlayerId || null,
-    eventType: effectiveEventFilter,
-    limit: adminLogsLimit || 100
+  adminLogsFilterPlayerId = log.player_id ? String(log.player_id) : "";
+  adminLogsFilterGameId = log.game_id ? String(log.game_id) : "";
+  adminLogsFilterEventType = "";
+  adminLogsQuickFilter = "all";
+  adminLogsSearch = "";
+  adminLogsDateFrom = "";
+  adminLogsDateTo = "";
+
+  if (typeof activateAdminTabByName === "function") {
+    await activateAdminTabByName("logs");
+  } else {
+    await initializeAdminLogsTab();
+  }
+
+  renderAdminLogsFilterOptions();
+  await renderAdminLogsList();
+
+  requestAnimationFrame(() => {
+    const row = document.querySelector(`.admin-log-row[data-log-id="${log.id}"]`);
+    if (!row) return;
+
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    row.classList.add("admin-log-row-highlight");
+    window.setTimeout(() => row.classList.remove("admin-log-row-highlight"), 2200);
   });
+}
+
+async function refreshAdminLogsListIfNeeded() {
+  const logs = await loadFilteredAdminLogs();
 
   const signature = JSON.stringify(
     (logs || []).map(log => [log.id, log.created_at])
   );
 
-  if (signature === lastAdminLogsSignature) {
-    return;
-  }
-
+  if (signature === lastAdminLogsSignature) return;
   await renderAdminLogsListFromData(logs);
 }
 

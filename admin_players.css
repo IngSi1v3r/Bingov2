@@ -1,0 +1,1068 @@
+/* ============================================================
+   admin_players.css
+   Spielerliste, Spieleransicht, Mini-Grids und Challenge-Ansicht.
+   Aus der bisherigen admin.css logisch ausgelagert.
+   Noch keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* PLAYER LIST */
+/* ===================== */
+
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-list-item {
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-list-item:hover {
+  background: #24364f;
+  border-color: #4b5563;
+}
+
+.admin-list-item.active {
+  background: #21406d;
+  border-color: #3b82f6;
+}
+
+.admin-list-card {
+  display: grid;
+  grid-template-columns: 1fr 70px;
+  gap: 10px;
+  align-items: start;
+}
+
+.admin-list-card-left {
+  min-width: 0;
+}
+
+.admin-list-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.admin-list-name {
+  font-weight: bold;
+  color: white;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.admin-list-meta {
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+
+.admin-list-subinfo {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+.admin-list-score {
+  font-weight: bold;
+  color: #facc15;
+  white-space: nowrap;
+  font-size: 1rem;
+}
+
+/* ===================== */
+/* MINI GRID SMALL */
+/* ===================== */
+
+.admin-mini-grid-small {
+  display: grid;
+    gap: 2px;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.admin-mini-cell-small {
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  background: #1f2937;
+}
+
+.admin-mini-cell-small.completed {
+  background: #22c55e;
+}
+
+.admin-mini-cell-small.active {
+  outline: 1px solid #3b82f6;
+}
+
+.admin-mini-cell-small.first {
+  box-shadow: inset 0 0 0 1px #facc15;
+}
+
+/* ===================== */
+/* MINI GRID LARGE */
+/* ===================== */
+
+.admin-mini-grid-wrapper {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.admin-mini-grid {
+  display: grid;
+  gap: 8px;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  box-sizing: border-box;
+}
+
+.admin-mini-cell {
+  position: relative;
+
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px;
+  overflow: hidden;
+
+  color: #d1d5db;
+  font-weight: 700;
+  text-align: center;
+
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 10px;
+}
+
+.admin-mini-cell.placeholder {
+  opacity: 0.35;
+}
+
+.admin-mini-cell.completed {
+  color: white;
+  background: #166534;
+  border-color: #16a34a;
+}
+
+.admin-mini-cell.active {
+  border: 2px solid #3b82f6;
+}
+
+.admin-mini-cell.first-solver::after {
+  content: "⭐";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.7rem;
+}
+
+.admin-mini-cell-title {
+  max-width: 100%;
+  min-width: 0;
+
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+
+  line-height: 1;
+  text-align: center;
+}
+
+.admin-mini-grid.grid-size-3 .admin-mini-cell-title {
+  font-size: 0.58rem;
+}
+
+.admin-mini-grid.grid-size-4 .admin-mini-cell-title {
+  font-size: 0.52rem;
+}
+
+.admin-mini-grid.grid-size-5 .admin-mini-cell-title {
+  font-size: 0.46rem;
+}
+
+.admin-mini-grid.grid-size-6 .admin-mini-cell-title {
+  font-size: 0.4rem;
+}
+
+.admin-mini-grid.grid-size-7 .admin-mini-cell-title {
+  font-size: 0.34rem;
+}
+
+.admin-mini-grid.grid-size-6 .admin-mini-cell.first-solver::after,
+.admin-mini-grid.grid-size-7 .admin-mini-cell.first-solver::after {
+  top: 2px;
+  right: 2px;
+  font-size: 0.48rem;
+}
+
+.admin-mini-cell-points {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+
+  color: #d1d5db;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.admin-mini-grid.grid-size-6 .admin-mini-cell-points {
+  right: 4px;
+  bottom: 3px;
+  font-size: 0.54rem;
+}
+
+.admin-mini-grid.grid-size-7 .admin-mini-cell-points {
+  right: 3px;
+  bottom: 3px;
+  font-size: 0.48rem;
+}
+
+/* ============================================================
+   ADMIN PLAYER CHALLENGE MODAL
+   ============================================================ */
+
+/*
+ * Flache, gleichwertige Informationszeilen ohne zusätzlichen Innen-Wrapper.
+ * Label und Wert stehen einander direkt gegenüber.
+ */
+.admin-challenge-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.admin-challenge-info-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  padding: 2px 0;
+}
+
+.admin-challenge-info-label,
+.admin-challenge-info-value {
+  color: #e5e7eb;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.admin-challenge-info-value {
+  text-align: right;
+}
+
+.admin-challenge-points-value {
+  color: #facc15;
+}
+
+/* Farblich eindeutiger Status, ohne ihn stärker als die übrigen Infos zu machen. */
+.admin-challenge-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.admin-challenge-status.completed {
+  color: #bbf7d0;
+  background: rgba(22, 163, 74, 0.18);
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.admin-challenge-status.active {
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.admin-challenge-status.open {
+  color: #cbd5e1;
+  background: rgba(71, 85, 105, 0.24);
+  border-color: rgba(148, 163, 184, 0.32);
+}
+
+/*
+ * Beweisfoto mit fixer, responsiver Höhe. Das Bild wird vollständig eingepasst
+ * und dient zugleich als Link in den Galerie-Viewer.
+ */
+.admin-challenge-image-frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: clamp(220px, 45vh, 430px);
+  margin-top: 14px;
+  padding: 0;
+  overflow: hidden;
+  background: #081226;
+  border: 1px solid #2a3b56;
+  border-radius: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.admin-challenge-image-frame:hover,
+.admin-challenge-image-frame:focus-visible {
+  filter: brightness(1.05);
+  border-color: #475569;
+}
+
+.admin-challenge-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 1;
+  transition: opacity 0.16s ease;
+}
+
+.admin-challenge-image.loading {
+  opacity: 0.18;
+}
+
+.admin-challenge-image-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.admin-challenge-image-loading.visible {
+  opacity: 1;
+}
+
+.admin-challenge-image-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  animation: admin-challenge-image-spin 0.75s linear infinite;
+}
+
+@keyframes admin-challenge-image-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Zwei gleichzeitig sinnvolle Aktionen teilen sich exakt eine Zeile. */
+.admin-player-challenge-actions.two-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-player-challenge-actions.two-actions button {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 420px) {
+  .admin-challenge-info-label,
+  .admin-challenge-info-value {
+    font-size: 0.76rem;
+  }
+
+  .admin-challenge-image-frame {
+    height: clamp(200px, 42vh, 350px);
+  }
+}
+
+/* ============================================================
+   PLAYER DRAWER – BASE
+   ============================================================ */
+
+.admin-players-layout {
+  position: relative;
+}
+
+.admin-player-list-panel,
+.admin-player-detail-panel {
+  min-width: 0;
+}
+
+.admin-player-drawer-close-btn {
+  display: none;
+}
+
+.admin-player-drawer-backdrop {
+  display: none;
+}
+
+/* ============================================================
+   MOBILE PLAYER RAIL
+   ============================================================ */
+
+.admin-player-rail-current {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  /* Mobile Seitenüberschrift entfernen */
+  #tab-players > h2 {
+    display: none;
+  }
+
+  /*
+   * Äußeres Players-Layout:
+   * kein zusätzlicher Wrapper, kein Grid, kein eigener Hintergrund.
+   */
+  #adminPlayersSplitLayout {
+    position: static;
+
+    display: block;
+
+    width: 100%;
+    min-width: 0;
+
+    margin: 0;
+    padding: 0;
+
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /*
+   * Detailpanel:
+   * kein zusätzlicher Panel-Rahmen.
+   * Links bleibt nur Platz für die schmale Rail.
+   */
+  #adminPlayersSplitLayout .admin-player-detail-panel {
+    display: block;
+
+    width: auto;
+    min-width: 0;
+
+    margin: 0 0 0 34px;
+    padding: 0;
+
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .admin-player-detail-panel > .admin-panel-header {
+    display: none;
+  }
+
+  /*
+   * Geschlossene Rail:
+   * volle verfügbare Bildschirmhöhe unter dem sticky Header.
+   */
+  #adminPlayerListPanel {
+    position: fixed;
+    top: calc(var(--admin-player-drawer-top, 100px) + 6px);
+    bottom: 6px;
+    left: 6px;
+    z-index: 2100;
+
+    display: block;
+
+    width: 28px;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+
+    margin: 0;
+    padding: 0;
+
+    overflow: hidden;
+
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+
+    cursor: pointer;
+  }
+
+  /*
+   * Im geschlossenen Zustand nur die eine Rail-Kachel anzeigen.
+   */
+  #adminPlayerListPanel:not(.drawer-open) .admin-player-list-header,
+  #adminPlayerListPanel:not(.drawer-open) .admin-player-drawer-list,
+  #adminPlayerListPanel:not(.drawer-open) #adminPlayersList {
+    display: none !important;
+  }
+
+  /*
+   * Die Kachel füllt die komplette Rail-Höhe.
+   * Optik ähnlich den normalen Admin-Kacheln.
+   */
+  #adminPlayerListPanel:not(.drawer-open) .admin-player-rail-current {
+  appearance: none;
+  -webkit-appearance: none;
+
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: auto;
+  min-height: 0;
+
+  margin: 0;
+  padding: 10px 3px;
+
+  color: white;
+  font-family: inherit;
+
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-left: 1px solid #334155;
+  border-radius: 9px;
+
+  box-shadow:
+    4px 0 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  cursor: pointer;
+}
+
+  #adminPlayerListPanel:not(.drawer-open) .admin-player-rail-current:hover {
+    background: #24364f;
+    border-color: #4b5563;
+  }
+
+  /*
+   * Name vollständig hochkant und mittig.
+   */
+  #adminPlayerListPanel:not(.drawer-open) .admin-player-rail-name {
+    display: block;
+
+    max-width: 100%;
+    max-height: calc(
+      100dvh - var(--admin-player-drawer-top, 100px) - 20px
+    );
+
+    overflow: hidden;
+
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  /*
+   * Geöffnete Spielerliste.
+   */
+  #adminPlayerListPanel.drawer-open {
+    position: fixed;
+    top: var(--admin-player-drawer-top, 100px);
+    bottom: 0;
+    left: 0;
+    z-index: 2300;
+
+    display: block;
+
+    width: min(78vw, 380px);
+    height: auto;
+    max-height: none;
+
+    margin: 0;
+    padding: 12px;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    background: #09152d;
+    border: 1px solid #2a3b56;
+    border-left: 0;
+    border-radius: 0 14px 14px 0;
+
+    box-shadow: 14px 0 35px rgba(0, 0, 0, 0.48);
+
+    cursor: default;
+  }
+
+  #adminPlayerListPanel.drawer-open .admin-player-rail-current {
+    display: none;
+  }
+
+  #adminPlayerListPanel.drawer-open .admin-player-list-header {
+    display: none;
+  }
+
+  #adminPlayerListPanel.drawer-open .admin-player-drawer-list,
+  #adminPlayerListPanel.drawer-open #adminPlayersList {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /*
+   * Abdunkelung der Details hinter dem offenen Drawer.
+   */
+  #adminPlayerDrawerBackdrop:not(.hidden) {
+    position: fixed;
+    top: var(--admin-player-drawer-top, 100px);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2200;
+
+    display: block;
+
+    background: rgba(3, 8, 18, 0.58);
+
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+  }
+}
+/* ============================================================
+   COMPACT PLAYER DETAILS
+   ============================================================ */
+
+.admin-player-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-player-details-grid .admin-detail-card {
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.admin-player-details-grid .admin-detail-label {
+  margin-bottom: 2px;
+  color: #9ca3af;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.admin-player-details-grid .admin-detail-value {
+  overflow: hidden;
+  color: white;
+  font-size: 0.94rem;
+  font-weight: 750;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-player-details-grid .admin-detail-value.clickable {
+  display: inline-block;
+  max-width: 100%;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.45);
+  transition: border-color 0.15s ease;
+}
+
+.admin-player-details-grid .admin-detail-value.clickable:hover {
+  border-bottom-color: rgba(255, 255, 255, 0.95);
+}
+
+.admin-player-details-grid .admin-detail-value.danger-state {
+  color: #fca5a5;
+}
+
+.admin-player-detail-full {
+  grid-column: 1 / -1;
+}
+
+.admin-player-details-grid .admin-player-activity-value,
+.admin-player-details-grid .admin-player-date-value,
+.admin-player-details-grid .admin-player-info-value {
+  font-size: 0.78rem;
+}
+
+.admin-player-details-grid .admin-player-activity-value,
+.admin-player-details-grid .admin-player-info-value {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.admin-player-state-game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-player-state-game-row {
+  padding: 10px 12px;
+  color: white;
+  font-weight: 700;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 10px;
+}
+
+@media (max-width: 420px) {
+  .admin-player-details-grid {
+    gap: 6px;
+  }
+
+  .admin-player-details-grid .admin-detail-card {
+    padding: 8px 7px;
+  }
+
+  .admin-player-details-grid .admin-detail-label {
+    font-size: 0.64rem;
+  }
+
+  .admin-player-details-grid .admin-detail-value {
+    font-size: 0.84rem;
+  }
+
+  .admin-player-details-grid .admin-player-activity-value,
+  .admin-player-details-grid .admin-player-date-value,
+  .admin-player-details-grid .admin-player-info-value {
+    font-size: 0.7rem;
+  }
+}
+
+/* Clickable game-state rows in the player states modal */
+.admin-player-state-game-row {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: 11px 12px;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.admin-player-state-game-row:hover {
+  background: #24364f;
+  border-color: #3b82f6;
+}
+
+/* ============================================================
+   COMPACT PLAYER COMPLETION LIST
+   ============================================================ */
+
+.admin-player-completion-list {
+  gap: 6px;
+}
+
+.admin-player-completion-row {
+  display: grid;
+  grid-template-columns:
+    24px
+    minmax(0, 1fr)
+    auto
+    auto;
+  align-items: center;
+  gap: 8px;
+
+  min-width: 0;
+  padding: 7px 9px;
+}
+
+.admin-player-completion-number {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+
+.admin-player-completion-title {
+  min-width: 0;
+  margin: 0;
+
+  overflow: hidden;
+
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-player-completion-title.clickable {
+  cursor: pointer;
+}
+
+.admin-player-completion-title.clickable .admin-player-completion-title-text {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.45);
+  transition: border-color 0.15s ease;
+}
+
+.admin-player-completion-title.clickable:hover .admin-player-completion-title-text {
+  border-bottom-color: rgba(255, 255, 255, 0.95);
+}
+
+.admin-player-completion-date {
+  margin: 0;
+
+  color: #94a3b8;
+  font-size: 0.7rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-player-completion-points {
+  margin: 0;
+
+  color: #facc15;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   FIXED PLAYER GALLERY
+   ============================================================ */
+
+#adminPlayerGalleryWrapper {
+  width: 100%;
+  min-width: 0;
+  margin-top: 18px;
+}
+
+#adminPlayerGallery {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-player-gallery-frame {
+  position: relative;
+
+  width: 100%;
+  height: clamp(240px, 48vw, 520px);
+
+  overflow: hidden;
+
+  background: #081226;
+  border: 1px solid #2a3b56;
+  border-radius: 14px;
+
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.admin-player-gallery-image {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+  object-position: center;
+
+  opacity: 1;
+
+  transition: opacity 0.16s ease;
+}
+
+.admin-player-gallery-image.loading {
+  opacity: 0.2;
+}
+
+.admin-player-gallery-caption {
+  position: absolute;
+  right: 54px;
+  bottom: 10px;
+  left: 10px;
+  z-index: 3;
+
+  width: fit-content;
+  max-width: calc(100% - 74px);
+  padding: 6px 9px;
+
+  overflow: hidden;
+
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  background: rgba(5, 12, 26, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.admin-player-gallery-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 48px;
+  padding: 0;
+
+  color: white;
+  font-size: 2rem;
+  line-height: 1;
+
+  background: rgba(5, 12, 26, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9px;
+
+  transform: translateY(-50%);
+
+  cursor: pointer;
+
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.admin-player-gallery-arrow:hover {
+  background: rgba(20, 35, 60, 0.9);
+}
+
+.admin-player-gallery-arrow-left {
+  left: 10px;
+}
+
+.admin-player-gallery-arrow-right {
+  right: 10px;
+}
+
+.admin-player-gallery-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  pointer-events: none;
+  opacity: 0;
+
+  transition: opacity 0.12s ease;
+}
+
+.admin-player-gallery-loading.visible {
+  opacity: 1;
+}
+
+.admin-player-gallery-spinner {
+  width: 30px;
+  height: 30px;
+
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+
+  animation: admin-player-gallery-spin 0.75s linear infinite;
+}
+
+@keyframes admin-player-gallery-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.admin-player-gallery-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 220px;
+
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+/* ============================================================
+   PLAYER DETAIL ACTIONS
+   ============================================================ */
+
+#adminPlayerActionBar.admin-player-action-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+
+#adminPlayerActionBar.admin-player-action-bar.hidden {
+  display: none;
+}
+
+#adminPlayerActionBar.admin-player-action-bar button {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+
+  padding: 7px 6px;
+
+  font-size: 0.7rem;
+  line-height: 1.15;
+  text-align: center;
+
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

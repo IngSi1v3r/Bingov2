@@ -1,0 +1,631 @@
+/* ============================================================
+   admin_gallery.css
+   Statische Galerie-Komponenten. JS-erzeugte Galerie-Styles bleiben vorerst unberuehrt.
+   Aus der bisherigen admin.css logisch ausgelagert.
+   Noch keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* GALLERY */
+/* ===================== */
+
+.admin-gallery-wrapper {
+  margin-top: 18px;
+}
+
+.admin-gallery-caption {
+  margin-bottom: 8px;
+  color: #d1d5db;
+}
+
+.admin-gallery-time {
+  color: #9ca3af;
+  margin-left: 6px;
+  font-size: 0.9rem;
+}
+
+.admin-gallery-image-container {
+  position: relative;
+}
+
+.admin-gallery-image {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 12px;
+  display: block;
+  border: 1px solid #334155;
+  background: #0f172a;
+}
+
+.admin-gallery-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 2rem;
+  color: white;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-gallery-arrow:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.admin-gallery-arrow.left {
+  left: 8px;
+}
+
+.admin-gallery-arrow.right {
+  right: 8px;
+}
+
+
+/* ============================================================
+   GALLERY FILTERS
+   ============================================================ */
+
+.admin-gallery-select,
+.admin-gallery-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #4b5563;
+  background: #111827;
+  color: white;
+  font-size: 0.95rem;
+}
+
+.admin-gallery-select:focus,
+.admin-gallery-input:focus {
+  outline: 2px solid #3b82f6;
+}
+
+/* ============================================================
+   GALLERY GRID
+   ============================================================ */
+
+.admin-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.admin-gallery-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  cursor: pointer;
+
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.admin-gallery-card:hover {
+  transform: translateY(-2px);
+  border-color: #3b82f6;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+.admin-gallery-card-image-wrap {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0b1220;
+}
+
+.admin-gallery-card-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-gallery-card-overlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  padding: 10px;
+
+  background:
+    linear-gradient(
+      to top,
+      rgba(2, 6, 23, 0.92),
+      rgba(2, 6, 23, 0.08)
+    );
+}
+
+.admin-gallery-card-player {
+  overflow: hidden;
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-gallery-card-challenge {
+  overflow: hidden;
+  margin-top: 2px;
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-gallery-card-live-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 30px;
+  height: 30px;
+
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+
+  background: rgba(37, 99, 235, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+}
+
+/* ============================================================
+   GALLERY SELECTION
+   ============================================================ */
+
+.admin-gallery-selection-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  margin-bottom: 14px;
+  padding: 10px 0;
+
+  background: #09152d;
+}
+
+.admin-gallery-selection-info {
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.admin-gallery-card.selection-mode::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  background: rgba(15, 23, 42, 0.18);
+  pointer-events: none;
+}
+
+.admin-gallery-card.selected {
+  border-color: #facc15;
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.45);
+}
+
+.admin-gallery-card-check {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 4;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  color: white;
+  font-size: 1.05rem;
+  font-weight: 900;
+
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+
+.admin-gallery-card.selected .admin-gallery-card-check {
+  color: #111827;
+  background: #facc15;
+  border-color: #facc15;
+}
+
+.admin-gallery-empty {
+  padding: 24px;
+
+  color: #9ca3af;
+  text-align: center;
+
+  background: #111827;
+  border: 1px dashed #374151;
+  border-radius: 14px;
+}
+
+/* ============================================================
+   GALLERY VIEWER
+   ============================================================ */
+
+.admin-gallery-viewer-modal {
+  max-width: 980px;
+}
+
+.admin-gallery-viewer-image-wrap {
+  position: relative;
+
+  width: 100%;
+  height: min(62vh, 620px);
+  min-height: 360px;
+
+  overflow: hidden;
+  margin-bottom: 12px;
+
+  background: #0b1220;
+  border: 1px solid #334155;
+  border-radius: 14px;
+}
+
+.admin-gallery-viewer-image {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+  object-position: center;
+
+  background: #0b1220;
+  opacity: 1;
+
+  transition: opacity 0.16s ease;
+}
+
+.admin-gallery-viewer-image.loading {
+  opacity: 0.18;
+}
+
+.admin-gallery-viewer-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition: opacity 0.12s ease;
+}
+
+.admin-gallery-viewer-loading.visible {
+  opacity: 1;
+}
+
+.admin-gallery-viewer-spinner {
+  width: 32px;
+  height: 32px;
+
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+
+  animation: admin-gallery-viewer-spin 0.75s linear infinite;
+}
+
+@keyframes admin-gallery-viewer-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.admin-gallery-viewer-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.admin-gallery-viewer-info-card {
+  min-width: 0;
+  padding: 9px 10px;
+
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 10px;
+}
+
+.admin-gallery-viewer-info-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-gallery-viewer-info-label {
+  margin-bottom: 2px;
+
+  color: #9ca3af;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.admin-gallery-viewer-info-value {
+  min-width: 0;
+  overflow: hidden;
+
+  color: white;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-gallery-viewer-info-value.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(147, 197, 253, 0.55);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.admin-gallery-viewer-info-value.clickable:hover {
+  color: #93c5fd;
+}
+
+/* ============================================================
+   GALLERY VIEWER ARROWS
+   ============================================================ */
+
+.admin-gallery-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+
+  color: white;
+  font-size: 2rem;
+
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+
+  cursor: pointer;
+  user-select: none;
+
+  transform: translateY(-50%);
+
+  transition:
+    background 0.2s ease,
+    transform 0.1s ease;
+}
+
+.admin-gallery-arrow:hover {
+  background: rgba(0, 0, 0, 0.6);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.admin-gallery-arrow.left {
+  left: 8px;
+}
+
+.admin-gallery-arrow.right {
+  right: 8px;
+}
+
+/* ============================================================
+   GALLERY TAB – COMPACT STRUCTURE
+   ============================================================ */
+
+.admin-gallery-layout {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-gallery-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-gallery-filter-grid .admin-detail-card {
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.admin-gallery-search-card {
+  grid-column: 1 / -1;
+}
+
+.admin-gallery-main-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+
+  margin: 12px 0 10px;
+}
+
+.admin-gallery-main-actions button {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-gallery-results-info {
+  margin: 0 0 10px;
+}
+
+.admin-gallery-selection-toolbar {
+  position: static;
+  margin: 0 0 12px;
+  padding: 0;
+  background: transparent;
+}
+
+.admin-gallery-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 760px) {
+  #tab-grid > h2 {
+    display: none;
+  }
+
+  .admin-gallery-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .admin-gallery-filter-grid .admin-detail-card {
+    padding: 8px 9px;
+  }
+
+  .admin-gallery-filter-grid .admin-detail-label {
+    margin-bottom: 4px;
+    font-size: 0.7rem;
+  }
+
+  .admin-gallery-select,
+  .admin-gallery-input {
+    min-width: 0;
+    padding: 8px 9px;
+    font-size: 0.82rem;
+  }
+
+  .admin-gallery-main-actions {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .admin-gallery-main-actions button {
+    padding: 9px 8px;
+    font-size: 0.82rem;
+  }
+
+  .admin-gallery-results-info {
+    font-size: 0.78rem;
+  }
+
+  .admin-gallery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .admin-gallery-card {
+    border-radius: 9px;
+  }
+
+  .admin-gallery-card-overlay {
+    padding: 6px;
+  }
+
+  .admin-gallery-card-player {
+    font-size: 0.72rem;
+  }
+
+  .admin-gallery-card-challenge {
+    font-size: 0.64rem;
+  }
+
+  .admin-gallery-card-live-badge {
+    top: 5px;
+    right: 5px;
+    min-width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+  }
+
+  .admin-gallery-card-check {
+    top: 5px;
+    left: 5px;
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-gallery-grid {
+    gap: 5px;
+  }
+
+  .admin-gallery-card-overlay {
+    padding: 5px;
+  }
+
+  .admin-gallery-card-player {
+    font-size: 0.66rem;
+  }
+
+  .admin-gallery-card-challenge {
+    font-size: 0.58rem;
+  }
+}
+
+
+/* ============================================================
+   GALLERY VIEWER FIXED SIZE – RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 700px) {
+  .admin-gallery-viewer-image-wrap {
+    height: 52vh;
+    min-height: 260px;
+    max-height: 420px;
+
+    margin-bottom: 8px;
+    border-radius: 10px;
+  }
+
+  .admin-gallery-viewer-info-grid {
+    gap: 6px;
+  }
+
+  .admin-gallery-viewer-info-card {
+    padding: 7px 8px;
+  }
+
+  .admin-gallery-viewer-info-label {
+    font-size: 0.6rem;
+  }
+
+  .admin-gallery-viewer-info-value {
+    font-size: 0.76rem;
+  }
+}

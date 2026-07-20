@@ -26,6 +26,13 @@
 
 let currentAdminPlayerGalleryEntries = [];
 let currentAdminPlayerGalleryIndex = 0;
+let adminPlayerDrawerOpen = false;
+let adminPlayerDrawerEventsBound = false;
+
+let currentAdminPlayerGallerySelectedChallengeId = null;
+let currentAdminPlayerGalleryPlayerId = null;
+let currentAdminPlayerGalleryGameId = null;
+let adminPlayerDetailsRenderToken = 0;
 
 /* ============================================================
  * LAYOUT / GRUNDSTRUKTUR
@@ -35,23 +42,59 @@ function ensureAdminPlayersTabLayout() {
   const tabEl = document.getElementById("tab-players");
   if (!tabEl) return;
 
-  if (document.getElementById("adminPlayersSplitLayout")) return;
+  if (document.getElementById("adminPlayersSplitLayout")) {
+    ensureAdminPlayerStatesModal();
+    attachAdminPlayerDrawerEvents();
+    updateAdminPlayerRailLabel();
+    requestAnimationFrame(updateAdminPlayerDrawerTopOffset);
+    return;
+  }
 
   tabEl.innerHTML = `
     <h2>Spieler</h2>
 
-    <div class="admin-split-layout" id="adminPlayersSplitLayout">
-      <div class="admin-panel">
-        <div class="admin-panel-header">
+    <div
+      class="admin-split-layout admin-players-layout"
+      id="adminPlayersSplitLayout"
+    >
+      <div
+        id="adminPlayerDrawerBackdrop"
+        class="admin-player-drawer-backdrop hidden"
+        aria-hidden="true"
+      ></div>
+
+      <aside
+        id="adminPlayerListPanel"
+        class="admin-panel admin-player-list-panel"
+      >
+        <button
+          id="adminPlayerRailCurrent"
+          class="admin-player-rail-current"
+          type="button"
+          aria-label="Spielerliste öffnen"
+          aria-expanded="false"
+        >
+          <span
+            id="adminPlayerRailName"
+            class="admin-player-rail-name"
+          >
+            Spieler
+          </span>
+        </button>
+
+        <div class="admin-panel-header admin-player-list-header">
           <h3>Alle Spieler</h3>
         </div>
 
-        <div id="adminPlayersList" class="admin-list">
+        <div
+          id="adminPlayersList"
+          class="admin-list admin-player-drawer-list"
+        >
           <p>Spieler werden geladen...</p>
         </div>
-      </div>
+      </aside>
 
-      <div class="admin-panel">
+      <div class="admin-panel admin-player-detail-panel">
         <div class="admin-panel-header">
           <h3>Spieler-Details</h3>
         </div>
@@ -60,46 +103,199 @@ function ensureAdminPlayersTabLayout() {
           <p>Wähle links einen Spieler aus.</p>
         </div>
 
-        <div id="adminPlayerCreateStateBar" class="admin-player-action-bar hidden">
-          <button id="adminCreatePlayerStateBtn" type="button">Spielstand anlegen</button>
+        <div
+          id="adminPlayerCreateStateBar"
+          class="admin-player-action-bar hidden"
+        >
+          <button id="adminCreatePlayerStateBtn" type="button">
+            Spielstand anlegen
+          </button>
         </div>
 
-        <div id="adminPlayerGameMiniGrid" class="admin-mini-grid-wrapper hidden">
-          <h3 class="admin-section-title">Fortschritt im aktuellen Spiel</h3>
-          <div id="adminPlayerMiniGrid" class="admin-mini-grid"></div>
+        <div
+          id="adminPlayerGameMiniGrid"
+          class="admin-mini-grid-wrapper hidden"
+        >
+          <div
+            id="adminPlayerMiniGrid"
+            class="admin-mini-grid"
+          ></div>
         </div>
 
-        <div id="adminPlayerGalleryWrapper" class="admin-gallery-wrapper hidden">
-          <h3 class="admin-section-title">Galerie</h3>
+        <div
+          id="adminPlayerGalleryWrapper"
+          class="admin-gallery-wrapper hidden"
+        >
           <div id="adminPlayerGallery"></div>
         </div>
 
-        <div id="adminPlayerCompletedWrapper" class="admin-completed-wrapper hidden">
-          <h3 class="admin-section-title">Abgeschlossene Aufgaben</h3>
+        <div
+          id="adminPlayerCompletedWrapper"
+          class="admin-completed-wrapper hidden"
+        >
+          
+
           <div id="adminPlayerCompletedList"></div>
         </div>
 
-        <div id="adminPlayerActionBar" class="admin-player-action-bar hidden">
-
-          <button id="adminPromotePlayerBtn" type="button" class="secondary-btn">
+        <div
+          id="adminPlayerActionBar"
+          class="admin-player-action-bar hidden"
+        >
+          <button
+            id="adminPromotePlayerBtn"
+            type="button"
+            class="secondary-btn"
+          >
             Zu Admin machen
           </button>
 
-          <button id="adminResetPlayerPasswordBtn" type="button" class="secondary-btn">
+          <button
+            id="adminResetPlayerPasswordBtn"
+            type="button"
+            class="secondary-btn"
+          >
             Passwort zurücksetzen
           </button>
 
-
-          <button id="adminResetPlayerGameBtn" type="button">
+          <button
+            id="adminResetPlayerGameBtn"
+            type="button"
+          >
             Fortschritt zurücksetzen
           </button>
-          <button id="adminDeletePlayerBtn" type="button" class="danger-btn">
+
+          <button
+            id="adminDeletePlayerBtn"
+            type="button"
+            class="danger-btn"
+          >
             Spieler löschen
           </button>
         </div>
       </div>
     </div>
   `;
+
+  ensureAdminPlayerStatesModal();
+  attachAdminPlayerDrawerEvents();
+  updateAdminPlayerRailLabel();
+  requestAnimationFrame(updateAdminPlayerDrawerTopOffset);
+}
+
+
+function ensureAdminPlayerStatesModal() {
+  if (document.getElementById("adminPlayerStatesOverlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "adminPlayerStatesOverlay";
+  overlay.className = "modal-overlay hidden";
+
+  overlay.innerHTML = `
+    <div class="modal admin-player-states-modal">
+      <button id="closeAdminPlayerStatesBtn" class="modal-close-btn" type="button">×</button>
+      <h2 id="adminPlayerStatesTitle">Spielstände</h2>
+      <div id="adminPlayerStatesContent" class="rules-content"></div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document
+    .getElementById("closeAdminPlayerStatesBtn")
+    ?.addEventListener("click", closeAdminPlayerStatesModal);
+
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) closeAdminPlayerStatesModal();
+  });
+}
+
+function closeAdminPlayerStatesModal() {
+  document.getElementById("adminPlayerStatesOverlay")?.classList.add("hidden");
+}
+
+function openAdminPlayerStatesModal(player, playerGames) {
+  ensureAdminPlayerStatesModal();
+
+  const overlay = document.getElementById("adminPlayerStatesOverlay");
+  const titleEl = document.getElementById("adminPlayerStatesTitle");
+  const contentEl = document.getElementById("adminPlayerStatesContent");
+  if (!overlay || !titleEl || !contentEl) return;
+
+  const playerName = player?.display_name || player?.username || `Spieler ${player?.id ?? ""}`;
+  titleEl.textContent = `Spielstände – ${playerName}`;
+  contentEl.innerHTML = "";
+
+  if (!playerGames.length) {
+    const empty = document.createElement("p");
+    empty.className = "admin-details-empty";
+    empty.textContent = "Für diesen Spieler sind noch keine Spielstände vorhanden.";
+    contentEl.appendChild(empty);
+  } else {
+    const list = document.createElement("div");
+    list.className = "admin-player-state-game-list";
+
+    playerGames.forEach(game => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "admin-player-state-game-row";
+      row.textContent = game.name || `Spiel ${game.id}`;
+      row.title = `${game.name || `Spiel ${game.id}`} im Adminpanel auswählen`;
+
+      row.addEventListener("click", async () => {
+        adminCurrentGameId = game.id;
+        adminCurrentGame = game;
+        saveGameIdToLocalStorageAdmin(adminCurrentGameId);
+        updateAdminCurrentGameDisplay();
+        closeAdminPlayerStatesModal();
+
+        await initializeAdminPlayersTab();
+      });
+
+      list.appendChild(row);
+    });
+
+    contentEl.appendChild(list);
+  }
+
+  overlay.classList.remove("hidden");
+}
+
+async function loadLastGlobalActivityLogForPlayer(playerId) {
+  const { data, error } = await supabaseClient
+    .from("activity_logs")
+    .select("*")
+    .eq("player_id", playerId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Globale letzte Aktivität konnte nicht geladen werden:", error);
+    return null;
+  }
+
+  return data || null;
+}
+
+function attachAdminPlayerStatesCard(player, playerGames) {
+  const statesBtn = document.getElementById("adminPlayerStatesBtn");
+  if (!statesBtn) return;
+
+  statesBtn.onclick = () => {
+    openAdminPlayerStatesModal(player, playerGames);
+  };
+}
+
+function attachAdminPlayerGlobalActivityCard(globalActivityLog) {
+  const activityBtn = document.getElementById("adminPlayerGlobalActivityBtn");
+  if (!activityBtn || !globalActivityLog) return;
+
+  activityBtn.onclick = async () => {
+    if (typeof openAdminLogEntry === "function") {
+      await openAdminLogEntry(globalActivityLog);
+    }
+  };
 }
 
 function ensureAdminPlayerChallengeModal() {
@@ -119,7 +315,7 @@ function ensureAdminPlayerChallengeModal() {
         <p>Lade Challenge-Details...</p>
       </div>
 
-      <div class="modal-actions" id="adminChallengeActions">
+      <div class="modal-actions admin-player-challenge-actions" id="adminChallengeActions">
         <button id="adminMarkChallengeCompletedBtn" type="button">Als bestanden markieren</button>
         <button id="adminSetChallengeActiveBtn" type="button">Als aktiv setzen</button>
         <button id="adminSetChallengeInactiveBtn" type="button">Inaktiv setzen</button>
@@ -152,10 +348,149 @@ function ensureAdminPlayerChallengeModal() {
 }
 
 /* ============================================================
+ * MOBILE PLAYER DRAWER
+ * ============================================================ */
+
+function isAdminPlayerMobileLayout() {
+  return window.matchMedia("(max-width: 760px)").matches;
+}
+
+function updateAdminPlayerDrawerTopOffset() {
+  const header = document.querySelector(".admin-sticky-header");
+
+  const headerHeight = header
+    ? Math.ceil(header.getBoundingClientRect().height)
+    : 100;
+
+  document.documentElement.style.setProperty(
+    "--admin-player-drawer-top",
+    `${headerHeight}px`
+  );
+}
+
+function updateAdminPlayerRailLabel() {
+  const railNameEl = document.getElementById("adminPlayerRailName");
+  const railButton = document.getElementById("adminPlayerRailCurrent");
+
+  if (!railNameEl) return;
+
+  const selectedPlayer = Array.isArray(adminPlayers)
+    ? adminPlayers.find(
+        player => Number(player.id) === Number(selectedAdminPlayerId)
+      )
+    : null;
+
+  const displayName = selectedPlayer
+    ? (selectedPlayer.display_name || selectedPlayer.username || `Spieler ${selectedPlayer.id}`)
+    : "Spieler";
+
+  railNameEl.textContent = displayName;
+
+  if (railButton) {
+    railButton.setAttribute(
+      "aria-label",
+      selectedPlayer
+        ? `Spielerliste öffnen. Aktuell ausgewählt: ${displayName}`
+        : "Spielerliste öffnen"
+    );
+    railButton.setAttribute("aria-expanded", adminPlayerDrawerOpen ? "true" : "false");
+  }
+}
+
+function openAdminPlayerDrawer() {
+  if (!isAdminPlayerMobileLayout()) return;
+
+  const layout = document.getElementById("adminPlayersSplitLayout");
+  const backdrop = document.getElementById("adminPlayerDrawerBackdrop");
+  const panel = document.getElementById("adminPlayerListPanel");
+
+  if (!layout || !panel) return;
+
+  updateAdminPlayerDrawerTopOffset();
+
+  adminPlayerDrawerOpen = true;
+  layout.classList.add("drawer-open");
+  panel.classList.add("drawer-open");
+  document.getElementById("adminPlayerRailCurrent")?.setAttribute("aria-expanded", "true");
+
+  if (backdrop) {
+    backdrop.classList.remove("hidden");
+  }
+}
+
+function closeAdminPlayerDrawer() {
+  const layout = document.getElementById("adminPlayersSplitLayout");
+  const backdrop = document.getElementById("adminPlayerDrawerBackdrop");
+  const panel = document.getElementById("adminPlayerListPanel");
+
+  adminPlayerDrawerOpen = false;
+
+  layout?.classList.remove("drawer-open");
+  panel?.classList.remove("drawer-open");
+  backdrop?.classList.add("hidden");
+  document.getElementById("adminPlayerRailCurrent")?.setAttribute("aria-expanded", "false");
+}
+
+function toggleAdminPlayerDrawer() {
+  if (adminPlayerDrawerOpen) {
+    closeAdminPlayerDrawer();
+  } else {
+    openAdminPlayerDrawer();
+  }
+}
+
+function attachAdminPlayerDrawerEvents() {
+  if (adminPlayerDrawerEventsBound) return;
+
+  const railButton = document.getElementById("adminPlayerRailCurrent");
+  const backdrop = document.getElementById("adminPlayerDrawerBackdrop");
+
+  if (!railButton || !backdrop) return;
+
+  railButton.addEventListener("click", event => {
+    if (!isAdminPlayerMobileLayout()) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    toggleAdminPlayerDrawer();
+  });
+
+  backdrop.addEventListener("click", () => {
+    closeAdminPlayerDrawer();
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && adminPlayerDrawerOpen) {
+      closeAdminPlayerDrawer();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    updateAdminPlayerDrawerTopOffset();
+
+    if (!isAdminPlayerMobileLayout() && adminPlayerDrawerOpen) {
+      closeAdminPlayerDrawer();
+    }
+  });
+
+  adminPlayerDrawerEventsBound = true;
+}
+
+window.addEventListener("resize", () => {
+  updateAdminPlayerDrawerTopOffset();
+
+  if (!isAdminPlayerMobileLayout() && adminPlayerDrawerOpen) {
+    closeAdminPlayerDrawer();
+  }
+});
+
+
+/* ============================================================
  * CLEAR / EMPTY STATE
  * ============================================================ */
 
 function clearAdminPlayerDetailsView() {
+  adminPlayerDetailsRenderToken++;
   const detailsEl = document.getElementById("adminPlayerDetails");
   const miniGridWrapper = document.getElementById("adminPlayerGameMiniGrid");
   const galleryWrapper = document.getElementById("adminPlayerGalleryWrapper");
@@ -175,6 +510,10 @@ function clearAdminPlayerDetailsView() {
 
   currentAdminPlayerGalleryEntries = [];
   currentAdminPlayerGalleryIndex = 0;
+
+  currentAdminPlayerGallerySelectedChallengeId = null;
+  currentAdminPlayerGalleryPlayerId = null;
+  currentAdminPlayerGalleryGameId = null;
 }
 
 /* ============================================================
@@ -227,6 +566,7 @@ function renderAdminPlayersList() {
 
   if (!adminPlayers.length) {
     listEl.innerHTML = `<p>Keine Spieler gefunden.</p>`;
+    updateAdminPlayerRailLabel();
     return;
   }
 
@@ -299,43 +639,60 @@ function renderAdminPlayersList() {
       </div>
     `;
 
-    item.addEventListener("click", async () => {
-      selectedAdminPlayerId = Number(player.id);
+    item.addEventListener("click", async event => {
+  event.stopPropagation();
 
-      renderAdminPlayersList();
+  /*
+   * Im geschlossenen mobilen Zustand öffnet der erste Klick
+   * nur die breite Spielerliste. Er wählt noch keinen Spieler.
+   */
+  if (isAdminPlayerMobileLayout() && !adminPlayerDrawerOpen) {
+    openAdminPlayerDrawer();
+    return;
+  }
 
-      const freshPlayer = adminPlayers.find(
-        p => Number(p.id) === Number(selectedAdminPlayerId)
-      );
+  selectedAdminPlayerId = Number(player.id);
 
-      if (freshPlayer) {
-        await renderAdminPlayerDetails(freshPlayer);
-      } else {
-        clearAdminPlayerDetailsView();
-      }
-    });
+  renderAdminPlayersList();
+
+  const freshPlayer = adminPlayers.find(
+    p => Number(p.id) === Number(selectedAdminPlayerId)
+  );
+
+  if (freshPlayer) {
+    await renderAdminPlayerDetails(freshPlayer);
+  } else {
+    clearAdminPlayerDetailsView();
+  }
+
+  if (isAdminPlayerMobileLayout()) {
+    closeAdminPlayerDrawer();
+  }
+});
 
     listEl.appendChild(item);
   });
+
+  updateAdminPlayerRailLabel();
 }
 
 /* ============================================================
  * RECHTE DETAILANSICHT
  * ============================================================ */
 
-function renderAdminPlayerBaseDetails({ player, relevantGame, currentState, playerGamesText }) {
-  const displayName = player.display_name || player.username || "-";
-
+function renderAdminPlayerBaseDetails({
+  player,
+  relevantGame,
+  currentState,
+  playerGames,
+  globalActivityText,
+  globalActivityLog
+}) {
   return `
-    <div class="admin-details-grid">
+    <div class="admin-details-grid admin-player-details-grid">
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Name</div>
-        <div class="admin-detail-value">${displayName}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Username</div>
-        <div class="admin-detail-value">${player.username || "-"}</div>
+        <div class="admin-detail-label">ID</div>
+        <div class="admin-detail-value">${player.id}</div>
       </div>
 
       <div class="admin-detail-card">
@@ -355,26 +712,36 @@ function renderAdminPlayerBaseDetails({ player, relevantGame, currentState, play
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Player ID</div>
-        <div class="admin-detail-value">${player.id}</div>
+        <div class="admin-detail-label">Spielstände</div>
+        <div
+          id="adminPlayerStatesBtn"
+          class="admin-detail-value clickable"
+          title="Spielstände anzeigen"
+        >
+          ${playerGames.length} ${playerGames.length === 1 ? "Spiel" : "Spiele"}
+        </div>
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Erstellt am</div>
-        <div class="admin-detail-value">${formatAdminDateTime(player.created_at)}</div>
+        <div class="admin-detail-label">Zuletzt aktiv</div>
+        <div
+          id="adminPlayerGlobalActivityBtn"
+          class="admin-detail-value admin-player-activity-value ${globalActivityLog ? "clickable" : ""}"
+          title="${globalActivityLog ? "Logeintrag öffnen" : ""}"
+        >${globalActivityText}</div>
       </div>
 
-      <div class="admin-detail-card admin-detail-wide">
-        <div class="admin-detail-label">Spielstände vorhanden in</div>
-        <div class="admin-detail-value">${playerGamesText}</div>
+      <div class="admin-detail-card">
+        <div class="admin-detail-label">Erstellt</div>
+        <div class="admin-detail-value admin-player-date-value">${formatAdminDateTime(player.created_at)}</div>
       </div>
 
       ${!currentState ? `
-        <div class="admin-detail-card admin-detail-wide">
+        <div class="admin-detail-card admin-player-detail-full">
           <div class="admin-detail-label">Info</div>
-          <div class="admin-detail-value">
-            Für diesen Spieler gibt es im aktuell ausgewählten Spiel
-            <strong>${relevantGame?.name || "-"}</strong> noch keinen Spielstand.
+          <div class="admin-detail-value admin-player-info-value">
+            Im aktuell ausgewählten Spiel ${relevantGame?.name || "-"}
+            ist noch kein Spielstand vorhanden.
           </div>
         </div>
       ` : ""}
@@ -383,6 +750,14 @@ function renderAdminPlayerBaseDetails({ player, relevantGame, currentState, play
 }
 
 async function renderAdminPlayerDetails(player) {
+  const renderToken = ++adminPlayerDetailsRenderToken;
+  const requestedPlayerId = Number(player?.id);
+  const requestedGameId = Number(adminCurrentGame?.id ?? adminCurrentGameId);
+
+  const isStaleRender = () =>
+    renderToken !== adminPlayerDetailsRenderToken ||
+    Number(selectedAdminPlayerId) !== requestedPlayerId ||
+    Number(adminCurrentGame?.id ?? adminCurrentGameId) !== requestedGameId;
   const detailsEl = document.getElementById("adminPlayerDetails");
   const miniGridWrapper = document.getElementById("adminPlayerGameMiniGrid");
   const galleryWrapper = document.getElementById("adminPlayerGalleryWrapper");
@@ -399,36 +774,44 @@ async function renderAdminPlayerDetails(player) {
 
   const relevantGame = adminCurrentGame || null;
   const currentState = getStateForPlayerInAdminGame(player.id);
-
   const playerGames = getAdminGameStateGamesForPlayer(player.id);
-  const playerGamesText = playerGames.length
-    ? playerGames.map(game => game.name).join(", ")
-    : "-";
+
+  let globalActivityLog = null;
+  try {
+    globalActivityLog = await loadLastGlobalActivityLogForPlayer(player.id);
+  } catch (error) {
+    console.warn("Globale letzte Aktivität konnte nicht geladen werden:", error);
+  }
+
+  if (isStaleRender()) return;
+
+  const globalActivityText = globalActivityLog
+    ? formatAdminDateTime(globalActivityLog.created_at)
+    : "Noch keine Aktivität";
 
   if (!relevantGame || !currentState) {
     detailsEl.innerHTML = renderAdminPlayerBaseDetails({
       player,
       relevantGame,
       currentState: null,
-      playerGamesText
+      playerGames,
+      globalActivityText,
+      globalActivityLog
     });
 
     attachAdminPlayerAlwaysAvailableActions(player);
+    attachAdminPlayerStatesCard(player, playerGames);
+    attachAdminPlayerGlobalActivityCard(globalActivityLog);
 
     if (miniGridWrapper) miniGridWrapper.classList.add("hidden");
-    if (galleryWrapper) galleryWrapper.classList.add("hidden");
+    renderAdminPlayerGallery(player, relevantGame);
     if (completedWrapper) completedWrapper.classList.add("hidden");
-
-    if (actionBar) {
-      actionBar.classList.remove("hidden");
-    }
+    if (actionBar) actionBar.classList.remove("hidden");
 
     const resetGameBtn = document.getElementById("adminResetPlayerGameBtn");
     if (resetGameBtn) resetGameBtn.classList.add("hidden");
 
-    if (createStateBar) {
-      createStateBar.classList.remove("hidden");
-    }
+    if (createStateBar) createStateBar.classList.remove("hidden");
 
     const createStateBtn = document.getElementById("adminCreatePlayerStateBtn");
     if (createStateBtn) {
@@ -441,40 +824,34 @@ async function renderAdminPlayerDetails(player) {
   }
 
   let activeChallengeText = "-";
-
   if (currentState.active_challenge_id) {
     activeChallengeText = getChallengeTitleByIdAdmin(currentState.active_challenge_id);
   }
 
   const score = currentState.score ?? 0;
   const cooldownText = formatAdminCooldown(currentState.cooldown_until);
-
   const completedRows = getCompletedRowsForPlayerInGame(player.id, relevantGame.id);
   const firstSolverCount = getFirstSolverCountForPlayerInGame(player.id, relevantGame.id);
   const bingoCount = getBingoCountForPlayerInGame(player.id, relevantGame.id);
 
   let lastActivityLog = null;
-
   try {
     lastActivityLog = await loadLastActivityLogForPlayerInGame(player.id, relevantGame.id);
   } catch (error) {
-    console.warn("Letzte Aktivität konnte nicht geladen werden:", error);
+    console.warn("Letzte Aktivität im Spiel konnte nicht geladen werden:", error);
   }
+
+  if (isStaleRender()) return;
 
   const lastActivityText = lastActivityLog
     ? formatLastActivityShort(lastActivityLog)
     : "Noch keine Aktivität";
 
   detailsEl.innerHTML = `
-    <div class="admin-details-grid">
+    <div class="admin-details-grid admin-player-details-grid">
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Name</div>
-        <div class="admin-detail-value">${player.display_name || player.username || "-"}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Username</div>
-        <div class="admin-detail-value">${player.username || "-"}</div>
+        <div class="admin-detail-label">ID</div>
+        <div class="admin-detail-value">${player.id}</div>
       </div>
 
       <div class="admin-detail-card">
@@ -494,59 +871,52 @@ async function renderAdminPlayerDetails(player) {
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Player ID</div>
-        <div class="admin-detail-value">${player.id}</div>
+        <div class="admin-detail-label">Spielstände</div>
+        <div
+          id="adminPlayerStatesBtn"
+          class="admin-detail-value clickable"
+          title="Spielstände anzeigen"
+        >
+          ${playerGames.length} ${playerGames.length === 1 ? "Spiel" : "Spiele"}
+        </div>
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Erstellt am</div>
-        <div class="admin-detail-value">${formatAdminDateTime(player.created_at)}</div>
-      </div>
-
-      <div class="admin-detail-card admin-detail-wide">
-        <div class="admin-detail-label">Spielstände vorhanden in</div>
-        <div class="admin-detail-value">${playerGamesText}</div>
+        <div class="admin-detail-label">Zuletzt aktiv</div>
+        <div
+          id="adminPlayerGlobalActivityBtn"
+          class="admin-detail-value admin-player-activity-value ${globalActivityLog ? "clickable" : ""}"
+          title="${globalActivityLog ? "Logeintrag öffnen" : ""}"
+        >${globalActivityText}</div>
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Ausgewähltes Spiel</div>
-        <div class="admin-detail-value">${relevantGame?.name || "-"}</div>
+        <div class="admin-detail-label">Erstellt</div>
+        <div class="admin-detail-value admin-player-date-value">${formatAdminDateTime(player.created_at)}</div>
       </div>
 
       <div class="admin-detail-card">
         <div class="admin-detail-label">Score</div>
-        <div
-          id="adminEditScoreBtn"
-          class="admin-detail-value clickable"
-          title="Zum Bearbeiten klicken"
-        >
-          ${score}
-        </div>
+        <div id="adminEditScoreBtn" class="admin-detail-value clickable" title="Zum Bearbeiten klicken">${score}</div>
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Aktive Aufgabe</div>
-        <div class="admin-detail-value">${activeChallengeText}</div>
+        <div class="admin-detail-label">Aufgabe</div>
+        <div class="admin-detail-value" title="${activeChallengeText}">${activeChallengeText}</div>
       </div>
 
       <div class="admin-detail-card">
         <div class="admin-detail-label">Cooldown</div>
-        <div
-          id="adminEditCooldownBtn"
-          class="admin-detail-value clickable"
-          title="Zum Bearbeiten klicken"
-        >
-          ${cooldownText}
-        </div>
+        <div id="adminEditCooldownBtn" class="admin-detail-value clickable" title="Zum Bearbeiten klicken">${cooldownText}</div>
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Abgeschlossene Aufgaben</div>
+        <div class="admin-detail-label">Abgeschlossen</div>
         <div class="admin-detail-value">${completedRows.length}</div>
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">First Solver</div>
+        <div class="admin-detail-label">First</div>
         <div class="admin-detail-value">${firstSolverCount}</div>
       </div>
 
@@ -555,21 +925,26 @@ async function renderAdminPlayerDetails(player) {
         <div class="admin-detail-value">${bingoCount}</div>
       </div>
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Letzte Aktivität</div>
-        <div class="admin-detail-value">${lastActivityText}</div>
+      <div class="admin-detail-card admin-player-detail-full">
+        <div class="admin-detail-label">Letzte Aktivität im Spiel</div>
+        <div class="admin-detail-value admin-player-activity-value">${lastActivityText}</div>
       </div>
     </div>
   `;
 
   attachAdminPlayerAlwaysAvailableActions(player);
+  attachAdminPlayerStatesCard(player, playerGames);
+  attachAdminPlayerGlobalActivityCard(globalActivityLog);
   attachAdminPlayerGameActions(player, relevantGame);
+  attachAdminPlayerStatesCard(player, playerGames);
 
   if (actionBar) actionBar.classList.remove("hidden");
   if (createStateBar) createStateBar.classList.add("hidden");
 
   const resetGameBtn = document.getElementById("adminResetPlayerGameBtn");
   if (resetGameBtn) resetGameBtn.classList.remove("hidden");
+
+  if (isStaleRender()) return;
 
   renderAdminPlayerMiniGrid(player, relevantGame);
   renderAdminCompletedChallenges(player, relevantGame);
@@ -671,7 +1046,17 @@ function renderAdminPlayerMiniGrid(player, game) {
     challengeByPosition[Number(challenge.position)] = challenge;
   });
 
-  gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+  gridEl.classList.remove(
+    "grid-size-3",
+    "grid-size-4",
+    "grid-size-5",
+    "grid-size-6",
+    "grid-size-7"
+  );
+
+  gridEl.classList.add(`grid-size-${gridSize}`);
+  gridEl.style.gridTemplateColumns =
+    `repeat(${gridSize}, minmax(0, 1fr))`;
   gridEl.innerHTML = "";
 
   for (let position = 1; position <= expectedCount; position++) {
@@ -700,6 +1085,14 @@ function renderAdminPlayerMiniGrid(player, game) {
     cell.innerHTML = `
       <div class="admin-mini-cell-title">
         ${shortenTitle(challenge.title || String(position), 22)}
+      </div>
+
+      <div class="admin-mini-cell-points">
+        ${
+          challenge.points === null || challenge.points === undefined
+            ? "?"
+            : `${challenge.points}P`
+        }
       </div>
     `;
 
@@ -731,18 +1124,92 @@ function closeAdminPlayerChallengeModal() {
   selectedAdminPlayerChallengeContext = null;
 }
 
+/**
+ * Öffnet die zugehörige Aufnahme im globalen Galerie-Tab.
+ *
+ * Der Galerie-Tab wird zuerst aktiviert und nötigenfalls initialisiert.
+ * Anschließend werden bestehende Filter zurückgesetzt, damit der gesuchte
+ * Eintrag sicher Teil der sichtbaren Galerie ist, und der Viewer wird direkt
+ * auf das betreffende Bild gesetzt.
+ */
+async function openAdminPlayerChallengeImageInGallery(row) {
+  if (!row?.id) return;
+
+  closeAdminPlayerChallengeModal();
+
+  if (typeof activateAdminTabByName === "function") {
+    await activateAdminTabByName("grid");
+  } else {
+    document.querySelector('.admin-tab[data-tab="grid"]')?.click();
+  }
+
+  if (typeof initializeAdminGalleryTab === "function") {
+    await initializeAdminGalleryTab();
+  }
+
+  if (!Array.isArray(adminGalleryEntries)) return;
+
+  const entryId = `normal-${row.id}`;
+  const targetEntry = adminGalleryEntries.find(entry => entry.id === entryId);
+  if (!targetEntry) {
+    console.warn("Galeriebild für Player-Challenge nicht gefunden:", row.id);
+    return;
+  }
+
+  /*
+   * Alte Filter dürfen das direkt angesprungene Bild nicht ausblenden.
+   * Deshalb wird für den Sprung einmal die vollständige Galerie verwendet.
+   */
+  if (typeof resetAdminGalleryFilters === "function") {
+    resetAdminGalleryFilters();
+  } else {
+    adminGalleryFilteredEntries = adminGalleryEntries.slice();
+    if (typeof renderAdminGalleryFilterOptions === "function") {
+      renderAdminGalleryFilterOptions();
+    }
+    if (typeof renderAdminGalleryGrid === "function") {
+      renderAdminGalleryGrid();
+    }
+  }
+
+  adminGallerySelectedEntryId = entryId;
+  adminGallerySelectedIndex = adminGalleryFilteredEntries.findIndex(
+    entry => entry.id === entryId
+  );
+
+  if (adminGallerySelectedIndex < 0) {
+    adminGalleryFilteredEntries = adminGalleryEntries.slice();
+    adminGallerySelectedIndex = adminGalleryFilteredEntries.findIndex(
+      entry => entry.id === entryId
+    );
+  }
+
+  if (typeof openAdminGalleryViewer === "function") {
+    openAdminGalleryViewer();
+  }
+}
+
+/**
+ * Rendert das Info-Modal für ein einzelnes Feld im Spieler-Grid.
+ *
+ * Die Informationen unterscheiden bewusst zwischen bereits abgeschlossenem
+ * und noch offenem Feld. Bei offenen Feldern wird zusätzlich geprüft, ob die
+ * Aufgabe im Spiel global schon von jemandem gelöst wurde. Solange das nicht
+ * der Fall ist, werden die möglichen First-Solver-Punkte doppelt angezeigt.
+ */
 async function showAdminPlayerChallengeDetails(player, game, challenge) {
   if (!player || !game || !challenge) return;
 
   const titleEl = document.getElementById("adminPlayerChallengeModalTitle");
   const contentEl = document.getElementById("adminPlayerChallengeModalContent");
+  const actionsEl = document.getElementById("adminChallengeActions");
 
   const markBtn = document.getElementById("adminMarkChallengeCompletedBtn");
   const setActiveBtn = document.getElementById("adminSetChallengeActiveBtn");
   const setInactiveBtn = document.getElementById("adminSetChallengeInactiveBtn");
   const resetBtn = document.getElementById("adminResetChallengeBtn");
 
-  if (!titleEl || !contentEl || !markBtn || !setActiveBtn || !setInactiveBtn || !resetBtn) {
+  if (!titleEl || !contentEl || !actionsEl || !markBtn || !setActiveBtn || !setInactiveBtn || !resetBtn) {
     console.error("Admin Player Challenge Modal DOM fehlt.");
     return;
   }
@@ -750,6 +1217,28 @@ async function showAdminPlayerChallengeDetails(player, game, challenge) {
   const row = getPlayerChallengeRow(player.id, game.id, challenge.id);
   const isCompleted = row?.status === "completed";
   const isActive = row?.status === "active";
+
+  const isGloballyCompleted = adminPlayerChallenges.some(candidate =>
+    Number(candidate.game_id) === Number(game.id) &&
+    Number(candidate.challenge_id) === Number(challenge.id) &&
+    candidate.status === "completed"
+  );
+
+  const basePoints = Number(challenge.points) || 0;
+  const possiblePoints = isGloballyCompleted ? basePoints : basePoints * 2;
+
+  const statusText = isCompleted
+    ? "Bestanden"
+    : isActive
+      ? "Aktiv"
+      : "Nicht bestanden";
+
+  const statusClass = isCompleted
+    ? "completed"
+    : isActive
+      ? "active"
+      : "open";
+
   const imageUrl = row?.proof_image_path
     ? getPublicImageUrl(row.proof_image_path)
     : null;
@@ -764,49 +1253,113 @@ async function showAdminPlayerChallengeDetails(player, game, challenge) {
   titleEl.textContent = challenge.title || `Challenge ${challenge.position}`;
 
   contentEl.innerHTML = `
-    <p><strong>Status:</strong> ${
-      isCompleted ? "Bestanden" :
-      isActive ? "Aktiv" :
-      "Nicht bestanden"
-    }</p>
-
-    <div class="admin-challenge-meta">
-      <div class="admin-challenge-meta-row">
-        <strong>Position:</strong> ${challenge.position ?? "-"}
+    <div class="admin-challenge-info-list">
+      <div class="admin-challenge-info-row">
+        <span class="admin-challenge-info-label">Status</span>
+        <span class="admin-challenge-status ${statusClass}">${statusText}</span>
       </div>
 
-      <div class="admin-challenge-meta-row">
-        <strong>Abgeschlossen am:</strong> ${
-          row?.completed_at ? formatAdminDateTime(row.completed_at) : "-"
-        }
-      </div>
+      ${isCompleted ? `
+        <div class="admin-challenge-info-row">
+          <span class="admin-challenge-info-label">Abgeschlossen am</span>
+          <span class="admin-challenge-info-value">${
+            row?.completed_at ? formatAdminDateTime(row.completed_at) : "-"
+          }</span>
+        </div>
 
-      <div class="admin-challenge-meta-row">
-        <strong>Punkte:</strong> ${row?.points_awarded ?? 0}
-      </div>
+        <div class="admin-challenge-info-row">
+          <span class="admin-challenge-info-label">Punkte</span>
+          <span class="admin-challenge-info-value">${row?.points_awarded ?? 0}</span>
+        </div>
 
-      <div class="admin-challenge-meta-row">
-        <strong>First Solver:</strong> ${row?.was_first_solver ? "Ja" : "Nein"}
-      </div>
+        <div class="admin-challenge-info-row">
+          <span class="admin-challenge-info-label">First Solver</span>
+          <span class="admin-challenge-info-value">${row?.was_first_solver ? "Ja" : "Nein"}</span>
+        </div>
+      ` : `
+        <div class="admin-challenge-info-row">
+          <span class="admin-challenge-info-label">Mögliche Punkte</span>
+          <span class="admin-challenge-info-value admin-challenge-points-value">${possiblePoints}</span>
+        </div>
+
+        <div class="admin-challenge-info-row">
+          <span class="admin-challenge-info-label">Aufgabe bereits gelöst</span>
+          <span class="admin-challenge-info-value">${isGloballyCompleted ? "Ja" : "Nein"}</span>
+        </div>
+      `}
     </div>
 
-    ${imageUrl ? `<img src="${imageUrl}" class="admin-challenge-image" alt="Beweisfoto" />` : ""}
+    ${imageUrl ? `
+      <div
+        id="adminPlayerChallengeImageLink"
+        class="admin-challenge-image-frame"
+        role="button"
+        tabindex="0"
+        title="Bild in der Galerie öffnen"
+        aria-label="Bild in der Galerie öffnen"
+      >
+        <div class="admin-challenge-image-loading visible" aria-hidden="true">
+          <div class="admin-challenge-image-spinner"></div>
+        </div>
+        <img
+          id="adminPlayerChallengeImage"
+          src="${imageUrl}"
+          class="admin-challenge-image loading"
+          alt="Beweisfoto zu ${String(challenge.title || "Aufgabe").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;")}"
+        />
+      </div>
+    ` : ""}
   `;
 
-  markBtn.style.display = "none";
-  setActiveBtn.style.display = "none";
-  setInactiveBtn.style.display = "none";
-  resetBtn.style.display = "none";
+  if (imageUrl) {
+    const imageLink = document.getElementById("adminPlayerChallengeImageLink");
+    const imageEl = document.getElementById("adminPlayerChallengeImage");
+    const loadingEl = imageLink?.querySelector(".admin-challenge-image-loading");
+
+    const finishImageLoading = () => {
+      imageEl?.classList.remove("loading");
+      loadingEl?.classList.remove("visible");
+    };
+
+    if (imageEl?.complete) {
+      finishImageLoading();
+    } else {
+      imageEl?.addEventListener("load", finishImageLoading, { once: true });
+      imageEl?.addEventListener("error", finishImageLoading, { once: true });
+    }
+
+    const openImageInGallery = async () => {
+      await openAdminPlayerChallengeImageInGallery(row);
+    };
+
+    imageLink?.addEventListener("click", openImageInGallery);
+    imageLink?.addEventListener("keydown", async event => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+
+      event.preventDefault();
+      await openImageInGallery();
+    });
+  }
+
+  /* Zuerst alle Aktionen ausblenden, danach nur sinnvolle freigeben. */
+  [markBtn, setActiveBtn, setInactiveBtn, resetBtn].forEach(button => {
+    button.style.display = "none";
+  });
 
   if (isCompleted) {
-    resetBtn.style.display = "inline-block";
+    resetBtn.style.display = "inline-flex";
   } else if (isActive) {
-    setInactiveBtn.style.display = "inline-block";
-    markBtn.style.display = "inline-block";
+    setInactiveBtn.style.display = "inline-flex";
+    markBtn.style.display = "inline-flex";
   } else {
-    setActiveBtn.style.display = "inline-block";
-    markBtn.style.display = "inline-block";
+    setActiveBtn.style.display = "inline-flex";
+    markBtn.style.display = "inline-flex";
   }
+
+  const visibleButtons = [markBtn, setActiveBtn, setInactiveBtn, resetBtn]
+    .filter(button => button.style.display !== "none");
+
+  actionsEl.classList.toggle("two-actions", visibleButtons.length === 2);
 
   openAdminPlayerChallengeModal();
 }
@@ -878,28 +1431,43 @@ function renderAdminCompletedChallenges(player, game) {
     return;
   }
 
-  let html = `<div class="admin-completion-list">`;
+  let html = `<div class="admin-completion-list admin-player-completion-list">`;
 
-  combined.forEach(entry => {
-    const clickable = entry.proofImagePath ? "clickable" : "";
+combined.forEach((entry, index) => {
+  const clickable = entry.proofImagePath ? "clickable" : "";
 
-    html += `
-      <div class="admin-completion-row">
-        <div class="admin-completion-left">
-          <div
-            class="admin-completion-name ${clickable}"
-            ${entry.challengeId ? `data-challenge-id="${entry.challengeId}"` : ""}
-          >
-            ${entry.type === "bingo" ? "🏆 " : ""}${entry.title}
-            ${entry.wasFirst ? `<span class="admin-completion-star">⭐</span>` : ""}
-          </div>
-          <div class="admin-completion-meta">
-            ${formatAdminDateTime(entry.completedAt)}
-          </div>
+  /*
+   * combined ist nach Datum absteigend sortiert.
+   * Dadurch erhält der älteste Eintrag unten die Nummer 1
+   * und der neueste Eintrag oben die höchste Nummer.
+   */
+  const sequenceNumber = combined.length - index;
+
+  html += `
+      <div
+        class="admin-completion-row admin-player-completion-row"
+        ${entry.challengeId ? `data-challenge-id="${entry.challengeId}"` : ""}
+      >
+        <div class="admin-player-completion-number">
+          ${sequenceNumber}
         </div>
 
-        <div class="admin-completion-right">
-          <div class="admin-completion-points">${entry.points}P</div>
+        <div
+          class="admin-completion-name admin-player-completion-title ${clickable}"
+          ${entry.challengeId ? `data-challenge-id="${entry.challengeId}"` : ""}
+          title="${entry.title}"
+        >
+          ${entry.type === "bingo" ? "🏆 " : ""}
+          <span class="admin-player-completion-title-text">${entry.title}</span>
+          ${entry.wasFirst ? `<span class="admin-completion-star">⭐</span>` : ""}
+        </div>
+
+        <div class="admin-completion-meta admin-player-completion-date">
+          ${formatAdminDateTime(entry.completedAt)}
+        </div>
+
+        <div class="admin-completion-points admin-player-completion-points">
+          ${entry.points}P
         </div>
       </div>
     `;
@@ -923,7 +1491,7 @@ function renderAdminCompletedChallenges(player, game) {
  * GALERIE
  * ============================================================ */
 
-function buildAdminGalleryEntries(playerId, gameId) {
+function buildAdminPlayerGalleryEntries(playerId, gameId) {
   return getCompletedRowsForPlayerInGame(playerId, gameId)
     .filter(row => row.proof_image_path)
     .map(row => {
@@ -949,66 +1517,251 @@ function renderAdminPlayerGallery(player, game) {
   if (!player || !game) {
     wrapperEl.classList.add("hidden");
     galleryEl.innerHTML = "";
+
     currentAdminPlayerGalleryEntries = [];
     currentAdminPlayerGalleryIndex = 0;
+    currentAdminPlayerGallerySelectedChallengeId = null;
+    currentAdminPlayerGalleryPlayerId = null;
+    currentAdminPlayerGalleryGameId = null;
+
     return;
   }
 
-  currentAdminPlayerGalleryEntries = buildAdminGalleryEntries(player.id, game.id);
-  currentAdminPlayerGalleryIndex = 0;
+  const playerChanged =
+    Number(currentAdminPlayerGalleryPlayerId) !== Number(player.id);
+
+  const gameChanged =
+    Number(currentAdminPlayerGalleryGameId) !== Number(game.id);
+
+  /*
+   * Bei einem echten Spieler- oder Spielwechsel
+   * darf die alte Bildauswahl nicht übernommen werden.
+   */
+  if (playerChanged || gameChanged) {
+    currentAdminPlayerGallerySelectedChallengeId = null;
+    currentAdminPlayerGalleryIndex = 0;
+  }
+
+  currentAdminPlayerGalleryPlayerId = player.id;
+  currentAdminPlayerGalleryGameId = game.id;
+
+  currentAdminPlayerGalleryEntries = buildAdminPlayerGalleryEntries(
+    player.id,
+    game.id
+  );
 
   if (!currentAdminPlayerGalleryEntries.length) {
     wrapperEl.classList.remove("hidden");
-    galleryEl.innerHTML = `<p class="admin-details-empty">Keine Bilder im relevanten Spiel vorhanden.</p>`;
+    const playerName = player.display_name || player.username || `Spieler ${player.id}`;
+    const gameName = game.name || `Spiel ${game.id}`;
+
+    galleryEl.innerHTML = `
+      <div class="admin-player-gallery-frame admin-player-gallery-empty">
+        ${playerName} hat im Spiel „${gameName}“ noch keine Bilder hochgeladen.
+      </div>
+    `;
+
+    currentAdminPlayerGalleryIndex = 0;
+    currentAdminPlayerGallerySelectedChallengeId = null;
     return;
   }
 
+  /*
+   * Nach einem Polling-Refresh wieder dasselbe Bild auswählen.
+   */
+  if (currentAdminPlayerGallerySelectedChallengeId !== null) {
+    const preservedIndex = currentAdminPlayerGalleryEntries.findIndex(
+      entry =>
+        Number(entry.challengeId) ===
+        Number(currentAdminPlayerGallerySelectedChallengeId)
+    );
+
+    currentAdminPlayerGalleryIndex =
+      preservedIndex >= 0 ? preservedIndex : 0;
+  } else {
+    currentAdminPlayerGalleryIndex = 0;
+  }
+
+  const selectedEntry =
+    currentAdminPlayerGalleryEntries[currentAdminPlayerGalleryIndex];
+
+  currentAdminPlayerGallerySelectedChallengeId =
+    selectedEntry?.challengeId ?? null;
+
   wrapperEl.classList.remove("hidden");
-  renderAdminGalleryCurrent();
+  renderAdminPlayerGalleryCurrent();
 }
 
-function renderAdminGalleryCurrent() {
+function renderAdminPlayerGalleryCurrent() {
   const galleryEl = document.getElementById("adminPlayerGallery");
   if (!galleryEl) return;
 
   if (!currentAdminPlayerGalleryEntries.length) {
-    galleryEl.innerHTML = `<p class="admin-details-empty">Keine Bilder vorhanden.</p>`;
+    galleryEl.innerHTML = `
+      <div class="admin-player-gallery-frame admin-player-gallery-empty">
+        Keine Bilder vorhanden.
+      </div>
+    `;
     return;
   }
 
-  const entry = currentAdminPlayerGalleryEntries[currentAdminPlayerGalleryIndex];
+  const entry =
+    currentAdminPlayerGalleryEntries[currentAdminPlayerGalleryIndex];
+
   const imageUrl = getPublicImageUrl(entry.proofImagePath);
 
-  galleryEl.innerHTML = `
-    <div class="admin-gallery-caption">
-      <strong>${entry.challengeTitle}</strong>
-      <span class="admin-gallery-time">(${formatAdminDateTime(entry.completedAt)})</span>
-    </div>
+  /*
+   * Grundstruktur nur beim ersten Rendern aufbauen.
+   * Beim Weiterklicken werden danach nur Bild und Beschriftung geändert.
+   */
+  let frame = galleryEl.querySelector(".admin-player-gallery-frame");
 
-    <div class="admin-gallery-image-container">
-      ${currentAdminPlayerGalleryIndex > 0 ? `<div class="admin-gallery-arrow left" id="adminGalleryPrevBtn">‹</div>` : ""}
-      <img src="${imageUrl}" class="admin-gallery-image" alt="Beweisfoto" />
-      ${currentAdminPlayerGalleryIndex < currentAdminPlayerGalleryEntries.length - 1 ? `<div class="admin-gallery-arrow right" id="adminGalleryNextBtn">›</div>` : ""}
-    </div>
-  `;
+  /*
+   * Ein zuvor angezeigter Leerzustand besitzt ebenfalls die Frame-Klasse,
+   * enthält aber noch keine Bild-, Caption- oder Pfeilelemente. Beim Wechsel
+   * zu einem Spieler mit Bildern muss die Galerie deshalb vollständig neu
+   * aufgebaut werden.
+   */
+  const needsGalleryStructure =
+    !frame ||
+    frame.classList.contains("admin-player-gallery-empty") ||
+    !galleryEl.querySelector("#adminPlayerGalleryImage") ||
+    !galleryEl.querySelector("#adminPlayerGalleryCaption");
 
-  document.getElementById("adminGalleryPrevBtn")?.addEventListener("click", () => {
-    if (currentAdminPlayerGalleryIndex > 0) {
-      currentAdminPlayerGalleryIndex--;
-      renderAdminGalleryCurrent();
-    }
-  });
+  if (needsGalleryStructure) {
+    galleryEl.innerHTML = `
+      <div class="admin-player-gallery-frame">
+        <div class="admin-player-gallery-loading" aria-hidden="true">
+          <div class="admin-player-gallery-spinner"></div>
+        </div>
 
-  document.getElementById("adminGalleryNextBtn")?.addEventListener("click", () => {
-    if (currentAdminPlayerGalleryIndex < currentAdminPlayerGalleryEntries.length - 1) {
-      currentAdminPlayerGalleryIndex++;
-      renderAdminGalleryCurrent();
-    }
-  });
+        <img
+          id="adminPlayerGalleryImage"
+          class="admin-player-gallery-image"
+          alt="Beweisfoto"
+        />
+
+        <div
+          id="adminPlayerGalleryCaption"
+          class="admin-player-gallery-caption"
+        ></div>
+
+        <button
+          id="adminPlayerGalleryPrevBtn"
+          class="admin-player-gallery-arrow admin-player-gallery-arrow-left"
+          type="button"
+          aria-label="Vorheriges Bild"
+        >
+          ‹
+        </button>
+
+        <button
+          id="adminPlayerGalleryNextBtn"
+          class="admin-player-gallery-arrow admin-player-gallery-arrow-right"
+          type="button"
+          aria-label="Nächstes Bild"
+        >
+          ›
+        </button>
+      </div>
+    `;
+
+    frame = galleryEl.querySelector(".admin-player-gallery-frame");
+
+    document
+      .getElementById("adminPlayerGalleryPrevBtn")
+      ?.addEventListener("click", () => {
+        if (currentAdminPlayerGalleryIndex <= 0) return;
+
+        currentAdminPlayerGalleryIndex--;
+
+        currentAdminPlayerGallerySelectedChallengeId =
+          currentAdminPlayerGalleryEntries[
+            currentAdminPlayerGalleryIndex
+          ]?.challengeId ?? null;
+
+        renderAdminPlayerGalleryCurrent();
+      });
+
+    document
+      .getElementById("adminPlayerGalleryNextBtn")
+      ?.addEventListener("click", () => {
+        if (
+          currentAdminPlayerGalleryIndex >=
+          currentAdminPlayerGalleryEntries.length - 1
+        ) {
+          return;
+        }
+
+        currentAdminPlayerGalleryIndex++;
+
+        currentAdminPlayerGallerySelectedChallengeId =
+          currentAdminPlayerGalleryEntries[
+            currentAdminPlayerGalleryIndex
+          ]?.challengeId ?? null;
+
+        renderAdminPlayerGalleryCurrent();
+      });
+  }
+
+  const imageEl = document.getElementById("adminPlayerGalleryImage");
+  const captionEl = document.getElementById("adminPlayerGalleryCaption");
+  const prevBtn = document.getElementById("adminPlayerGalleryPrevBtn");
+  const nextBtn = document.getElementById("adminPlayerGalleryNextBtn");
+  const loadingEl = frame?.querySelector(".admin-player-gallery-loading");
+
+  if (!imageEl || !captionEl || !prevBtn || !nextBtn || !loadingEl) {
+    return;
+  }
+
+  captionEl.textContent = entry.challengeTitle || "Aufgabe";
+
+  prevBtn.classList.toggle(
+    "hidden",
+    currentAdminPlayerGalleryIndex <= 0
+  );
+
+  nextBtn.classList.toggle(
+    "hidden",
+    currentAdminPlayerGalleryIndex >=
+      currentAdminPlayerGalleryEntries.length - 1
+  );
+
+  loadingEl.classList.add("visible");
+  imageEl.classList.add("loading");
+
+  const nextImage = new Image();
+
+  nextImage.onload = () => {
+    imageEl.src = imageUrl;
+    imageEl.alt = entry.challengeTitle || "Beweisfoto";
+
+    requestAnimationFrame(() => {
+      imageEl.classList.remove("loading");
+      loadingEl.classList.remove("visible");
+    });
+  };
+
+  nextImage.onerror = () => {
+    imageEl.removeAttribute("src");
+    imageEl.alt = "Bild konnte nicht geladen werden";
+
+    imageEl.classList.remove("loading");
+    loadingEl.classList.remove("visible");
+  };
+
+  nextImage.src = imageUrl;
 }
 
 function setAdminGalleryToChallenge(playerId, gameId, challengeId) {
-  currentAdminPlayerGalleryEntries = buildAdminGalleryEntries(playerId, gameId);
+  currentAdminPlayerGalleryPlayerId = playerId;
+  currentAdminPlayerGalleryGameId = gameId;
+  currentAdminPlayerGallerySelectedChallengeId = challengeId;
+
+  currentAdminPlayerGalleryEntries = buildAdminPlayerGalleryEntries(
+    playerId,
+    gameId
+  );
 
   const index = currentAdminPlayerGalleryEntries.findIndex(
     entry => Number(entry.challengeId) === Number(challengeId)
@@ -1016,6 +1769,6 @@ function setAdminGalleryToChallenge(playerId, gameId, challengeId) {
 
   if (index >= 0) {
     currentAdminPlayerGalleryIndex = index;
-    renderAdminGalleryCurrent();
+    renderAdminPlayerGalleryCurrent();
   }
 }

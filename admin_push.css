@@ -1,0 +1,212 @@
+/* ============================================================
+   admin_push.css
+   Push-Formular, Einstellungen und Historie.
+   Aus der bisherigen admin.css logisch ausgelagert.
+   Noch keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* PUSH TAB */
+/* ===================== */
+
+.admin-push-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.admin-push-wide-panel {
+  grid-column: 1 / -1;
+}
+
+.admin-push-panel label {
+  display: block;
+  margin-bottom: 6px;
+  color: #cbd5e1;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.admin-push-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.admin-push-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-push-panel textarea,
+.admin-push-panel input,
+.admin-push-select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #374151;
+  background: #111827;
+  color: white;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.admin-push-panel textarea:focus,
+.admin-push-panel input:focus,
+.admin-push-select:focus {
+  outline: 2px solid #3b82f6;
+}
+
+.admin-push-preview-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  background: #111827;
+  color: #d1d5db;
+  flex-wrap: wrap;
+}
+
+.admin-push-status {
+  min-height: 1.2em;
+  margin: 12px 0 0;
+  color: #cbd5e1;
+}
+
+.admin-push-status.success {
+  color: #86efac;
+}
+
+.admin-push-status.error {
+  color: #fca5a5;
+}
+
+.admin-push-settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-push-setting-card {
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #1f2d42;
+  cursor: pointer;
+}
+
+.admin-push-setting-card input {
+  width: auto;
+  margin-top: 3px;
+}
+
+.admin-push-setting-title {
+  color: white;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.admin-push-setting-description {
+  color: #9ca3af;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.admin-push-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-push-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-push-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  background: #1f2d42;
+}
+
+.admin-push-history-row.failed {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.admin-push-history-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.admin-push-history-message {
+  color: #d1d5db;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.admin-push-history-error {
+  margin-top: 8px;
+  color: #fca5a5;
+  font-size: 0.9rem;
+}
+
+.admin-push-history-meta {
+  color: #9ca3af;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.admin-push-history-id {
+  word-break: break-all;
+}
+
+
+
+/* Push-Historie: Löschbutton */
+.admin-push-history-row {
+  position: relative;
+}
+
+.admin-push-history-delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-push-history-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.24);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.admin-push-history-meta {
+  padding-right: 38px;
+}

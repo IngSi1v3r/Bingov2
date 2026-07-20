@@ -1,0 +1,634 @@
+/* ============================================================
+   admin_responsive.css
+   Saemtliche Responsive-Anpassungen des Adminpanels.
+   ============================================================ */
+
+
+@media (max-width: 980px) {
+  .admin-split-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+@media (max-width: 520px) {
+  body {
+    padding: 14px;
+  }
+
+  .admin-sticky-header {
+  width: calc(100% - 28px);
+  }
+ 
+  .admin-tab-content h2 {
+    font-size: 1.6rem;
+  }
+
+  .header-card h1 {
+    font-size: 1.7rem;
+  }
+}
+
+
+@media (max-width: 700px) {
+  /* Alte, allgemeine Challenge-Karten mobil weiterhin untereinander.
+     Das neu strukturierte Aufgaben-Detailmodal bleibt bewusst dreispaltig. */
+  .admin-game-challenge-cards:not(.admin-game-challenge-detail-grid) {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-game-challenge-detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+@media (max-width: 900px) {
+  .admin-dashboard-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-current-game-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-game-grid {
+    max-width: 260px;
+  }
+}
+
+
+@media (max-width: 980px) {
+  .admin-push-layout,
+  .admin-push-history-row,
+  .admin-push-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ============================================================
+   GALLERY RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 700px) {
+  .admin-gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .admin-gallery-meta-row {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .admin-gallery-meta-label {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+/* ============================================================
+   STICKY ADMIN HEADER RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 600px) {
+  .admin-sticky-header {
+    margin-bottom: 12px;
+  }
+
+  .admin-toolbar {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .admin-toolbar-btn {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  .admin-user-btn {
+    max-width: 150px;
+  }
+
+  .admin-tabs {
+    gap: 6px;
+    padding-bottom: 7px;
+  }
+
+  .admin-tab {
+    padding: 9px 13px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-user-btn {
+    max-width: 125px;
+  }
+
+  .admin-toolbar-icon {
+    display: none;
+  }
+}
+
+/* ============================================================
+   GAMES DETAILS – MOBILE 3 COLUMNS
+   ============================================================ */
+
+@media (max-width: 980px) {
+  #adminGameDetails .admin-game-details-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  #adminGameDetails .admin-game-details-grid {
+    gap: 6px;
+  }
+
+  #adminGameDetails .admin-game-details-grid .admin-detail-card {
+    padding: 8px 7px;
+  }
+
+  #adminGameDetails .admin-game-details-grid .admin-detail-label {
+    font-size: 0.64rem;
+  }
+
+  #adminGameDetails .admin-game-details-grid .admin-detail-value {
+    font-size: 0.84rem;
+  }
+}
+
+/* ============================================================
+   ADMIN GAME GRID RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 760px) {
+  #adminGameGrid {
+    gap: 5px;
+  }
+
+  #adminGameGrid .admin-game-grid-cell {
+    padding: 4px;
+    border-radius: 7px;
+  }
+
+  .admin-bingo-board-main,
+.admin-bingo-board-bottom {
+    grid-template-columns:minmax(0,1fr) 24px;
+}
+
+.admin-bingo-board-top{
+    grid-template-columns:minmax(0,1fr) 24px;
+}
+
+  .admin-bingo-line-indicator{
+    width:20px;
+    height:20px;
+
+    padding:1px;
+
+    font-size:.45rem;
+    border-radius:5px;
+}
+.admin-bingo-row-indicators,
+.admin-bingo-column-indicators{
+    gap:3px;
+}
+
+#adminGameGrid{
+    gap:3px;
+}
+}
+/* ============================================================
+   PLAYER DETAILS – MOBILE 3 COLUMNS
+   ============================================================ */
+
+@media (max-width: 980px) {
+  #adminPlayerDetails .admin-player-details-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Highlight a log opened from player details */
+.admin-log-row-highlight {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  background: rgba(59, 130, 246, 0.16);
+  transition: background 0.25s ease, outline-color 0.25s ease;
+}
+
+
+/* ============================================================
+   PLAYER PROGRESS GRID RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 760px) {
+  #adminPlayerMiniGrid {
+    gap: 3px;
+  }
+
+  #adminPlayerMiniGrid .admin-mini-cell {
+    padding: 3px;
+    border-radius: 7px;
+  }
+}
+
+
+/* ============================================================
+   PLAYER COMPLETION LIST RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 520px) {
+  .admin-player-completion-row {
+    grid-template-columns:
+      18px
+      minmax(0, 1fr)
+      auto
+      auto;
+
+    gap: 5px;
+    padding: 6px;
+  }
+
+  .admin-player-completion-number {
+    font-size: 0.62rem;
+  }
+
+  .admin-player-completion-title {
+    font-size: 0.7rem;
+  }
+
+  .admin-player-completion-date {
+    font-size: 0.58rem;
+  }
+
+  .admin-player-completion-points {
+    font-size: 0.68rem;
+  }
+}
+
+/* ============================================================
+   PLAYER GALLERY RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 760px) {
+  .admin-player-gallery-frame {
+    height: 300px;
+    border-radius: 10px;
+  }
+
+  .admin-player-gallery-caption {
+    right: 44px;
+    bottom: 7px;
+    left: 7px;
+
+    max-width: calc(100% - 58px);
+    padding: 5px 7px;
+
+    font-size: 0.7rem;
+  }
+
+  .admin-player-gallery-arrow {
+    width: 30px;
+    height: 42px;
+
+    font-size: 1.7rem;
+    border-radius: 7px;
+  }
+
+  .admin-player-gallery-arrow-left {
+    left: 7px;
+  }
+
+  .admin-player-gallery-arrow-right {
+    right: 7px;
+  }
+}
+
+/* ============================================================
+   GALLERY GRID – MOBILE 3 COLUMNS
+   ============================================================ */
+
+@media (max-width: 700px) {
+  #adminGalleryGrid.admin-gallery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  #adminGalleryGrid.admin-gallery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+}
+
+/* ============================================================
+   GALLERY VIEWER FIXED SIZE
+   ============================================================ */
+
+@media (max-width: 700px) {
+  .admin-gallery-viewer-image-wrap {
+    height: 52vh;
+    min-height: 280px;
+    max-height: 440px;
+
+    margin-bottom: 10px;
+    border-radius: 10px;
+  }
+}
+
+/* ============================================================
+   LOGS TAB RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 520px) {
+  .admin-logs-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .admin-logs-filter-grid .admin-detail-card {
+    padding: 8px 7px;
+  }
+
+  .admin-logs-filter-grid .admin-detail-label {
+    font-size: 0.64rem;
+  }
+
+  .admin-logs-select {
+    padding: 7px;
+    font-size: 0.72rem;
+  }
+
+  .admin-logs-controls {
+    gap: 8px;
+    margin: 8px 0 10px;
+  }
+
+  .admin-logs-controls button {
+    padding: 8px 10px;
+    font-size: 0.74rem;
+  }
+
+  .admin-logs-results-info {
+    font-size: 0.68rem;
+  }
+
+  .admin-log-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 7px;
+    padding: 6px 7px;
+  }
+
+  .admin-log-main {
+    font-size: 0.68rem;
+    line-height: 1.22;
+  }
+
+  .admin-log-time {
+    font-size: 0.56rem;
+  }
+
+  .admin-log-push-btn {
+    width: 22px;
+    height: 22px;
+  }
+
+  .admin-log-push-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+
+/* ============================================================
+   LIVE TAB RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 980px) {
+  #adminLiveGlobalStatsWrapper .admin-live-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  #adminLiveGlobalStatsWrapper .admin-live-stats-grid {
+    gap: 6px;
+  }
+
+  #adminLiveGlobalStatsWrapper .admin-detail-card {
+    padding: 8px 7px;
+  }
+
+  #adminLiveGlobalStatsWrapper .admin-detail-label {
+    font-size: 0.62rem;
+  }
+
+  #adminLiveGlobalStatsWrapper .admin-detail-value {
+    font-size: 0.82rem;
+  }
+
+  .admin-live-filter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-live-filter-bar {
+    justify-content: space-between;
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  .admin-live-filter-bar label {
+    font-size: 0.72rem;
+  }
+
+  .admin-live-scope-toggle {
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 9px;
+    font-size: 0.74rem;
+  }
+
+  .admin-live-top-actions {
+    gap: 6px;
+  }
+
+  .admin-live-top-actions button {
+    padding: 8px 9px;
+    font-size: 0.74rem;
+  }
+}
+
+/* ============================================================
+   LIVE TAB REFINEMENTS
+   ============================================================ */
+
+@media (max-width: 760px) {
+  .admin-live-top-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .admin-live-top-actions > button {
+    padding: 8px 5px;
+    font-size: 0.66rem;
+  }
+
+  .admin-live-details-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .admin-live-details-grid .admin-detail-card {
+    padding: 8px 7px;
+  }
+
+  .admin-live-details-grid .admin-detail-label {
+    font-size: 0.62rem;
+  }
+
+  .admin-live-details-grid .admin-detail-value {
+    font-size: 0.75rem;
+  }
+}
+
+/* ============================================================
+   DASHBOARD OVERHAUL RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 760px) {
+  .admin-dashboard-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .admin-dashboard-stat-card {
+    padding: 8px 6px;
+  }
+
+  .admin-dashboard-stat-card .admin-detail-label {
+    font-size: 0.6rem;
+  }
+
+  .admin-dashboard-stat-card .admin-detail-value {
+    font-size: 0.82rem;
+  }
+
+  .admin-dashboard-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .admin-dashboard-section {
+    padding: 8px;
+  }
+
+  .admin-dashboard-game-grid {
+    width: min(100%, 180px);
+    gap: 2px;
+  }
+
+  .admin-dashboard-game-cell {
+    border-radius: 3px;
+  }
+
+  .admin-dashboard-row {
+    gap: 5px;
+    padding: 6px;
+  }
+
+  .admin-dashboard-row-title {
+    font-size: 0.66rem;
+  }
+
+  .admin-dashboard-row-right,
+  .admin-dashboard-rank {
+    font-size: 0.6rem;
+  }
+
+  .admin-dashboard-row-meta {
+    font-size: 0.55rem;
+  }
+
+  .admin-dashboard-settings-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-dashboard-layout {
+    gap: 9px;
+  }
+
+  .admin-dashboard-overview-grid {
+    gap: 6px;
+  }
+
+  .admin-dashboard-section-label {
+    margin-bottom: 5px;
+    font-size: 0.62rem;
+  }
+
+  .admin-dashboard-game-grid {
+    width: min(100%, 150px);
+  }
+
+  .admin-dashboard-settings-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ============================================================
+   DASHBOARD SETTINGS RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 520px) {
+  .admin-dashboard-polling-buttons {
+    gap: 5px;
+  }
+
+  .admin-dashboard-polling-buttons button {
+    padding: 7px 3px;
+    font-size: 0.62rem;
+  }
+
+  .admin-dashboard-access-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .admin-dashboard-access-card {
+    min-height: 52px;
+    padding: 7px 6px;
+  }
+
+  .admin-dashboard-access-label {
+    font-size: 0.58rem;
+  }
+
+  .admin-dashboard-access-card strong {
+    font-size: 0.68rem;
+  }
+
+  .admin-dashboard-polling-info-grid {
+    gap: 5px;
+  }
+}

@@ -1,0 +1,408 @@
+/* ============================================================
+   admin_live.css
+   Live-Challenge-Tab und dessen Komponenten.
+   Aus der bisherigen admin.css logisch ausgelagert.
+   Noch keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* LIVE TAB */
+/* ===================== */
+
+.admin-live-proof-image {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  background: #0f172a;
+}
+
+.admin-live-status-active {
+  color: #86efac;
+}
+
+.admin-live-status-expired {
+  color: #fca5a5;
+}
+
+.admin-live-status-completed {
+  color: #93c5fd;
+}
+
+.admin-live-row-dismissed {
+  opacity: 0.58;
+}
+
+.admin-live-name-dismissed {
+  color: #9ca3af;
+}
+
+.admin-live-end-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: bold;
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+}
+
+.admin-live-time-row {
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.admin-live-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-live-filter-bar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+#adminResetPlayerPasswordBtn {
+  background: #1f2937;
+  border: 1px solid #4b5563;
+  color: white;
+}
+
+#adminResetPlayerPasswordBtn:hover {
+  background: #374151;
+}
+
+#adminResetPlayerGameBtn {
+  background: #7c3aed;
+}
+
+#adminResetPlayerGameBtn:hover {
+  background: #6d28d9;
+}
+
+
+/* ============================================================
+   LIVE COMPACT OVERVIEW
+   ============================================================ */
+
+.admin-live-top-actions {
+  margin: 0 0 10px;
+}
+
+#adminLiveGlobalStatsWrapper {
+  margin-bottom: 10px;
+}
+
+.admin-live-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-live-stats-grid .admin-detail-card {
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.admin-live-stats-grid .admin-detail-label {
+  margin-bottom: 2px;
+  font-size: 0.7rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.admin-live-stats-grid .admin-detail-value {
+  overflow: hidden;
+  font-size: 0.94rem;
+  font-weight: 750;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-live-stats-grid .admin-detail-value.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.45);
+}
+
+.admin-live-active-games-card {
+  grid-column: 1 / -1;
+}
+
+.admin-live-filter-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.admin-live-filter-bar {
+  margin: 0;
+  padding: 8px 10px;
+}
+
+.admin-live-scope-toggle {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.admin-live-layout {
+  position: relative;
+}
+
+.admin-live-list-panel,
+.admin-live-detail-panel {
+  min-width: 0;
+}
+
+.admin-live-rail-current,
+.admin-live-drawer-backdrop {
+  display: none;
+}
+
+.admin-live-active-games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-live-active-game-item {
+  width: 100%;
+  padding: 10px 12px;
+  color: white;
+  text-align: left;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.admin-live-active-game-item:hover {
+  background: #24364f;
+  border-color: #4b5563;
+}
+
+/* ============================================================
+   MOBILE LIVE RAIL
+   ============================================================ */
+
+@media (max-width: 760px) {
+  #adminLiveSplitLayout {
+    position: static;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  #adminLiveSplitLayout .admin-live-detail-panel {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 0 0 0 34px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  #adminLiveListPanel {
+    position: fixed;
+    top: calc(var(--admin-live-drawer-top, 100px) + 6px);
+    bottom: 6px;
+    left: 6px;
+    z-index: 2100;
+    display: block;
+    width: 28px;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    cursor: pointer;
+  }
+
+  #adminLiveListPanel:not(.drawer-open) .admin-live-drawer-list,
+  #adminLiveListPanel:not(.drawer-open) #adminLiveList {
+    display: none !important;
+  }
+
+  #adminLiveListPanel:not(.drawer-open) .admin-live-rail-current {
+    appearance: none;
+    -webkit-appearance: none;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 10px 3px;
+    color: white;
+    font-family: inherit;
+    background: #1f2d42;
+    border: 1px solid #334155;
+    border-radius: 9px;
+    box-shadow:
+      4px 0 12px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+  }
+
+  #adminLiveListPanel:not(.drawer-open) .admin-live-rail-name {
+    display: block;
+    max-width: 100%;
+    max-height: calc(
+      100dvh - var(--admin-live-drawer-top, 100px) - 20px
+    );
+    overflow: hidden;
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  #adminLiveListPanel.drawer-open {
+    position: fixed;
+    top: var(--admin-live-drawer-top, 100px);
+    bottom: 0;
+    left: 0;
+    z-index: 2300;
+    display: block;
+    width: min(78vw, 380px);
+    height: auto;
+    max-height: none;
+    margin: 0;
+    padding: 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #09152d;
+    border: 1px solid #2a3b56;
+    border-left: 0;
+    border-radius: 0 14px 14px 0;
+    box-shadow: 14px 0 35px rgba(0, 0, 0, 0.48);
+    cursor: default;
+  }
+
+  #adminLiveListPanel.drawer-open .admin-live-rail-current {
+    display: none;
+  }
+
+  #adminLiveListPanel.drawer-open .admin-live-drawer-list,
+  #adminLiveListPanel.drawer-open #adminLiveList {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #adminLiveDrawerBackdrop:not(.hidden) {
+    position: fixed;
+    top: var(--admin-live-drawer-top, 100px);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2200;
+    display: block;
+    background: rgba(3, 8, 18, 0.58);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+  }
+}
+
+/* ============================================================
+   LIVE DETAIL GRID / TOP ACTIONS
+   ============================================================ */
+
+.admin-live-top-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.admin-live-top-actions > button {
+  min-width: 0;
+}
+
+.admin-live-filter-bar {
+  margin: 0 0 10px;
+}
+
+.admin-live-details-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-live-details-grid .admin-detail-card {
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.admin-live-details-grid .admin-detail-label {
+  margin-bottom: 2px;
+  font-size: 0.7rem;
+  line-height: 1.1;
+}
+
+.admin-live-details-grid .admin-detail-value {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-live-details-grid .admin-detail-value.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.45);
+}
+
+.admin-live-description-value {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.admin-live-detail-span-2 { grid-column: span 2; }
+.admin-live-detail-span-3 { grid-column: span 3; }
+.admin-live-detail-span-6 { grid-column: 1 / -1; }

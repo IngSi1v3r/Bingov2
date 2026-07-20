@@ -1,0 +1,207 @@
+/* ============================================================
+   admin_components.css
+   Wiederverwendbare Buttons, Badges, Detailkarten und Aktionsleisten.
+   Aus der bisherigen admin.css logisch ausgelagert.
+   Noch keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* BUTTONS */
+/* ===================== */
+
+.secondary-btn,
+.admin-link-btn {
+  background: #1f2937;
+  color: white;
+  border: 1px solid #4b5563;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secondary-btn:hover,
+.admin-link-btn:hover {
+  background: #374151;
+}
+
+/* ===================== */
+/* BADGES */
+/* ===================== */
+
+.admin-status-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: bold;
+}
+
+.admin-badge.blocked {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.admin-badge.ingame {
+  background: rgba(34, 197, 94, 0.16);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.admin-badge.cooldown {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ===================== */
+/* DETAILS */
+/* ===================== */
+
+.admin-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.admin-detail-card {
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.admin-detail-label {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.admin-detail-value {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: white;
+  word-break: break-word;
+}
+
+.admin-details-empty {
+  color: #9ca3af;
+}
+
+/* ===================== */
+/* COMPLETED LIST */
+/* ===================== */
+
+.admin-completed-wrapper {
+  margin-top: 18px;
+}
+
+.admin-completion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-completion-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: #1f2d42;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.admin-completion-left {
+  min-width: 0;
+}
+
+.admin-completion-name {
+  font-weight: bold;
+  color: white;
+}
+
+.admin-completion-name.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.admin-completion-name.clickable:hover {
+  color: #93c5fd;
+}
+
+.admin-completion-meta {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.admin-completion-right {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin-completion-points {
+  color: #facc15;
+  font-weight: bold;
+}
+
+.admin-completion-star {
+  margin-left: 6px;
+}
+
+/* ===================== */
+/* PLAYER ACTION BAR */
+/* ===================== */
+
+.admin-player-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.admin-player-action-bar button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.admin-player-action-bar button:hover {
+  background: #1d4ed8;
+}
+
+#adminDeletePlayerBtn {
+  background: #b91c1c;
+}
+
+#adminDeletePlayerBtn:hover {
+  background: #991b1b;
+}
+
+.admin-detail-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-badge.admin-role {
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.14);
+  border: 1px solid rgba(250, 204, 21, 0.45);
+}

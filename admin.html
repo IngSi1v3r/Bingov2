@@ -26,59 +26,98 @@
     </div>
   </div>
 
-  <div class="app">
-    <!-- HEADER -->
-    <div class="header-card">
-      <div class="header-top-row">
-        <h1>Admin Panel</h1>
+<div class="app">
 
-        <div class="header-top-actions">
-          <button id="adminRefreshBtn" class="secondary-btn" type="button">Refresh</button>
-          <button id="adminLogoutBtn" class="secondary-btn" type="button">Admin Logout</button>
-          <button id="adminGoToGameBtn" class="secondary-btn admin-link-btn" type="button">Zum Spiel</button>
-        </div>
-      </div>
+  <!-- STICKY ADMIN NAVIGATION -->
+  <header class="admin-sticky-header">
 
-      <div class="header-controls">
-        <div class="header-item">
-          <div class="header-label">Admin</div>
-          <div id="adminName" class="header-value">-</div>
-        </div>
+    <!-- OBERE WERKZEUGLEISTE -->
+    <div class="admin-toolbar">
 
-        <div class="header-item">
-          <div class="header-label">Aktives Spiel</div>
-          <button id="adminCurrentGameBtn" class="secondary-btn header-button" type="button">
-            <span id="adminCurrentGame">-</span>
+      <!-- ADMINMENÜ -->
+      <div class="admin-user-menu-wrapper">
+        <button
+          id="adminUserMenuBtn"
+          class="admin-toolbar-btn admin-user-btn"
+          type="button"
+          aria-expanded="false"
+          aria-controls="adminUserMenu"
+        >
+          <span class="admin-toolbar-icon" aria-hidden="true">👤</span>
+          <span id="adminName" class="admin-toolbar-text">-</span>
+        </button>
+
+        <div id="adminUserMenu" class="admin-user-menu hidden">
+          <button id="adminGoToGameBtn" type="button">
+            Zum Spiel
+          </button>
+
+          <button id="adminLogoutBtn" type="button">
+            Logout
           </button>
         </div>
       </div>
+
+      <!-- SPIELAUSWAHL -->
+      <button
+        id="adminCurrentGameBtn"
+        class="admin-toolbar-btn admin-game-select-btn"
+        type="button"
+      >
+        <span class="admin-toolbar-icon" aria-hidden="true">🎮</span>
+        <span id="adminCurrentGame" class="admin-toolbar-text">-</span>
+        <span class="admin-toolbar-chevron" aria-hidden="true">▾</span>
+      </button>
+
     </div>
 
-    <!-- ADMIN GAME SELECT OVERLAY -->
-    <div id="adminGameSelectOverlay" class="modal-overlay hidden">
-      <div class="modal">
-        <button id="closeAdminGameSelectBtn" class="modal-close-btn" type="button">×</button>
+    <!-- TABNAVIGATION -->
+    <nav class="admin-tabs" aria-label="Adminbereiche">
+      <button class="admin-tab active" data-tab="dashboard" type="button">
+        Dashboard
+      </button>
 
-        <h2>Spiel auswählen</h2>
+      <button class="admin-tab" data-tab="players" type="button">
+        Spieler
+      </button>
 
-        <div id="adminGameList" class="game-list">
-          <p>Spiele werden geladen...</p>
-        </div>
+      <button class="admin-tab" data-tab="games" type="button">
+        Spiele
+      </button>
+
+      <button class="admin-tab" data-tab="live" type="button">
+        Live
+      </button>
+
+      <button class="admin-tab" data-tab="grid" type="button">
+        Galerie
+      </button>
+
+      <button class="admin-tab" data-tab="logs" type="button">
+        Logs
+      </button>
+
+      <button class="admin-tab" data-tab="push" type="button">
+        Push
+      </button>
+    </nav>
+
+  </header>
+
+  <!-- ADMIN GAME SELECT OVERLAY -->
+  <div id="adminGameSelectOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <button id="closeAdminGameSelectBtn" class="modal-close-btn" type="button">×</button>
+
+      <h2>Spiel auswählen</h2>
+
+      <div id="adminGameList" class="game-list">
+        <p>Spiele werden geladen...</p>
       </div>
     </div>
+  </div>
 
-    <!-- TABS -->
-    <div class="admin-tabs">
-      <button class="admin-tab active" data-tab="dashboard" type="button">Dashboard</button>
-      <button class="admin-tab" data-tab="players" type="button">Spieler</button>
-      <button class="admin-tab" data-tab="games" type="button">Spiele</button>
-      <button class="admin-tab" data-tab="live" type="button">Live</button>
-      <button class="admin-tab" data-tab="grid" type="button">Galerie</button>
-      <button class="admin-tab" data-tab="logs" type="button">Logs</button>
-      <button class="admin-tab" data-tab="push" type="button">Push</button>
-    </div>
-
-    <!-- CONTENT -->
+  <!-- CONTENT -->
     <div class="admin-content">
       <div class="admin-tab-content active" id="tab-dashboard"></div>
       <div class="admin-tab-content" id="tab-players"></div>

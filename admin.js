@@ -65,8 +65,10 @@ let currentAdminGalleryIndex = 0;
 const tabs = document.querySelectorAll(".admin-tab");
 const contents = document.querySelectorAll(".admin-tab-content");
 
-const adminRefreshBtn = document.getElementById("adminRefreshBtn");
 const adminLogoutBtn = document.getElementById("adminLogoutBtn");
+
+const adminUserMenuBtn = document.getElementById("adminUserMenuBtn");
+const adminUserMenu = document.getElementById("adminUserMenu");
 
 const adminCurrentGameBtn = document.getElementById("adminCurrentGameBtn");
 const adminCurrentGameText = document.getElementById("adminCurrentGame");
@@ -123,6 +125,7 @@ function logoutAdmin() {
  */
 async function startAdminPanelAfterLogin() {
   renderAdminHeader();
+  requestAnimationFrame(updateAdminHeaderHeight);
   await loadAdminCurrentGame();
 
   const activeTab = getActiveAdminTab();
@@ -144,6 +147,18 @@ function renderAdminHeader() {
   if (nameEl && adminPlayer) {
     nameEl.textContent = adminPlayer.display_name || adminPlayer.username || "-";
   }
+}
+
+function updateAdminHeaderHeight() {
+  const header = document.querySelector(".admin-sticky-header");
+  if (!header) return;
+
+  const height = Math.ceil(header.getBoundingClientRect().height);
+
+  document.documentElement.style.setProperty(
+    "--admin-header-height",
+    `${height + 12}px`
+  );
 }
 
 /**
@@ -179,6 +194,18 @@ function updateAdminCurrentGameDisplay() {
   if (adminCurrentGameText) {
     adminCurrentGameText.textContent = adminCurrentGame?.name || "-";
   }
+}
+
+function updateAdminHeaderHeight() {
+  const header = document.querySelector(".admin-sticky-header");
+  if (!header) return;
+
+  const height = Math.ceil(header.getBoundingClientRect().height);
+
+  document.documentElement.style.setProperty(
+    "--admin-header-height",
+    `${height + 12}px`
+  );
 }
 
 /* ============================================================
@@ -276,6 +303,7 @@ async function activateAdminTabByName(tabName) {
   contents.forEach(c => c.classList.remove("active"));
   content.classList.add("active");
 
+  scrollAdminTabIntoView(tab);
   await handleAdminTabActivated(tabName);
   return true;
 }
@@ -334,6 +362,16 @@ async function handleAdminTabActivated(tabName) {
     }
     return;
   }
+}
+
+function scrollAdminTabIntoView(tab) {
+  if (!tab) return;
+
+  tab.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest",
+    inline: "center"
+  });
 }
 
 /* ============================================================
@@ -421,31 +459,60 @@ tabs.forEach(tab => {
       content.classList.add("active");
     }
 
+    scrollAdminTabIntoView(tab);
+    closeAdminUserMenu();
+
     await handleAdminTabActivated(target);
   });
 });
 
 /* ============================================================
+ * ADMIN USER MENU
+ * ============================================================ */
+
+function openAdminUserMenu() {
+  if (!adminUserMenu || !adminUserMenuBtn) return;
+
+  adminUserMenu.classList.remove("hidden");
+  adminUserMenuBtn.setAttribute("aria-expanded", "true");
+}
+
+function closeAdminUserMenu() {
+  if (!adminUserMenu || !adminUserMenuBtn) return;
+
+  adminUserMenu.classList.add("hidden");
+  adminUserMenuBtn.setAttribute("aria-expanded", "false");
+}
+
+function toggleAdminUserMenu() {
+  if (!adminUserMenu) return;
+
+  const isOpen = !adminUserMenu.classList.contains("hidden");
+
+  if (isOpen) {
+    closeAdminUserMenu();
+  } else {
+    openAdminUserMenu();
+  }
+}
+
+/* ============================================================
  * HEADER / GLOBAL EVENTS
  * ============================================================ */
 
-if (adminRefreshBtn) {
-  adminRefreshBtn.addEventListener("click", async () => {
-    await loadAdminCurrentGame();
 
-    const activeTab = getActiveAdminTab();
-    await handleAdminTabActivated(activeTab);
-  });
-}
 
 if (adminLogoutBtn) {
   adminLogoutBtn.addEventListener("click", () => {
+    closeAdminUserMenu();
     logoutAdmin();
   });
 }
 
 if (adminGoToGameBtn) {
   adminGoToGameBtn.addEventListener("click", () => {
+    closeAdminUserMenu();
+
     localStorage.setItem(AUTH_FORCE_GAME_VIEW_KEY, "true");
     saveAuthPreferredView(AUTH_VIEW_GAME);
     window.location.href = "index.html";
@@ -464,6 +531,41 @@ if (closeAdminGameSelectBtn) {
     closeAdminGameSelectOverlay();
   });
 }
+
+if (adminUserMenuBtn) {
+  adminUserMenuBtn.addEventListener("click", event => {
+    event.stopPropagation();
+    toggleAdminUserMenu();
+  });
+}
+
+if (adminUserMenu) {
+  adminUserMenu.addEventListener("click", event => {
+    event.stopPropagation();
+  });
+}
+
+document.addEventListener("click", event => {
+  if (!adminUserMenu || adminUserMenu.classList.contains("hidden")) {
+    return;
+  }
+
+  const clickedInsideMenu = adminUserMenu.contains(event.target);
+  const clickedMenuButton = adminUserMenuBtn?.contains(event.target);
+
+  if (!clickedInsideMenu && !clickedMenuButton) {
+    closeAdminUserMenu();
+  }
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    closeAdminUserMenu();
+  }
+});
+
+window.addEventListener("resize", updateAdminHeaderHeight);
+
 
 /* ============================================================
  * GENERISCHE HELPER

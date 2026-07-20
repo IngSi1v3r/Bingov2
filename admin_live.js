@@ -55,15 +55,18 @@ let adminLiveChallengeViews = [];
 let adminLiveInitialized = false;
 let adminLiveDetailsCountdownInterval = null;
 
+let adminLiveDrawerOpen = false;
+let adminLiveDrawerEventsBound = false;
+let adminLiveScope = "current";
+
 /**
- * Statusfilter für die linke Liste.
- * Alle Status sind standardmäßig sichtbar.
+ * Statusfilter für die Liste.
+ * completed und expired werden gemeinsam als "beendet" behandelt.
  */
 let adminLiveStatusFilters = {
   active: true,
   inactive: true,
-  completed: true,
-  expired: true
+  ended: true
 };
 
 /* ============================================================
@@ -82,6 +85,7 @@ let adminLiveStatusFilters = {
 async function initializeAdminLiveTab() {
   ensureAdminLiveTabLayout();
   ensureAdminCreateLiveChallengeModal();
+  ensureAdminLiveActiveGamesModal();
 
   await autoActivateScheduledLiveChallenges();
   await loadAdminLiveTabData();
@@ -127,52 +131,285 @@ function ensureAdminLiveTabLayout() {
   if (!tabEl) return;
 
   const alreadyBuilt = document.getElementById("adminLiveSplitLayout");
-  if (alreadyBuilt) return;
+  if (alreadyBuilt) {
+    attachAdminLiveDrawerEvents();
+    updateAdminLiveRailLabel();
+    requestAnimationFrame(updateAdminLiveDrawerTopOffset);
+    return;
+  }
 
   tabEl.innerHTML = `
-    <h2>Live Challenges</h2>
-
-    <div class="admin-player-action-bar" style="margin-top: 0; margin-bottom: 16px;">
+    <div class="admin-player-action-bar admin-live-top-actions">
       <button id="adminCreateLiveChallengeBtn" type="button">Neue Live-Challenge</button>
       <button id="adminEndActiveLiveChallengeBtn" type="button" class="secondary-btn">Aktive beenden</button>
+      <button
+        id="adminLiveScopeToggleBtn"
+        type="button"
+        class="secondary-btn admin-live-scope-toggle"
+      >
+        Nur ausgewähltes Spiel
+      </button>
     </div>
 
-    <div id="adminLiveGlobalStatsWrapper" style="margin-bottom: 20px;"></div>
+    <div id="adminLiveGlobalStatsWrapper"></div>
 
-    <div class="admin-split-layout" id="adminLiveSplitLayout">
-      <div class="admin-panel">
-        <div class="admin-panel-header">
-          <h3>Live-Challenges im ausgewählten Spiel</h3>
-        </div>
+    <div class="admin-live-filter-bar">
+      <label><input type="checkbox" id="adminLiveFilterActive" checked /> Aktiv</label>
+      <label><input type="checkbox" id="adminLiveFilterInactive" checked /> Inaktiv</label>
+      <label><input type="checkbox" id="adminLiveFilterEnded" checked /> Beendet</label>
+    </div>
 
-        <div class="admin-live-filter-bar">
-          <label><input type="checkbox" id="adminLiveFilterActive" checked /> Aktiv</label>
-          <label><input type="checkbox" id="adminLiveFilterInactive" checked /> Inaktiv</label>
-          <label><input type="checkbox" id="adminLiveFilterCompleted" checked /> Beendet</label>
-          <label><input type="checkbox" id="adminLiveFilterExpired" checked /> Expired</label>
-        </div>
+    <div
+      id="adminLiveSplitLayout"
+      class="admin-split-layout admin-live-layout"
+    >
+      <div
+        id="adminLiveDrawerBackdrop"
+        class="admin-live-drawer-backdrop hidden"
+        aria-hidden="true"
+      ></div>
 
-        <div id="adminLiveList" class="admin-list">
+      <aside
+        id="adminLiveListPanel"
+        class="admin-panel admin-live-list-panel"
+      >
+        <button
+          id="adminLiveRailCurrent"
+          class="admin-live-rail-current"
+          type="button"
+          aria-label="Live-Challenges öffnen"
+          aria-expanded="false"
+        >
+          <span id="adminLiveRailName" class="admin-live-rail-name">
+            Live
+          </span>
+        </button>
+
+        <div id="adminLiveList" class="admin-list admin-live-drawer-list">
           <p>Live-Challenges werden geladen...</p>
         </div>
-      </div>
+      </aside>
 
-      <div class="admin-panel">
-        <div class="admin-panel-header">
-          <h3>Details</h3>
-        </div>
-
+      <div class="admin-panel admin-live-detail-panel">
         <div id="adminLiveDetails">
           <p class="admin-details-empty">Wähle links eine Live-Challenge aus.</p>
         </div>
       </div>
     </div>
   `;
+
+  attachAdminLiveDrawerEvents();
+  updateAdminLiveRailLabel();
+  requestAnimationFrame(updateAdminLiveDrawerTopOffset);
 }
 
 /**
  * Baut das Create-Modal für Live-Challenges genau einmal auf.
  */
+
+function isAdminLiveMobileLayout() {
+  return window.matchMedia("(max-width: 760px)").matches;
+}
+
+function updateAdminLiveDrawerTopOffset() {
+  const header = document.querySelector(".admin-sticky-header");
+  const splitLayout = document.getElementById("adminLiveSplitLayout");
+
+  const headerBottom = header
+    ? Math.ceil(header.getBoundingClientRect().bottom)
+    : 100;
+
+  const splitTop = splitLayout
+    ? Math.ceil(splitLayout.getBoundingClientRect().top)
+    : headerBottom;
+
+  const drawerTop = Math.max(headerBottom, splitTop);
+
+  document.documentElement.style.setProperty(
+    "--admin-live-drawer-top",
+    `${drawerTop}px`
+  );
+}
+
+function updateAdminLiveRailLabel() {
+  const railNameEl = document.getElementById("adminLiveRailName");
+  const railButton = document.getElementById("adminLiveRailCurrent");
+  if (!railNameEl) return;
+
+  const selected = adminLiveChallenges.find(
+    row => Number(row.id) === Number(selectedAdminLiveChallengeId)
+  );
+
+  const label = selected?.title || "Live";
+  railNameEl.textContent = label;
+
+  if (railButton) {
+    railButton.setAttribute(
+      "aria-label",
+      selected
+        ? `Live-Challenges öffnen. Aktuell ausgewählt: ${label}`
+        : "Live-Challenges öffnen"
+    );
+    railButton.setAttribute(
+      "aria-expanded",
+      adminLiveDrawerOpen ? "true" : "false"
+    );
+  }
+}
+
+function openAdminLiveDrawer() {
+  if (!isAdminLiveMobileLayout()) return;
+
+  updateAdminLiveDrawerTopOffset();
+
+  adminLiveDrawerOpen = true;
+  document.getElementById("adminLiveSplitLayout")?.classList.add("drawer-open");
+  document.getElementById("adminLiveListPanel")?.classList.add("drawer-open");
+  document.getElementById("adminLiveDrawerBackdrop")?.classList.remove("hidden");
+  document.getElementById("adminLiveRailCurrent")?.setAttribute("aria-expanded", "true");
+}
+
+function closeAdminLiveDrawer() {
+  adminLiveDrawerOpen = false;
+  document.getElementById("adminLiveSplitLayout")?.classList.remove("drawer-open");
+  document.getElementById("adminLiveListPanel")?.classList.remove("drawer-open");
+  document.getElementById("adminLiveDrawerBackdrop")?.classList.add("hidden");
+  document.getElementById("adminLiveRailCurrent")?.setAttribute("aria-expanded", "false");
+}
+
+function toggleAdminLiveDrawer() {
+  if (adminLiveDrawerOpen) {
+    closeAdminLiveDrawer();
+  } else {
+    openAdminLiveDrawer();
+  }
+}
+
+function attachAdminLiveDrawerEvents() {
+  if (adminLiveDrawerEventsBound) return;
+
+  const railButton = document.getElementById("adminLiveRailCurrent");
+  const backdrop = document.getElementById("adminLiveDrawerBackdrop");
+  if (!railButton || !backdrop) return;
+
+  railButton.addEventListener("click", event => {
+    if (!isAdminLiveMobileLayout()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleAdminLiveDrawer();
+  });
+
+  backdrop.addEventListener("click", closeAdminLiveDrawer);
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && adminLiveDrawerOpen) {
+      closeAdminLiveDrawer();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    updateAdminLiveDrawerTopOffset();
+
+    if (!isAdminLiveMobileLayout() && adminLiveDrawerOpen) {
+      closeAdminLiveDrawer();
+    }
+  });
+
+  window.addEventListener("scroll", () => {
+    if (isAdminLiveMobileLayout()) {
+      updateAdminLiveDrawerTopOffset();
+    }
+  }, { passive: true });
+
+  adminLiveDrawerEventsBound = true;
+}
+
+function ensureAdminLiveActiveGamesModal() {
+  if (document.getElementById("adminLiveActiveGamesOverlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "adminLiveActiveGamesOverlay";
+  overlay.className = "modal-overlay hidden";
+
+  overlay.innerHTML = `
+    <div class="modal admin-live-active-games-modal">
+      <button
+        id="closeAdminLiveActiveGamesBtn"
+        class="modal-close-btn"
+        type="button"
+      >×</button>
+
+      <h2>Spiele mit aktiven Challenges</h2>
+      <div id="adminLiveActiveGamesList" class="admin-live-active-games-list"></div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document
+    .getElementById("closeAdminLiveActiveGamesBtn")
+    ?.addEventListener("click", closeAdminLiveActiveGamesModal);
+
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) {
+      closeAdminLiveActiveGamesModal();
+    }
+  });
+}
+
+function openAdminLiveActiveGamesModal() {
+  ensureAdminLiveActiveGamesModal();
+
+  const overlay = document.getElementById("adminLiveActiveGamesOverlay");
+  const listEl = document.getElementById("adminLiveActiveGamesList");
+  if (!overlay || !listEl) return;
+
+  const gameIds = [...new Set(
+    adminLiveChallenges
+      .filter(row => row.status === "active")
+      .map(row => Number(row.game_id))
+  )];
+
+  if (!gameIds.length) {
+    listEl.innerHTML = `<p class="admin-details-empty">Aktuell keine.</p>`;
+  } else {
+    listEl.innerHTML = "";
+
+    gameIds.forEach(gameId => {
+      const game = adminGames.find(row => Number(row.id) === gameId);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "admin-live-active-game-item";
+      button.textContent = game?.name || `Spiel ${gameId}`;
+
+      button.addEventListener("click", async () => {
+        adminCurrentGameId = gameId;
+        adminCurrentGame = game || null;
+
+        if (typeof saveGameIdToLocalStorageAdmin === "function") {
+          saveGameIdToLocalStorageAdmin(gameId);
+        }
+
+        if (typeof updateAdminCurrentGameDisplay === "function") {
+          updateAdminCurrentGameDisplay();
+        }
+
+        adminLiveScope = "current";
+        closeAdminLiveActiveGamesModal();
+        await initializeAdminLiveTab();
+      });
+
+      listEl.appendChild(button);
+    });
+  }
+
+  overlay.classList.remove("hidden");
+}
+
+function closeAdminLiveActiveGamesModal() {
+  document.getElementById("adminLiveActiveGamesOverlay")?.classList.add("hidden");
+}
+
 function ensureAdminCreateLiveChallengeModal() {
   if (document.getElementById("adminCreateLiveChallengeOverlay")) return;
 
@@ -335,8 +572,7 @@ function attachAdminLiveFilterEvents() {
   const mapping = [
     { id: "adminLiveFilterActive", key: "active" },
     { id: "adminLiveFilterInactive", key: "inactive" },
-    { id: "adminLiveFilterCompleted", key: "completed" },
-    { id: "adminLiveFilterExpired", key: "expired" }
+    { id: "adminLiveFilterEnded", key: "ended" }
   ];
 
   mapping.forEach(entry => {
@@ -347,26 +583,54 @@ function attachAdminLiveFilterEvents() {
 
     el.addEventListener("change", async () => {
       adminLiveStatusFilters[entry.key] = el.checked;
-
-      renderAdminLiveList();
-
-      const visibleRows = getVisibleAdminLiveChallenges();
-      const selectedStillVisible = visibleRows.some(
-        row => row.id === selectedAdminLiveChallengeId
-      );
-
-      if (!selectedStillVisible) {
-        selectedAdminLiveChallengeId = visibleRows[0]?.id || null;
-      }
-
-      const selectedLive =
-        visibleRows.find(row => row.id === selectedAdminLiveChallengeId) || null;
-
-      await renderAdminLiveDetails(selectedLive);
+      await refreshAdminLiveVisibleSelection();
     });
 
     el.dataset.bound = "true";
   });
+
+  const scopeBtn = document.getElementById("adminLiveScopeToggleBtn");
+
+  if (scopeBtn) {
+    scopeBtn.textContent =
+      adminLiveScope === "current"
+        ? "Nur ausgewähltes Spiel"
+        : "Alle Spiele";
+
+    if (!scopeBtn.dataset.bound) {
+      scopeBtn.addEventListener("click", async () => {
+        adminLiveScope =
+          adminLiveScope === "current"
+            ? "all"
+            : "current";
+
+        scopeBtn.textContent =
+          adminLiveScope === "current"
+            ? "Nur ausgewähltes Spiel"
+            : "Alle Spiele";
+
+        await refreshAdminLiveVisibleSelection();
+      });
+
+      scopeBtn.dataset.bound = "true";
+    }
+  }
+}
+
+async function refreshAdminLiveVisibleSelection() {
+  const visibleRows = getVisibleAdminLiveChallenges();
+
+  if (!visibleRows.some(row => row.id === selectedAdminLiveChallengeId)) {
+    selectedAdminLiveChallengeId = visibleRows[0]?.id || null;
+  }
+
+  renderAdminLiveList();
+  updateAdminLiveRailLabel();
+
+  const selectedLive =
+    visibleRows.find(row => row.id === selectedAdminLiveChallengeId) || null;
+
+  await renderAdminLiveDetails(selectedLive);
 }
 
 /* ============================================================
@@ -418,15 +682,29 @@ async function loadAllLiveChallengeViewsForAdmin() {
  * - sortiert: active -> inactive -> Rest
  */
 function getVisibleAdminLiveChallenges() {
-  const currentGameId = Number(adminCurrentGameId);
-
-  if (!Number.isFinite(currentGameId)) {
-    return [];
-  }
-
   return adminLiveChallenges
-    .filter(row => Number(row.game_id) === currentGameId)
-    .filter(row => adminLiveStatusFilters[row.status] === true)
+    .filter(row => {
+      if (adminLiveScope === "current") {
+        return Number(row.game_id) === Number(adminCurrentGameId);
+      }
+
+      return true;
+    })
+    .filter(row => {
+      if (row.status === "active") {
+        return adminLiveStatusFilters.active === true;
+      }
+
+      if (row.status === "inactive") {
+        return adminLiveStatusFilters.inactive === true;
+      }
+
+      if (row.status === "completed" || row.status === "expired") {
+        return adminLiveStatusFilters.ended === true;
+      }
+
+      return false;
+    })
     .sort((a, b) => {
       const getGroup = status => {
         if (status === "active") return 1;
@@ -434,10 +712,12 @@ function getVisibleAdminLiveChallenges() {
         return 3;
       };
 
-      const ga = getGroup(a.status);
-      const gb = getGroup(b.status);
+      const groupDifference = getGroup(a.status) - getGroup(b.status);
 
-      if (ga !== gb) return ga - gb;
+      if (groupDifference !== 0) {
+        return groupDifference;
+      }
+
       return new Date(b.created_at) - new Date(a.created_at);
     });
 }
@@ -802,14 +1082,14 @@ function startAdminLiveDetailsCountdown(row) {
 function buildAdminLiveStatsForRows(rows) {
   const totalCount = rows.length;
   const activeRows = rows.filter(row => row.status === "active");
-  const completedRows = rows.filter(row => row.status === "completed");
-  const expiredRows = rows.filter(row => row.status === "expired");
+  const endedRows = rows.filter(
+    row => row.status === "completed" || row.status === "expired"
+  );
 
   return {
     totalCount,
     activeCount: activeRows.length,
-    completedCount: completedRows.length,
-    expiredCount: expiredRows.length
+    endedCount: endedRows.length
   };
 }
 
@@ -823,16 +1103,21 @@ function renderAdminLiveGlobalStats() {
   if (!wrapper) return;
 
   const globalStats = buildAdminLiveStatsForRows(adminLiveChallenges);
-  const visibleRows = getVisibleAdminLiveChallenges();
-  const currentGameStats = buildAdminLiveStatsForRows(visibleRows);
 
-  const activeGames = adminLiveChallenges
-    .filter(row => row.status === "active")
-    .map(row => getAdminLiveGameName(row.game_id))
-    .filter((value, index, arr) => arr.indexOf(value) === index);
+  const currentGameRows = adminLiveChallenges.filter(
+    row => Number(row.game_id) === Number(adminCurrentGameId)
+  );
+
+  const currentGameStats = buildAdminLiveStatsForRows(currentGameRows);
+
+  const activeGameIds = [...new Set(
+    adminLiveChallenges
+      .filter(row => row.status === "active")
+      .map(row => Number(row.game_id))
+  )];
 
   wrapper.innerHTML = `
-    <div class="admin-details-grid">
+    <div class="admin-live-stats-grid">
       <div class="admin-detail-card">
         <div class="admin-detail-label">Global gesamt</div>
         <div class="admin-detail-value">${globalStats.totalCount}</div>
@@ -845,42 +1130,40 @@ function renderAdminLiveGlobalStats() {
 
       <div class="admin-detail-card">
         <div class="admin-detail-label">Global beendet</div>
-        <div class="admin-detail-value">${globalStats.completedCount}</div>
+        <div class="admin-detail-value">${globalStats.endedCount}</div>
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Global expired</div>
-        <div class="admin-detail-value">${globalStats.expiredCount}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Ausgewähltes Spiel gesamt</div>
+        <div class="admin-detail-label">Spiel gesamt</div>
         <div class="admin-detail-value">${currentGameStats.totalCount}</div>
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Ausgewähltes Spiel aktiv</div>
+        <div class="admin-detail-label">Spiel aktiv</div>
         <div class="admin-detail-value">${currentGameStats.activeCount}</div>
       </div>
 
       <div class="admin-detail-card">
-        <div class="admin-detail-label">Ausgewähltes Spiel beendet</div>
-        <div class="admin-detail-value">${currentGameStats.completedCount}</div>
+        <div class="admin-detail-label">Spiel beendet</div>
+        <div class="admin-detail-value">${currentGameStats.endedCount}</div>
       </div>
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Ausgewähltes Spiel expired</div>
-        <div class="admin-detail-value">${currentGameStats.expiredCount}</div>
-      </div>
-
-      <div class="admin-detail-card admin-detail-wide">
-        <div class="admin-detail-label">Spiele mit aktiven Live-Challenges</div>
-        <div class="admin-detail-value">
-          ${activeGames.length ? activeGames.join(", ") : "Aktuell keine"}
+      <div class="admin-detail-card admin-live-active-games-card">
+        <div class="admin-detail-label">Spiele mit aktiven Challenges</div>
+        <div
+          id="adminLiveActiveGamesBtn"
+          class="admin-detail-value clickable"
+          title="Liste öffnen"
+        >
+          ${activeGameIds.length} Spiel${activeGameIds.length === 1 ? "" : "e"}
         </div>
       </div>
     </div>
   `;
+
+  document
+    .getElementById("adminLiveActiveGamesBtn")
+    ?.addEventListener("click", openAdminLiveActiveGamesModal);
 }
 
 /* ============================================================
@@ -1400,14 +1683,28 @@ function renderAdminLiveList() {
       </div>
     `;
 
-    item.addEventListener("click", async () => {
+    item.addEventListener("click", async event => {
+      event.stopPropagation();
+
+      if (isAdminLiveMobileLayout() && !adminLiveDrawerOpen) {
+        openAdminLiveDrawer();
+        return;
+      }
+
       selectedAdminLiveChallengeId = row.id;
       renderAdminLiveList();
+      updateAdminLiveRailLabel();
       await renderAdminLiveDetails(row);
+
+      if (isAdminLiveMobileLayout()) {
+        closeAdminLiveDrawer();
+      }
     });
 
     listEl.appendChild(item);
   });
+
+  updateAdminLiveRailLabel();
 }
 
 /* ============================================================
@@ -1480,122 +1777,87 @@ async function renderAdminLiveDetails(row) {
   participantHtml += `</div>`;
 
   detailsEl.innerHTML = `
-    <div class="admin-details-grid">
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Titel</div>
-        <div id="adminEditLiveTitleBtn" class="admin-detail-value clickable" title="Zum Bearbeiten klicken">
-          ${row.title || "-"}
-        </div>
+    <div class="admin-live-details-grid">
+      <div class="admin-detail-card admin-live-detail-span-3">
+        <div class="admin-detail-label">Spiel</div>
+        <div class="admin-detail-value">${getAdminLiveGameName(row.game_id)}</div>
       </div>
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Punkte</div>
-        <div id="adminEditLivePointsBtn" class="admin-detail-value clickable" title="Zum Bearbeiten klicken">
-          ${row.points ?? 0}
-        </div>
-      </div>
-
-      <div class="admin-detail-card admin-detail-wide">
-        <div class="admin-detail-label">Beschreibung</div>
-        <div id="adminEditLiveDescriptionBtn" class="admin-detail-value clickable">
-          ${row.description ? row.description : "–"}
-        </div>
-      </div>
-
-      <div class="admin-detail-card">
+      <div class="admin-detail-card admin-live-detail-span-3">
         <div class="admin-detail-label">Status</div>
-        <div
-          id="adminToggleLiveStatusBtn"
-          class="admin-detail-value clickable ${row.status === "inactive" ? "danger-state" : ""}"
-        >
+        <div id="adminToggleLiveStatusBtn" class="admin-detail-value clickable ${row.status === "inactive" ? "danger-state" : ""}">
           ${getAdminLiveStatusLabel(row)}
         </div>
       </div>
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Foto erforderlich</div>
-        <div id="adminToggleLivePhotoBtn" class="admin-detail-value clickable">
-          ${row.requires_photo_proof ? "Ja" : "Nein"}
+      <div class="admin-detail-card admin-live-detail-span-6">
+        <div class="admin-detail-label">Beschreibung</div>
+        <div id="adminEditLiveDescriptionBtn" class="admin-detail-value clickable admin-live-description-value">
+          ${row.description ? row.description : "–"}
         </div>
       </div>
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Dauer</div>
-        <div id="adminEditLiveDurationBtn" class="admin-detail-value clickable" title="Zum Bearbeiten klicken">
-          ${
-            row.status === "active"
-              ? (row.expires_at
-                  ? formatAdminLiveRemaining(getAdminLiveRemainingSeconds(row))
-                  : "Kein Zeitlimit")
-              : (row.duration_minutes
-                  ? `${row.duration_minutes} min`
-                  : "Kein Zeitlimit")
-          }
-        </div>
+      <div class="admin-detail-card admin-live-detail-span-2">
+        <div class="admin-detail-label">Erstellt</div>
+        <div class="admin-detail-value">${formatAdminDateTime(row.created_at)}</div>
       </div>
 
-      <div class="admin-detail-card">
+      <div class="admin-detail-card admin-live-detail-span-2">
         <div class="admin-detail-label">Geplanter Start</div>
         <div id="adminEditLiveScheduledStartBtn" class="admin-detail-value clickable">
           ${row.scheduled_start_at ? formatAdminDateTime(row.scheduled_start_at) : "Nicht geplant"}
         </div>
       </div>
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Spiel</div>
-        <div class="admin-detail-value">${getAdminLiveGameName(row.game_id)}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Erstellt</div>
-        <div class="admin-detail-value">${formatAdminDateTime(row.created_at)}</div>
-      </div>
-
-      <div class="admin-detail-card">
+      <div class="admin-detail-card admin-live-detail-span-2">
         <div class="admin-detail-label">Beendet</div>
         <div class="admin-detail-value">${row.completed_at ? formatAdminDateTime(row.completed_at) : "-"}</div>
       </div>
 
-      ${row.status === "completed" ? `
-        <div class="admin-detail-card">
-          <div class="admin-detail-label">Gewinner</div>
-          <div class="admin-detail-value">${winnerName}</div>
+      <div class="admin-detail-card admin-live-detail-span-2">
+        <div class="admin-detail-label">Dauer</div>
+        <div id="adminEditLiveDurationBtn" class="admin-detail-value clickable">
+          ${row.status === "active"
+            ? (row.expires_at ? formatAdminLiveRemaining(getAdminLiveRemainingSeconds(row)) : "Kein Zeitlimit")
+            : (row.duration_minutes ? `${row.duration_minutes} min` : "Kein Zeitlimit")}
         </div>
-      ` : ""}
+      </div>
 
-      <div class="admin-detail-card">
+      <div class="admin-detail-card admin-live-detail-span-2">
+        <div class="admin-detail-label">Foto</div>
+        <div id="adminToggleLivePhotoBtn" class="admin-detail-value clickable">
+          ${row.requires_photo_proof ? "Ja" : "Nein"}
+        </div>
+      </div>
+
+      <div class="admin-detail-card admin-live-detail-span-2">
+        <div class="admin-detail-label">Punkte</div>
+        <div id="adminEditLivePointsBtn" class="admin-detail-value clickable">${row.points ?? 0}</div>
+      </div>
+
+      <div class="admin-detail-card admin-live-detail-span-2">
         <div class="admin-detail-label">Teilnahmebasis</div>
         <div class="admin-detail-value">${stats.eligiblePlayers.length}</div>
       </div>
 
-      <div class="admin-detail-card">
+      <div class="admin-detail-card admin-live-detail-span-2">
         <div class="admin-detail-label">Gesehen</div>
         <div class="admin-detail-value">${stats.seenCount}</div>
       </div>
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Gesehen ohne Abschluss</div>
-        <div class="admin-detail-value">${stats.seenWithoutCompletionCount}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Nicht gesehen</div>
-        <div class="admin-detail-value">${stats.unseenCount}</div>
-      </div>
-
-      <div class="admin-detail-card">
+      <div class="admin-detail-card admin-live-detail-span-2">
         <div class="admin-detail-label">Weggeklickt</div>
         <div class="admin-detail-value">${stats.dismissedCount}</div>
       </div>
 
-      <div class="admin-detail-card">
+      <div class="admin-detail-card admin-live-detail-span-3">
         <div class="admin-detail-label">Ende gesehen</div>
         <div class="admin-detail-value">${stats.endSeenCount}</div>
       </div>
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Abschlüsse</div>
-        <div class="admin-detail-value">${stats.completedCount}</div>
+      <div class="admin-detail-card admin-live-detail-span-3">
+        <div class="admin-detail-label">Gewinner</div>
+        <div class="admin-detail-value">${row.status === "completed" ? winnerName : "-"}</div>
       </div>
     </div>
 
@@ -1612,13 +1874,10 @@ async function renderAdminLiveDetails(row) {
     </div>
 
     <div class="admin-player-action-bar" style="margin-top: 16px;">
-      <button id="adminDeleteLiveChallengeBtn" class="danger-btn">
-        Live-Challenge löschen
-      </button>
+      <button id="adminDeleteLiveChallengeBtn" class="danger-btn">Live-Challenge löschen</button>
     </div>
   `;
 
-  const editTitleBtn = document.getElementById("adminEditLiveTitleBtn");
   const editPointsBtn = document.getElementById("adminEditLivePointsBtn");
   const editDescriptionBtn = document.getElementById("adminEditLiveDescriptionBtn");
   const togglePhotoBtn = document.getElementById("adminToggleLivePhotoBtn");
@@ -1627,11 +1886,6 @@ async function renderAdminLiveDetails(row) {
   const editScheduledStartBtn = document.getElementById("adminEditLiveScheduledStartBtn");
   const deleteBtn = document.getElementById("adminDeleteLiveChallengeBtn");
 
-  if (editTitleBtn) {
-    editTitleBtn.addEventListener("click", async () => {
-      await handleAdminEditLiveTitle(row);
-    });
-  }
 
   if (editPointsBtn) {
     editPointsBtn.addEventListener("click", async () => {

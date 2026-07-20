@@ -1,0 +1,348 @@
+/* ============================================================
+   admin_layout.css
+   Header, Tabs, Hauptinhalt, Panels und Seitenlayouts.
+   Aus der bisherigen admin.css logisch ausgelagert.
+   Noch keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* HEADER */
+/* ===================== */
+
+.header-card {
+  background: #0b1733;
+  border: 1px solid #22304a;
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.header-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.header-card h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.05;
+}
+
+.header-top-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.header-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.header-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.header-label {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.header-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: white;
+  word-break: break-word;
+}
+
+/* ===================== */
+/* TABS */
+/* ===================== */
+
+.admin-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.admin-tab {
+  background: #1f2937;
+  color: white;
+  border: 1px solid #4b5563;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.admin-tab:hover {
+  background: #374151;
+}
+
+.admin-tab.active {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+/* ===================== */
+/* CONTENT */
+/* ===================== */
+
+.admin-content {
+  width: 100%;
+  min-width: 0;
+  min-height: 500px;
+
+  margin: 0;
+  padding: 0;
+
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.admin-tab-content {
+  display: none;
+}
+
+.admin-tab-content.active {
+  display: block;
+}
+
+.admin-tab-content h2 {
+  margin-top: 0;
+  margin-bottom: 18px;
+  font-size: 2rem;
+}
+
+/* ===================== */
+/* LAYOUT */
+/* ===================== */
+
+.admin-split-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.admin-panel {
+  background: #09152d;
+  border: 1px solid #2a3b56;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.admin-panel-header {
+  margin-bottom: 14px;
+}
+
+.admin-panel-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.admin-section-title {
+  margin: 20px 0 10px;
+  font-size: 1rem;
+  color: white;
+}
+
+
+/* ============================================================
+   STICKY ADMIN HEADER
+   ============================================================ */
+
+.admin-sticky-header {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 3000;
+
+  width: calc(100% - 40px);
+  max-width: 1400px;
+
+  padding-top: 4px;
+
+  background: #111827;
+
+  transform: translateX(-50%);
+}
+
+.app {
+  padding-top: var(--admin-header-height, 112px);
+}
+
+/* ============================================================
+   ADMIN TOOLBAR
+   ============================================================ */
+
+.admin-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.admin-toolbar-btn {
+  appearance: none;
+  -webkit-appearance: none;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-width: 0;
+  min-height: 46px;
+  padding: 9px 12px;
+
+  color: white;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+
+  background: #1f2937;
+  border: 1px solid #4b5563;
+  border-radius: 10px;
+
+  cursor: pointer;
+}
+
+.admin-toolbar-btn:hover {
+  background: #374151;
+}
+
+.admin-toolbar-icon {
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.admin-toolbar-text {
+  min-width: 0;
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-btn {
+  max-width: 220px;
+}
+
+.admin-game-select-btn {
+  width: 100%;
+}
+
+.admin-game-select-btn .admin-toolbar-text {
+  flex: 1;
+}
+
+.admin-toolbar-chevron {
+  flex: 0 0 auto;
+  margin-left: auto;
+
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+/* ============================================================
+   ADMIN USER MENU
+   ============================================================ */
+
+.admin-user-menu-wrapper {
+  position: relative;
+  min-width: 0;
+}
+
+.admin-user-menu {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  z-index: 1200;
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  width: max-content;
+  min-width: 180px;
+  padding: 8px;
+
+  background: #1f2937;
+  border: 1px solid #4b5563;
+  border-radius: 10px;
+
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.38);
+}
+
+.admin-user-menu button {
+  width: 100%;
+  padding: 10px 12px;
+
+  color: white;
+  font-family: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+
+  cursor: pointer;
+}
+
+.admin-user-menu button:hover {
+  background: #374151;
+}
+
+/* ============================================================
+   HORIZONTAL TAB NAVIGATION
+   ============================================================ */
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 8px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.app {
+  min-width: 0;
+}

@@ -59,6 +59,10 @@ let currentAdminGameChallengeGalleryIndex = 0;
 /** Auswahl für die Gridgröße im "Neues Spiel"-Modal */
 let selectedGridSize = 5;
 
+/** Mobiler Drawer-Status im Spiele-Tab */
+let adminGameDrawerOpen = false;
+let adminGameDrawerGlobalEventsBound = false;
+
 /* ============================================================
  * TAB INITIALISIERUNG
  * ============================================================ */
@@ -77,19 +81,32 @@ async function initializeAdminGamesTab() {
   ensureAdminChallengeSetupModal();
   ensureAdminGamePasswordModal();
   ensureAdminChallengeImageModal();
+  ensureAdminGamePlayersListModal();
 
   await loadAdminGamesTabData();
 
-  if (!selectedAdminGameDetailsId) {
-    selectedAdminGameDetailsId = adminCurrentGameId || adminGames[0]?.id || null;
+  /*
+   * Der global im Header gewählte Spielkontext ist führend.
+   * Dadurch springt der Games-Tab nach einem Header-Wechsel automatisch
+   * zum passenden Spiel und aktualisiert Rail, Liste und Details.
+   */
+  if (adminCurrentGameId && adminGames.some(game => Number(game.id) === Number(adminCurrentGameId))) {
+    selectedAdminGameDetailsId = Number(adminCurrentGameId);
+  } else if (!selectedAdminGameDetailsId) {
+    selectedAdminGameDetailsId = adminGames[0]?.id || null;
   }
 
-  const selectedStillExists = adminGames.some(game => game.id === selectedAdminGameDetailsId);
+  const selectedStillExists = adminGames.some(
+    game => Number(game.id) === Number(selectedAdminGameDetailsId)
+  );
+
   if (!selectedStillExists) {
-    selectedAdminGameDetailsId = adminCurrentGameId || adminGames[0]?.id || null;
+    selectedAdminGameDetailsId = adminGames[0]?.id || null;
   }
 
   renderAdminGamesList();
+  updateAdminGameRailLabel();
+  requestAnimationFrame(updateAdminGameDrawerTopOffset);
 
   const selectedGame = adminGames.find(game => game.id === selectedAdminGameDetailsId) || null;
   await renderAdminGameDetails(selectedGame);
@@ -130,29 +147,54 @@ function ensureAdminGamesTabLayout() {
   const tabEl = document.getElementById("tab-games");
   if (!tabEl) return;
 
-  const alreadyBuilt = document.getElementById("adminGamesSplitLayout");
-  if (alreadyBuilt) return;
+  if (document.getElementById("adminGamesSplitLayout")) {
+    attachAdminGameDrawerEvents();
+    updateAdminGameRailLabel();
+    requestAnimationFrame(updateAdminGameDrawerTopOffset);
+    return;
+  }
 
   tabEl.innerHTML = `
     <h2>Spiele</h2>
 
-    <div class="admin-split-layout" id="adminGamesSplitLayout">
+    <div
+      class="admin-split-layout admin-games-layout"
+      id="adminGamesSplitLayout"
+    >
+      <div
+        id="adminGameDrawerBackdrop"
+        class="admin-game-drawer-backdrop hidden"
+        aria-hidden="true"
+      ></div>
 
-      <div class="admin-panel">
-        <div class="admin-panel-header">
+      <aside
+        id="adminGameListPanel"
+        class="admin-panel admin-game-list-panel"
+      >
+        <button
+          id="adminGameRailCurrent"
+          class="admin-game-rail-current"
+          type="button"
+          aria-label="Spieleliste öffnen"
+          aria-expanded="false"
+        >
+          <span id="adminGameRailName" class="admin-game-rail-name">Spiel</span>
+        </button>
+
+        <div class="admin-panel-header admin-game-list-header">
           <h3>Alle Spiele</h3>
         </div>
 
-        <div class="admin-player-action-bar" style="margin-top: 0; margin-bottom: 16px;">
+        <div class="admin-player-action-bar admin-game-list-actions">
           <button id="adminCreateGameBtn" type="button">Neues Spiel</button>
         </div>
 
-        <div id="adminGamesList" class="admin-list">
+        <div id="adminGamesList" class="admin-list admin-game-drawer-list">
           <p>Spiele werden geladen...</p>
         </div>
-      </div>
+      </aside>
 
-      <div class="admin-panel">
+      <div class="admin-panel admin-game-detail-panel">
         <div class="admin-panel-header">
           <h3>Spiel-Details</h3>
         </div>
@@ -162,8 +204,7 @@ function ensureAdminGamesTabLayout() {
         </div>
 
         <div id="adminGameGridWrapper" class="admin-mini-grid-wrapper hidden">
-          <h3 class="admin-section-title">Grid</h3>
-
+          
           <div class="admin-bingo-board-shell">
             <div class="admin-bingo-board-top">
               <div></div>
@@ -183,11 +224,10 @@ function ensureAdminGamesTabLayout() {
         </div>
 
         <div id="adminGameLeaderboardWrapper" class="admin-completed-wrapper hidden">
-          <h3 class="admin-section-title">Leaderboard</h3>
           <div id="adminGameLeaderboard"></div>
         </div>
 
-        <div id="adminGameDeleteWrapper" class="admin-player-action-bar hidden" style="margin-top: 20px;">
+        <div id="adminGameDeleteWrapper" class="admin-player-action-bar hidden admin-game-detail-actions">
           <button id="adminDuplicateGameBtn" type="button" class="secondary-btn">
             Spiel duplizieren
           </button>
@@ -199,9 +239,12 @@ function ensureAdminGamesTabLayout() {
           </button>
         </div>
       </div>
-
     </div>
   `;
+
+  attachAdminGameDrawerEvents();
+  updateAdminGameRailLabel();
+  requestAnimationFrame(updateAdminGameDrawerTopOffset);
 
   const createBtn = document.getElementById("adminCreateGameBtn");
   const deleteBtn = document.getElementById("adminDeleteGameBtn");
@@ -209,7 +252,8 @@ function ensureAdminGamesTabLayout() {
   const checkBtn = document.getElementById("adminCheckGameChallengesBtn");
 
   if (createBtn) {
-    createBtn.addEventListener("click", () => {
+    createBtn.addEventListener("click", event => {
+      event.stopPropagation();
       openAdminCreateGameModal();
     });
   }
@@ -234,6 +278,225 @@ function ensureAdminGamesTabLayout() {
       await handleAdminCheckIncompleteChallenges(selectedGame);
     });
   }
+}
+
+/* ============================================================
+ * MOBILE GAME DRAWER
+ * ============================================================ */
+
+function isAdminGameMobileLayout() {
+  return window.matchMedia("(max-width: 760px)").matches;
+}
+
+function updateAdminGameDrawerTopOffset() {
+  const header = document.querySelector(".admin-sticky-header");
+  const headerHeight = header
+    ? Math.ceil(header.getBoundingClientRect().height)
+    : 100;
+
+  document.documentElement.style.setProperty(
+    "--admin-game-drawer-top",
+    `${headerHeight}px`
+  );
+}
+
+function getSelectedAdminGameForRail() {
+  return adminGames.find(
+    game => Number(game.id) === Number(selectedAdminGameDetailsId)
+  ) || adminCurrentGame || null;
+}
+
+function updateAdminGameRailLabel() {
+  const label = document.getElementById("adminGameRailName");
+  if (!label) return;
+
+  const game = getSelectedAdminGameForRail();
+  label.textContent = game?.name || "Spiel";
+}
+
+function openAdminGameDrawer() {
+  if (!isAdminGameMobileLayout()) return;
+
+  const layout = document.getElementById("adminGamesSplitLayout");
+  const backdrop = document.getElementById("adminGameDrawerBackdrop");
+  const panel = document.getElementById("adminGameListPanel");
+  const rail = document.getElementById("adminGameRailCurrent");
+
+  if (!layout || !panel) return;
+
+  updateAdminGameDrawerTopOffset();
+  adminGameDrawerOpen = true;
+  layout.classList.add("drawer-open");
+  panel.classList.add("drawer-open");
+  backdrop?.classList.remove("hidden");
+  rail?.setAttribute("aria-expanded", "true");
+}
+
+function closeAdminGameDrawer() {
+  const layout = document.getElementById("adminGamesSplitLayout");
+  const backdrop = document.getElementById("adminGameDrawerBackdrop");
+  const panel = document.getElementById("adminGameListPanel");
+  const rail = document.getElementById("adminGameRailCurrent");
+
+  adminGameDrawerOpen = false;
+  layout?.classList.remove("drawer-open");
+  panel?.classList.remove("drawer-open");
+  backdrop?.classList.add("hidden");
+  rail?.setAttribute("aria-expanded", "false");
+}
+
+function attachAdminGameDrawerEvents() {
+  const rail = document.getElementById("adminGameRailCurrent");
+  const backdrop = document.getElementById("adminGameDrawerBackdrop");
+
+  if (rail && !rail.dataset.drawerBound) {
+    rail.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      openAdminGameDrawer();
+    });
+    rail.dataset.drawerBound = "true";
+  }
+
+  if (backdrop && !backdrop.dataset.drawerBound) {
+    backdrop.addEventListener("click", closeAdminGameDrawer);
+    backdrop.dataset.drawerBound = "true";
+  }
+
+  if (!adminGameDrawerGlobalEventsBound) {
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && adminGameDrawerOpen) {
+        closeAdminGameDrawer();
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      updateAdminGameDrawerTopOffset();
+      if (!isAdminGameMobileLayout() && adminGameDrawerOpen) {
+        closeAdminGameDrawer();
+      }
+    });
+
+    adminGameDrawerGlobalEventsBound = true;
+  }
+}
+
+
+/* ============================================================
+ * SPIELERLISTEN-MODAL / NAVIGATION
+ * ============================================================ */
+
+function ensureAdminGamePlayersListModal() {
+  if (document.getElementById("adminGamePlayersListOverlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "adminGamePlayersListOverlay";
+  overlay.className = "modal-overlay hidden";
+  overlay.innerHTML = `
+    <div class="modal admin-game-players-list-modal">
+      <button id="closeAdminGamePlayersListBtn" class="modal-close-btn" type="button">×</button>
+      <h2 id="adminGamePlayersListTitle">Spieler</h2>
+      <div id="adminGamePlayersListContent" class="admin-game-players-list"></div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document
+    .getElementById("closeAdminGamePlayersListBtn")
+    ?.addEventListener("click", closeAdminGamePlayersListModal);
+
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) closeAdminGamePlayersListModal();
+  });
+}
+
+function closeAdminGamePlayersListModal() {
+  document.getElementById("adminGamePlayersListOverlay")?.classList.add("hidden");
+}
+
+async function openAdminGamePlayerInPlayersTab(playerId, game) {
+  if (!playerId || !game) return;
+
+  selectedAdminPlayerId = Number(playerId);
+  adminCurrentGameId = game.id;
+  adminCurrentGame = game;
+  saveGameIdToLocalStorageAdmin(adminCurrentGameId);
+  updateAdminCurrentGameDisplay();
+  closeAdminGamePlayersListModal();
+
+  if (typeof activateAdminTabByName === "function") {
+    await activateAdminTabByName("players");
+  } else {
+    document.querySelector('.admin-tab[data-tab="players"]')?.click();
+  }
+}
+
+function openAdminGamePlayersListModal(title, rows, game) {
+  ensureAdminGamePlayersListModal();
+
+  const overlay = document.getElementById("adminGamePlayersListOverlay");
+  const titleEl = document.getElementById("adminGamePlayersListTitle");
+  const contentEl = document.getElementById("adminGamePlayersListContent");
+  if (!overlay || !titleEl || !contentEl) return;
+
+  titleEl.textContent = title;
+  contentEl.innerHTML = "";
+
+  if (!rows.length) {
+    contentEl.innerHTML = `<p class="admin-details-empty">Keine Spieler vorhanden.</p>`;
+  } else {
+    rows.forEach(row => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "admin-game-player-list-row";
+      button.innerHTML = `
+        <span class="admin-game-player-list-name">${row.name}</span>
+        ${row.meta ? `<span class="admin-game-player-list-meta">${row.meta}</span>` : ""}
+      `;
+      button.addEventListener("click", async () => {
+        await openAdminGamePlayerInPlayersTab(row.playerId, game);
+      });
+      contentEl.appendChild(button);
+    });
+  }
+
+  overlay.classList.remove("hidden");
+}
+
+function formatAdminGameCooldownSeconds(totalSeconds) {
+  const seconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
+  if (seconds < 60) return `${seconds} s`;
+
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${minutes}:${String(rest).padStart(2, "0")} min`;
+}
+
+function parseAdminGameCooldownInput(input) {
+  if (input === null || input === undefined) return null;
+
+  const trimmed = String(input).trim().toLowerCase();
+  if (!trimmed) return null;
+
+  if (trimmed.includes(":")) {
+    const parts = trimmed.split(":");
+    if (parts.length === 2) {
+      const minutes = Number(parts[0]);
+      const seconds = Number(parts[1]);
+      if (
+        Number.isInteger(minutes) && minutes >= 0 &&
+        Number.isInteger(seconds) && seconds >= 0 && seconds < 60
+      ) {
+        return minutes * 60 + seconds;
+      }
+    }
+    return null;
+  }
+
+  const numeric = Number(trimmed);
+  if (!Number.isFinite(numeric) || numeric < 0) return null;
+  return Math.round(numeric);
 }
 
 /* ============================================================
@@ -496,7 +759,9 @@ function renderAdminGamesList() {
       </div>
     `;
 
-    item.addEventListener("click", async () => {
+    item.addEventListener("click", async event => {
+      event.stopPropagation();
+
       selectedAdminGameDetailsId = game.id;
 
       adminCurrentGameId = game.id;
@@ -505,7 +770,12 @@ function renderAdminGamesList() {
       updateAdminCurrentGameDisplay();
 
       renderAdminGamesList();
+      updateAdminGameRailLabel();
       await renderAdminGameDetails(game);
+
+      if (isAdminGameMobileLayout()) {
+        closeAdminGameDrawer();
+      }
     });
 
     listEl.appendChild(item);
@@ -540,141 +810,161 @@ async function renderAdminGameDetails(game) {
   const stats = buildAdminGameBasicStats(game);
 
   detailsEl.innerHTML = `
-    <div class="admin-details-grid">
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Name</div>
-        <div
-          id="adminEditGameNameBtn"
-          class="admin-detail-value clickable"
-          title="Zum Bearbeiten klicken"
-        >
-          ${game.name || "-"}
-        </div>
-      </div>
+  <div class="admin-details-grid admin-game-details-grid">
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Spiel-ID</div>
-        <div class="admin-detail-value">${game.id}</div>
-      </div>
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">ID</div>
+      <div class="admin-detail-value">${game.id}</div>
+    </div>
 
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Gridgröße</div>
-        <div class="admin-detail-value">${game.grid_size || 5}x${game.grid_size || 5}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Status</div>
-        <div
-          id="adminToggleGameActiveBtn"
-          class="admin-detail-value clickable ${game.is_active ? "" : "danger-state"}"
-          title="Zum Umschalten klicken"
-        >
-          ${game.is_active ? "Aktiv" : "Inaktiv"}
-        </div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Aufgaben nur einmal lösbar</div>
-        <div
-          id="adminToggleSingleUseChallengesBtn"
-          class="admin-detail-value clickable ${game.single_use_challenges ? "" : "muted"}"
-          title="Zum Umschalten klicken"
-        >
-          ${game.single_use_challenges ? "Ja" : "Nein"}
-        </div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Sichtbarkeit</div>
-        <div
-          id="adminEditGameVisibilityBtn"
-          class="admin-detail-value clickable"
-          title="Zum Bearbeiten klicken"
-        >
-          ${getAdminGameVisibilityLabel(game.visibility || "public")}
-        </div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Spielpasswort</div>
-        <div
-          id="adminEditGamePasswordBtn"
-          class="admin-detail-value clickable ${game.game_password_hash ? "" : "muted"}"
-          title="Zum Bearbeiten klicken"
-        >
-          ${game.game_password_hash ? "Gesetzt" : "Nicht gesetzt"}
-        </div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Cooldown</div>
-        <div
-          id="adminEditGameCooldownBtn"
-          class="admin-detail-value clickable"
-          title="Zum Bearbeiten klicken"
-        >
-          ${game.cooldown_seconds ?? 0} s
-        </div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Bingo-Bonus</div>
-        <div
-          id="adminEditGameBingoBtn"
-          class="admin-detail-value clickable"
-          title="Zum Bearbeiten klicken"
-        >
-          ${game.bingo_bonus_points ?? 0} P
-        </div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">First-Bingo-Bonus</div>
-        <div
-          id="adminEditGameFirstBingoBtn"
-          class="admin-detail-value clickable"
-          title="Zum Bearbeiten klicken"
-        >
-          ${game.first_bingo_bonus_points ?? 3} P
-        </div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Spieler mit State</div>
-        <div class="admin-detail-value">${stats.uniquePlayersWithState}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Aktive Spieler</div>
-        <div class="admin-detail-value">${stats.playersWithActiveChallenge}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Cooldown-Spieler</div>
-        <div class="admin-detail-value">${stats.playersInCooldown}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Gelöste Felder</div>
-        <div class="admin-detail-value">${stats.solvedFieldsUnique}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Ungelöste Felder</div>
-        <div class="admin-detail-value">${stats.unsolvedFields}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Vergebene Gesamtpunkte</div>
-        <div class="admin-detail-value">${stats.totalAwardedPoints}</div>
-      </div>
-
-      <div class="admin-detail-card">
-        <div class="admin-detail-label">Unvollständige Aufgaben</div>
-        <div class="admin-detail-value">${stats.incompleteChallengesCount}</div>
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Größe</div>
+      <div class="admin-detail-value">
+        ${game.grid_size || 5}×${game.grid_size || 5}
       </div>
     </div>
-  `;
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Status</div>
+      <div
+        id="adminToggleGameActiveBtn"
+        class="admin-detail-value clickable ${
+          game.is_active ? "success-state" : "danger-state"
+        }"
+        title="Zum Umschalten klicken"
+      >
+        ${game.is_active ? "Aktiv" : "Inaktiv"}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Sichtbar</div>
+      <div
+        id="adminEditGameVisibilityBtn"
+        class="admin-detail-value clickable"
+        title="Zum Bearbeiten klicken"
+      >
+        ${(game.visibility || "public") === "private" ? "Privat" : "Öffent."}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Passwort</div>
+      <div
+        id="adminEditGamePasswordBtn"
+        class="admin-detail-value clickable ${
+          game.game_password_hash ? "" : "muted"
+        }"
+        title="Zum Bearbeiten klicken"
+      >
+        ${game.game_password_hash ? "Gesetzt" : "Keines"}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Single Use</div>
+      <div
+        id="adminToggleSingleUseChallengesBtn"
+        class="admin-detail-value clickable ${
+          game.single_use_challenges ? "success-state" : "muted"
+        }"
+        title="Zum Umschalten klicken"
+      >
+        ${game.single_use_challenges ? "Ja" : "Nein"}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Cooldown</div>
+      <div
+        id="adminEditGameCooldownBtn"
+        class="admin-detail-value clickable"
+        title="Zum Bearbeiten klicken"
+      >
+        ${formatAdminGameCooldownSeconds(game.cooldown_seconds ?? 0)}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Bingo</div>
+      <div
+        id="adminEditGameBingoBtn"
+        class="admin-detail-value clickable"
+        title="Zum Bearbeiten klicken"
+      >
+        ${game.bingo_bonus_points ?? 0} P
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">First</div>
+      <div
+        id="adminEditGameFirstBingoBtn"
+        class="admin-detail-value clickable"
+        title="Zum Bearbeiten klicken"
+      >
+        ${game.first_bingo_bonus_points ?? 3} P
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Spieler</div>
+      <div id="adminGamePlayersBtn" class="admin-detail-value clickable" title="Spielerliste anzeigen">
+        ${stats.uniquePlayersWithState}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Aktiv</div>
+      <div id="adminGameActivePlayersBtn" class="admin-detail-value clickable" title="Aktive Spieler anzeigen">
+        ${stats.playersWithActiveChallenge}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Cooldown</div>
+      <div id="adminGameCooldownPlayersBtn" class="admin-detail-value clickable" title="Spieler im Cooldown anzeigen">
+        ${stats.playersInCooldown}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Gelöst</div>
+      <div class="admin-detail-value">
+        ${stats.solvedFieldsUnique}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Offen</div>
+      <div class="admin-detail-value">
+        ${stats.unsolvedFields}
+      </div>
+    </div>
+
+    <div class="admin-detail-card">
+      <div class="admin-detail-label">Punkte</div>
+      <div class="admin-detail-value points-state">
+        ${stats.totalAwardedPoints}
+      </div>
+    </div>
+
+  </div>
+
+  ${
+    stats.incompleteChallengesCount > 0
+      ? `
+        <div class="admin-game-incomplete-warning">
+          <span>⚠</span>
+          <strong>${stats.incompleteChallengesCount}</strong>
+          unvollständige Aufgabe${
+            stats.incompleteChallengesCount === 1 ? "" : "n"
+          }
+        </div>
+      `
+      : ""
+  }
+`;
 
   const editNameBtn = document.getElementById("adminEditGameNameBtn");
   const editCooldownBtn = document.getElementById("adminEditGameCooldownBtn");
@@ -684,6 +974,9 @@ async function renderAdminGameDetails(game) {
   const editVisibilityBtn = document.getElementById("adminEditGameVisibilityBtn");
   const editPasswordBtn = document.getElementById("adminEditGamePasswordBtn");
   const singleUseBtn = document.getElementById("adminToggleSingleUseChallengesBtn");
+  const playersBtn = document.getElementById("adminGamePlayersBtn");
+  const activePlayersBtn = document.getElementById("adminGameActivePlayersBtn");
+  const cooldownPlayersBtn = document.getElementById("adminGameCooldownPlayersBtn");
 
   if (editNameBtn) {
     editNameBtn.addEventListener("click", async () => {
@@ -724,6 +1017,60 @@ async function renderAdminGameDetails(game) {
   if (editPasswordBtn) {
     editPasswordBtn.addEventListener("click", async () => {
       await openAdminGamePasswordModal(game);
+    });
+  }
+
+  const gameStates = getAdminGamePlayerStates(game.id);
+
+  if (playersBtn) {
+    playersBtn.addEventListener("click", () => {
+      openAdminGamePlayersListModal(
+        `Spieler – ${game.name || `Spiel ${game.id}`}`,
+        gameStates
+          .map(state => ({
+            playerId: state.player_id,
+            name: getAdminPlayerName(state.player_id),
+            meta: `${state.score ?? 0}P`
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, "de")),
+        game
+      );
+    });
+  }
+
+  if (activePlayersBtn) {
+    activePlayersBtn.addEventListener("click", () => {
+      openAdminGamePlayersListModal(
+        `Aktive Spieler – ${game.name || `Spiel ${game.id}`}`,
+        gameStates
+          .filter(state => state.active_challenge_id !== null)
+          .map(state => ({
+            playerId: state.player_id,
+            name: getAdminPlayerName(state.player_id),
+            meta: typeof getChallengeTitleByIdAdmin === "function"
+              ? getChallengeTitleByIdAdmin(state.active_challenge_id)
+              : "Aktive Aufgabe"
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, "de")),
+        game
+      );
+    });
+  }
+
+  if (cooldownPlayersBtn) {
+    cooldownPlayersBtn.addEventListener("click", () => {
+      openAdminGamePlayersListModal(
+        `Spieler im Cooldown – ${game.name || `Spiel ${game.id}`}`,
+        gameStates
+          .filter(state => isCooldownActiveAdmin(state.cooldown_until))
+          .map(state => ({
+            playerId: state.player_id,
+            name: getAdminPlayerName(state.player_id),
+            meta: formatAdminCooldown(state.cooldown_until)
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, "de")),
+        game
+      );
     });
   }
 
@@ -876,16 +1223,21 @@ async function handleAdminEditGameName(game) {
 async function handleAdminEditGameCooldown(game) {
   if (!game) return;
 
-    const oldCooldown = game.cooldown_seconds ?? 0;
+  const oldCooldown = game.cooldown_seconds ?? 0;
   const input = prompt(
-    `Cooldown in Sekunden für "${game.name}" eingeben:`,
-    String(game.cooldown_seconds ?? 0)
+    `Cooldown für "${game.name}" eingeben.\n\n` +
+    `Formate:\n` +
+    `- Sekunden: 90\n` +
+    `- Minuten:Sekunden: 1:30`,
+    oldCooldown >= 60
+      ? `${Math.floor(oldCooldown / 60)}:${String(oldCooldown % 60).padStart(2, "0")}`
+      : String(oldCooldown)
   );
   if (input === null) return;
 
-  const value = Number(input);
-  if (!Number.isFinite(value) || value < 0) {
-    alert("Ungültiger Cooldown.");
+  const value = parseAdminGameCooldownInput(input);
+  if (value === null) {
+    alert("Ungültiger Cooldown. Beispiele: 90 oder 1:30");
     return;
   }
 
@@ -1059,6 +1411,16 @@ function renderAdminGameGrid(game) {
   renderAdminBingoLineIndicators(game);
   const expectedCount = gridSize * gridSize;
 
+    gridEl.classList.remove(
+      "grid-size-3",
+      "grid-size-4",
+      "grid-size-5",
+      "grid-size-6",
+      "grid-size-7"
+    );
+
+gridEl.classList.add(`grid-size-${gridSize}`);
+
   const challenges = getAdminGameChallenges(game.id);
   const challengeByPosition = {};
 
@@ -1066,7 +1428,8 @@ function renderAdminGameGrid(game) {
     challengeByPosition[Number(challenge.position)] = challenge;
   });
 
-  gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+  gridEl.style.gridTemplateColumns =
+  `repeat(${gridSize}, minmax(0, 1fr))`;
   gridEl.innerHTML = "";
 
   for (let position = 1; position <= expectedCount; position++) {
@@ -1361,12 +1724,10 @@ function ensureAdminGameChallengeModal() {
   overlay.className = "modal-overlay hidden";
 
   overlay.innerHTML = `
-    <div class="modal">
+    <div class="modal admin-game-challenge-modal">
       <button id="closeAdminGameChallengeBtn" class="modal-close-btn" type="button">×</button>
 
-      <h2 id="adminGameChallengeModalTitle">Challenge</h2>
-
-      <div id="adminGameChallengeModalContent" class="rules-content">
+      <div id="adminGameChallengeModalContent" class="rules-content admin-game-challenge-modal-content">
         <p>Lade Challenge-Details...</p>
       </div>
     </div>
@@ -1549,7 +1910,11 @@ function renderAdminGameChallengeGalleryCurrent() {
   if (!container) return;
 
   if (!currentAdminGameChallengeGalleryEntries.length) {
-    container.innerHTML = `<p>Noch keine Bilder vorhanden.</p>`;
+    container.innerHTML = `
+      <div class="admin-game-challenge-gallery-stage empty">
+        <p class="admin-details-empty">Noch keine Bilder vorhanden.</p>
+      </div>
+    `;
     return;
   }
 
@@ -1557,40 +1922,31 @@ function renderAdminGameChallengeGalleryCurrent() {
   const imageUrl = getPublicImageUrl(entry.proofImagePath);
 
   container.innerHTML = `
-    <div class="admin-gallery-wrapper">
-      <p class="admin-gallery-caption">
-        <strong>Foto von:</strong> ${entry.playerName}
-        <span class="admin-gallery-time">(${formatAdminDateTime(entry.completedAt)})</span>
-      </p>
+    <div class="admin-game-challenge-gallery-stage">
+      ${currentAdminGameChallengeGalleryIndex > 0 ? `<button class="admin-gallery-arrow left" id="adminGameChallengeGalleryPrevBtn" type="button" aria-label="Vorheriges Bild">‹</button>` : ""}
+      <img src="${imageUrl}" class="admin-game-challenge-gallery-image" alt="Beweisfoto" />
+      ${currentAdminGameChallengeGalleryIndex < currentAdminGameChallengeGalleryEntries.length - 1 ? `<button class="admin-gallery-arrow right" id="adminGameChallengeGalleryNextBtn" type="button" aria-label="Nächstes Bild">›</button>` : ""}
 
-      <div class="admin-gallery-image-container">
-        ${currentAdminGameChallengeGalleryIndex > 0 ? `<div class="admin-gallery-arrow left" id="adminGameChallengeGalleryPrevBtn">‹</div>` : ""}
-        <img src="${imageUrl}" class="admin-gallery-image" alt="Beweisfoto" />
-        ${currentAdminGameChallengeGalleryIndex < currentAdminGameChallengeGalleryEntries.length - 1 ? `<div class="admin-gallery-arrow right" id="adminGameChallengeGalleryNextBtn">›</div>` : ""}
+      <div class="admin-game-challenge-gallery-caption">
+        <strong>${entry.playerName}</strong>
+        <span>${formatAdminDateTime(entry.completedAt)}</span>
       </div>
     </div>
   `;
 
-  const prevBtn = document.getElementById("adminGameChallengeGalleryPrevBtn");
-  const nextBtn = document.getElementById("adminGameChallengeGalleryNextBtn");
+  document.getElementById("adminGameChallengeGalleryPrevBtn")?.addEventListener("click", () => {
+    if (currentAdminGameChallengeGalleryIndex > 0) {
+      currentAdminGameChallengeGalleryIndex--;
+      renderAdminGameChallengeGalleryCurrent();
+    }
+  });
 
-  if (prevBtn) {
-    prevBtn.onclick = () => {
-      if (currentAdminGameChallengeGalleryIndex > 0) {
-        currentAdminGameChallengeGalleryIndex--;
-        renderAdminGameChallengeGalleryCurrent();
-      }
-    };
-  }
-
-  if (nextBtn) {
-    nextBtn.onclick = () => {
-      if (currentAdminGameChallengeGalleryIndex < currentAdminGameChallengeGalleryEntries.length - 1) {
-        currentAdminGameChallengeGalleryIndex++;
-        renderAdminGameChallengeGalleryCurrent();
-      }
-    };
-  }
+  document.getElementById("adminGameChallengeGalleryNextBtn")?.addEventListener("click", () => {
+    if (currentAdminGameChallengeGalleryIndex < currentAdminGameChallengeGalleryEntries.length - 1) {
+      currentAdminGameChallengeGalleryIndex++;
+      renderAdminGameChallengeGalleryCurrent();
+    }
+  });
 }
 
 /** Springt in der Galerie zum Bild eines bestimmten Players */
@@ -1600,6 +1956,49 @@ function setAdminGameChallengeGalleryToPlayer(playerId) {
     currentAdminGameChallengeGalleryIndex = index;
     renderAdminGameChallengeGalleryCurrent();
   }
+}
+
+async function loadAdminChallengeFailedLogs(gameId, challengeId) {
+  try {
+    if (DataService?.logs?.loadActivityLogs) {
+      const rows = await DataService.logs.loadActivityLogs({
+        gameId,
+        eventType: "challenge_failed",
+        limit: 1000
+      });
+
+      return (rows || [])
+        .filter(row => Number(row.challenge_id) === Number(challengeId))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    const { data, error } = await supabaseClient
+      .from("activity_logs")
+      .select("id, game_id, player_id, challenge_id, event_type, created_at, metadata")
+      .eq("game_id", gameId)
+      .eq("challenge_id", challengeId)
+      .eq("event_type", "challenge_failed")
+      .order("created_at", { ascending: false })
+      .limit(1000);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.warn("Aufgabenabbrüche konnten nicht geladen werden:", error);
+    return [];
+  }
+}
+
+function openAdminChallengePlayerRows(title, rows, game) {
+  openAdminGamePlayersListModal(
+    title,
+    rows.map(row => ({
+      playerId: row.playerId,
+      name: getAdminPlayerName(row.playerId),
+      meta: row.meta || ""
+    })),
+    game
+  );
 }
 
 /**
@@ -1613,26 +2012,24 @@ function setAdminGameChallengeGalleryToPlayer(playerId) {
 async function openAdminGameChallengeDetails(game, challenge) {
   if (!game || !challenge) return;
 
-  const titleEl = document.getElementById("adminGameChallengeModalTitle");
   const contentEl = document.getElementById("adminGameChallengeModalContent");
-
-  if (!titleEl || !contentEl) return;
+  if (!contentEl) return;
 
   const completions = getAdminChallengeCompletedRows(game.id, challenge.id);
-  const challengeStats = getAdminChallengeStats(game.id, challenge.id);
+  const activeRows = getAdminChallengeActiveRows(game.id, challenge.id);
+  const failedLogs = await loadAdminChallengeFailedLogs(game.id, challenge.id);
 
   currentAdminGameChallengeGalleryEntries = buildAdminGameChallengeGalleryEntries(game.id, challenge.id);
   currentAdminGameChallengeGalleryIndex = 0;
 
-  titleEl.textContent = challenge.title || `Challenge ${challenge.position}`;
-
   let leaderboardHtml = `
-    <div class="admin-completed-wrapper" style="margin-top: 0;">
+    <div class="admin-completed-wrapper admin-game-challenge-leaderboard">
+      <h3>Leaderboard dieser Aufgabe</h3>
       <div class="admin-completion-list">
   `;
 
   if (!completions.length) {
-    leaderboardHtml += `<p>Noch niemand.</p>`;
+    leaderboardHtml += `<p class="admin-details-empty">Noch niemand.</p>`;
   } else {
     completions.forEach((row, index) => {
       const playerName = getAdminPlayerName(row.player_id);
@@ -1641,229 +2038,156 @@ async function openAdminGameChallengeDetails(game, challenge) {
       leaderboardHtml += `
         <div class="admin-completion-row">
           <div class="admin-completion-left">
-            <div
-              class="admin-completion-name ${clickable}"
-              data-player-id="${row.player_id}"
-            >
+            <div class="admin-completion-name ${clickable}" data-player-id="${row.player_id}">
               ${index + 1}. ${playerName}
               ${index === 0 ? `<span class="admin-completion-star">⭐</span>` : ""}
             </div>
-
             <div class="admin-completion-meta">
               ${row.success_variant_label ? `${row.success_variant_label} · ` : ""}${formatAdminDateTime(row.completed_at)}
             </div>
           </div>
-
           <div class="admin-completion-right">
-            <div class="admin-completion-points">
-              ${row.points_awarded || 0}P
-            </div>
+            <div class="admin-completion-points">${row.points_awarded || 0}P</div>
           </div>
         </div>
       `;
     });
   }
 
-  leaderboardHtml += `
-      </div>
-    </div>
-  `;
+  leaderboardHtml += `</div></div>`;
 
   contentEl.innerHTML = `
-    <div class="admin-game-challenge-cards">
+    <div class="admin-game-challenge-cards admin-game-challenge-detail-grid">
+      <div id="adminEditChallengeTitleBtn" class="admin-game-challenge-card editable admin-game-challenge-title-card admin-game-challenge-card-wide">
+        <div class="admin-game-challenge-card-label">Titel</div>
+        <div class="admin-game-challenge-card-value clickable-value">${challenge.title || "–"}</div>
+      </div>
 
-      <div id="adminEditChallengeTitleBtn" class="admin-game-challenge-card editable">
-        <div class="admin-game-challenge-card-label">Name</div>
-        <div class="admin-game-challenge-card-value">${challenge.title || "–"}</div>
+      <div id="adminEditChallengeTaskBtn" class="admin-game-challenge-card editable compact-text-card">
+        <div class="admin-game-challenge-card-label">Beschreibung</div>
+        <div class="admin-game-challenge-card-value muted clickable-value"><span class="admin-one-line-preview">${getFirstLinePreview(challenge.task)}</span></div>
+      </div>
+      <div id="adminEditChallengeDetailsBtn" class="admin-game-challenge-card editable compact-text-card">
+        <div class="admin-game-challenge-card-label">Hinweistext</div>
+        <div class="admin-game-challenge-card-value muted clickable-value"><span class="admin-one-line-preview">${getFirstLinePreview(challenge.details)}</span></div>
+      </div>
+      <div id="adminEditChallengeSuccessBtn" class="admin-game-challenge-card editable compact-text-card">
+        <div class="admin-game-challenge-card-label">Erfolgstext</div>
+        <div class="admin-game-challenge-card-value muted clickable-value"><span class="admin-one-line-preview">${getFirstLinePreview(challenge.success_text)}</span></div>
       </div>
 
       <div id="adminEditChallengePointsBtn" class="admin-game-challenge-card editable">
         <div class="admin-game-challenge-card-label">Punkte</div>
-        <div class="admin-game-challenge-card-value">${getAdminChallengePointsValueDisplay(challenge)}</div>
+        <div class="admin-game-challenge-card-value clickable-value">${getAdminChallengePointsValueDisplay(challenge)}</div>
+      </div>
+      <div id="adminToggleChallengePhotoBtn" class="admin-game-challenge-card editable">
+        <div class="admin-game-challenge-card-label">Foto-Modus</div>
+        <div class="admin-game-challenge-card-value clickable-value ${getAdminChallengePhotoMode(challenge) === "none" ? "muted" : ""}">${getAdminChallengePhotoModeLabel(challenge)}</div>
+      </div>
+      <div id="adminEditChallengeCategoryBtn" class="admin-game-challenge-card editable">
+        <div class="admin-game-challenge-card-label">Kategorie</div>
+        <div class="admin-game-challenge-card-value clickable-value">${challenge.category_icon || "–"}</div>
       </div>
 
       <div id="adminEditChallengeVariant1Btn" class="admin-game-challenge-card editable">
         <div class="admin-game-challenge-card-label">Variante 1</div>
-        <div class="admin-game-challenge-card-value muted">${challenge.success_variant_1 || "–"}</div>
+        <div class="admin-game-challenge-card-value muted clickable-value">${challenge.success_variant_1 || "–"}</div>
       </div>
-
       <div id="adminEditChallengeVariant2Btn" class="admin-game-challenge-card editable">
         <div class="admin-game-challenge-card-label">Variante 2</div>
-        <div class="admin-game-challenge-card-value muted">${challenge.success_variant_2 || "–"}</div>
+        <div class="admin-game-challenge-card-value muted clickable-value">${challenge.success_variant_2 || "–"}</div>
       </div>
-
       <div id="adminEditChallengeVariant3Btn" class="admin-game-challenge-card editable">
         <div class="admin-game-challenge-card-label">Variante 3</div>
-        <div class="admin-game-challenge-card-value muted">${challenge.success_variant_3 || "–"}</div>
+        <div class="admin-game-challenge-card-value muted clickable-value">${challenge.success_variant_3 || "–"}</div>
       </div>
 
-      <div id="adminEditChallengeTaskBtn" class="admin-game-challenge-card editable admin-game-challenge-card-wide">
-        <div class="admin-game-challenge-card-label">Beschreibung</div>
-        <div class="admin-game-challenge-card-value muted">
-          <span class="admin-one-line-preview">${getFirstLinePreview(challenge.task)}</span>
-        </div>
-      </div>
-
-      <div id="adminEditChallengeDetailsBtn" class="admin-game-challenge-card editable admin-game-challenge-card-wide">
-        <div class="admin-game-challenge-card-label">Hinweistext</div>
-        <div class="admin-game-challenge-card-value muted">
-          <span class="admin-one-line-preview">${getFirstLinePreview(challenge.details)}</span>
-        </div>
-      </div>
-
-      <div id="adminEditChallengeSuccessBtn" class="admin-game-challenge-card editable admin-game-challenge-card-wide">
-        <div class="admin-game-challenge-card-label">Congratulation Text</div>
-        <div class="admin-game-challenge-card-value muted">
-          <span class="admin-one-line-preview">${getFirstLinePreview(challenge.success_text)}</span>
-        </div>
-      </div>
-
-      <div id="adminEditChallengeImageBtn" class="admin-game-challenge-card editable admin-game-challenge-card-wide">
+      <div id="adminEditChallengeImageBtn" class="admin-game-challenge-card editable">
         <div class="admin-game-challenge-card-label">Aufgabenbild</div>
-        <div class="admin-game-challenge-card-value ${challenge.description_image_path ? "" : "muted"}">
-          ${challenge.description_image_path ? "Bild vorhanden" : "Nicht gesetzt"}
-        </div>
+        <div class="admin-game-challenge-card-value clickable-value ${challenge.description_image_path ? "" : "muted"}">${challenge.description_image_path ? "Vorhanden" : "Keines"}</div>
       </div>
-
-      <div id="adminToggleChallengePhotoBtn" class="admin-game-challenge-card editable">
-        <div class="admin-game-challenge-card-label">Foto-Modus</div>
-        <div class="admin-game-challenge-card-value ${getAdminChallengePhotoMode(challenge) === "none" ? "muted" : ""}">
-          ${getAdminChallengePhotoModeLabel(challenge)}
-        </div>
-      </div>
-
       <div id="adminToggleChallengeActiveBtn" class="admin-game-challenge-card editable">
-        <div class="admin-game-challenge-card-label">Aktiv</div>
-        <div class="admin-game-challenge-card-value ${challenge.is_active ? "" : "muted"}">
-          ${challenge.is_active ? "Ja" : "Nein"}
-        </div>
+        <div class="admin-game-challenge-card-label">Status</div>
+        <div class="admin-game-challenge-card-value clickable-value ${challenge.is_active ? "success-state" : "muted"}">${challenge.is_active ? "Aktiv" : "Inaktiv"}</div>
       </div>
-
-      <div id="adminEditChallengeCategoryBtn" class="admin-game-challenge-card editable">
-        <div class="admin-game-challenge-card-label">Kategorie</div>
-        <div class="admin-game-challenge-card-value">
-          ${challenge.category_icon || "–"}
-        </div>
-      </div>
-
       <div class="admin-game-challenge-card">
         <div class="admin-game-challenge-card-label">Gridposition</div>
         <div class="admin-game-challenge-card-value">${challenge.position ?? "-"}</div>
       </div>
 
-      <div class="admin-game-challenge-card">
+      <div id="adminChallengeSolvedStatsBtn" class="admin-game-challenge-card stat-card clickable-stat">
         <div class="admin-game-challenge-card-label">Gelöst</div>
-        <div class="admin-game-challenge-card-value">${challengeStats.solvedCount}</div>
+        <div class="admin-game-challenge-card-value clickable-value">${completions.length}</div>
       </div>
-
-      <div class="admin-game-challenge-card">
+      <div id="adminChallengeActiveStatsBtn" class="admin-game-challenge-card stat-card clickable-stat">
         <div class="admin-game-challenge-card-label">Gerade aktiv</div>
-        <div class="admin-game-challenge-card-value">${challengeStats.activeCount}</div>
+        <div class="admin-game-challenge-card-value clickable-value">${activeRows.length}</div>
       </div>
-
+      <div id="adminChallengeFailedStatsBtn" class="admin-game-challenge-card stat-card clickable-stat">
+        <div class="admin-game-challenge-card-label">Aufgegeben</div>
+        <div class="admin-game-challenge-card-value clickable-value">${failedLogs.length}</div>
+      </div>
     </div>
 
-    <div style="margin-top: 20px;">
-      <h3>Galerie</h3>
-      <div id="adminGameChallengeGallery"></div>
-    </div>
-
-    <div style="margin-top: 20px;">
-      <h3>Leaderboard dieser Aufgabe</h3>
-      ${leaderboardHtml}
-    </div>
+    <div id="adminGameChallengeGallery" class="admin-game-challenge-gallery"></div>
+    ${leaderboardHtml}
   `;
 
-  const editTitleBtn = document.getElementById("adminEditChallengeTitleBtn");
-  const editTaskBtn = document.getElementById("adminEditChallengeTaskBtn");
-  const editDetailsBtn = document.getElementById("adminEditChallengeDetailsBtn");
-  const editPointsBtn = document.getElementById("adminEditChallengePointsBtn");
-  const editSuccessBtn = document.getElementById("adminEditChallengeSuccessBtn");
-  const editImageBtn = document.getElementById("adminEditChallengeImageBtn");
-  const editVariant1Btn = document.getElementById("adminEditChallengeVariant1Btn");
-  const editVariant2Btn = document.getElementById("adminEditChallengeVariant2Btn");
-  const editVariant3Btn = document.getElementById("adminEditChallengeVariant3Btn");
-  const togglePhotoBtn = document.getElementById("adminToggleChallengePhotoBtn");
-  const toggleActiveBtn = document.getElementById("adminToggleChallengeActiveBtn");
-  const editCategoryBtn = document.getElementById("adminEditChallengeCategoryBtn");
+  const handlers = {
+    adminEditChallengeTitleBtn: () => handleAdminEditChallengeTitle(game, challenge),
+    adminEditChallengeTaskBtn: () => handleAdminEditChallengeTask(game, challenge),
+    adminEditChallengeDetailsBtn: () => handleAdminEditChallengeDetails(game, challenge),
+    adminEditChallengePointsBtn: () => handleAdminEditChallengePoints(game, challenge),
+    adminEditChallengeSuccessBtn: () => handleAdminEditChallengeSuccessText(game, challenge),
+    adminEditChallengeImageBtn: () => openAdminChallengeImageModal(game, challenge),
+    adminEditChallengeVariant1Btn: () => handleAdminEditChallengeSuccessVariant(game, challenge, 1),
+    adminEditChallengeVariant2Btn: () => handleAdminEditChallengeSuccessVariant(game, challenge, 2),
+    adminEditChallengeVariant3Btn: () => handleAdminEditChallengeSuccessVariant(game, challenge, 3),
+    adminToggleChallengePhotoBtn: () => handleAdminToggleChallengePhoto(game, challenge),
+    adminToggleChallengeActiveBtn: () => handleAdminToggleChallengeActive(game, challenge),
+    adminEditChallengeCategoryBtn: () => handleAdminEditChallengeCategory(game, challenge)
+  };
 
-  if (editTitleBtn) {
-    editTitleBtn.addEventListener("click", async () => {
-      await handleAdminEditChallengeTitle(game, challenge);
-    });
-  }
+  Object.entries(handlers).forEach(([id, handler]) => {
+    document.getElementById(id)?.addEventListener("click", handler);
+  });
 
-  if (editTaskBtn) {
-    editTaskBtn.addEventListener("click", async () => {
-      await handleAdminEditChallengeTask(game, challenge);
-    });
-  }
+  document.getElementById("adminChallengeSolvedStatsBtn")?.addEventListener("click", () => {
+    openAdminChallengePlayerRows(
+      `Gelöst – ${challenge.title || `Feld ${challenge.position}`}`,
+      completions.map(row => ({
+        playerId: row.player_id,
+        meta: formatAdminDateTime(row.completed_at)
+      })),
+      game
+    );
+  });
 
-  if (editDetailsBtn) {
-    editDetailsBtn.addEventListener("click", async () => {
-      await handleAdminEditChallengeDetails(game, challenge);
-    });
-  }
+  document.getElementById("adminChallengeActiveStatsBtn")?.addEventListener("click", () => {
+    openAdminChallengePlayerRows(
+      `Gerade aktiv – ${challenge.title || `Feld ${challenge.position}`}`,
+      activeRows.map(row => ({
+        playerId: row.player_id,
+        meta: row.started_at ? formatAdminDateTime(row.started_at) : "Aktiv"
+      })),
+      game
+    );
+  });
 
-  if (editPointsBtn) {
-    editPointsBtn.addEventListener("click", async () => {
-      await handleAdminEditChallengePoints(game, challenge);
-    });
-  }
+  document.getElementById("adminChallengeFailedStatsBtn")?.addEventListener("click", () => {
+    openAdminChallengePlayerRows(
+      `Aufgegeben – ${challenge.title || `Feld ${challenge.position}`}`,
+      failedLogs.map(row => ({
+        playerId: row.player_id,
+        meta: formatAdminDateTime(row.created_at)
+      })),
+      game
+    );
+  });
 
-  if (editSuccessBtn) {
-    editSuccessBtn.addEventListener("click", async () => {
-      await handleAdminEditChallengeSuccessText(game, challenge);
-    });
-  }
-
-  if (editImageBtn) {
-    editImageBtn.addEventListener("click", async () => {
-      openAdminChallengeImageModal(game, challenge);
-    });
-  }
-
-  if (editVariant1Btn) {
-    editVariant1Btn.addEventListener("click", async () => {
-      await handleAdminEditChallengeSuccessVariant(game, challenge, 1);
-    });
-  }
-
-  if (editVariant2Btn) {
-    editVariant2Btn.addEventListener("click", async () => {
-      await handleAdminEditChallengeSuccessVariant(game, challenge, 2);
-    });
-  }
-
-  if (editVariant3Btn) {
-    editVariant3Btn.addEventListener("click", async () => {
-      await handleAdminEditChallengeSuccessVariant(game, challenge, 3);
-    });
-  }
-
-  if (togglePhotoBtn) {
-    togglePhotoBtn.addEventListener("click", async () => {
-      await handleAdminToggleChallengePhoto(game, challenge);
-    });
-  }
-
-  if (toggleActiveBtn) {
-    toggleActiveBtn.addEventListener("click", async () => {
-      await handleAdminToggleChallengeActive(game, challenge);
-    });
-  }
-
-  if (editCategoryBtn) {
-    editCategoryBtn.addEventListener("click", async () => {
-      await handleAdminEditChallengeCategory(game, challenge);
-    });
-  }
-
-  const clickableEntries = contentEl.querySelectorAll(".admin-completion-name.clickable");
-  clickableEntries.forEach(el => {
+  contentEl.querySelectorAll(".admin-completion-name.clickable").forEach(el => {
     el.addEventListener("click", () => {
-      const playerId = Number(el.dataset.playerId);
-      setAdminGameChallengeGalleryToPlayer(playerId);
+      setAdminGameChallengeGalleryToPlayer(Number(el.dataset.playerId));
     });
   });
 
@@ -2253,7 +2577,7 @@ async function handleAdminEditChallengeDetails(game, challenge) {
 async function handleAdminEditChallengeSuccessText(game, challenge) {
   const oldSuccessText = challenge.success_text || "";
   openAdminTextEditModal({
-    title: "Congratulation Text bearbeiten",
+    title: "Erfolgstext bearbeiten",
     initialValue: challenge.success_text || "",
     onSave: async (value) => {
       const updated = await updateAdminChallengeFields(challenge.id, {
@@ -2847,11 +3171,16 @@ async function handleAdminDuplicateGame(game) {
     .insert({
       name: newName,
       grid_size: game.grid_size,
-      cooldown_seconds: game.cooldown_seconds,
-      bingo_bonus_points: game.bingo_bonus_points,
-      is_active: false,
+      cooldown_seconds: game.cooldown_seconds ?? 0,
+      bingo_bonus_points: game.bingo_bonus_points ?? 0,
+      first_bingo_bonus_points: game.first_bingo_bonus_points ?? 3,
+      single_use_challenges: game.single_use_challenges === true,
       visibility: game.visibility || "public",
-      game_password_hash: game.game_password_hash || null
+      game_password_hash: game.game_password_hash || null,
+
+      // Eine Kopie startet weiterhin bewusst inaktiv. Alle übrigen
+      // Spielregeln und Zugangseinstellungen werden vollständig übernommen.
+      is_active: false
     })
     .select()
     .single();
@@ -2873,6 +3202,10 @@ async function handleAdminDuplicateGame(game) {
       grid_size: newGame.grid_size || null,
       cooldown_seconds: newGame.cooldown_seconds ?? null,
       bingo_bonus_points: newGame.bingo_bonus_points ?? null,
+      first_bingo_bonus_points: newGame.first_bingo_bonus_points ?? null,
+      single_use_challenges: newGame.single_use_challenges === true,
+      visibility: newGame.visibility || "public",
+      has_game_password: !!newGame.game_password_hash,
       is_active: newGame.is_active === true
     }
   });

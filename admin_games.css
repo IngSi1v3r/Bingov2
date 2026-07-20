@@ -1,0 +1,1156 @@
+/* ============================================================
+   admin_games.css
+   Spiele-Tab, Spielfeld, Bingo-Indikatoren und Setup-Wizard.
+   Aus der bisherigen admin.css logisch ausgelagert.
+   Noch keine bewussten Design- oder Funktionsaenderungen.
+   ============================================================ */
+
+/* ===================== */
+/* GAMES TAB GRID */
+/* ===================== */
+
+.admin-game-grid {
+  display: grid;
+  gap: 10px;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  box-sizing: border-box;
+}
+
+.admin-game-grid-cell {
+  position: relative;
+
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 8px;
+
+  overflow: hidden;
+
+  color: white;
+  text-align: center;
+
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.admin-game-grid-cell:hover {
+  transform: translateY(-2px);
+  background: #445066;
+}
+
+.admin-game-grid-cell.placeholder {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.admin-game-grid-cell.solved {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: white;
+}
+
+.admin-game-grid-cell.inactive {
+  opacity: 0.45;
+}
+
+.admin-game-grid-title {
+  max-width: 100%;
+  min-width: 0;
+
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+
+  font-weight: 700;
+  text-align: center;
+}
+
+.admin-game-grid-points {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 0.85rem;
+  color: #d1d5db;
+}
+
+.admin-game-grid-count {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  font-size: 0.8rem;
+  color: #d1d5db;
+}
+
+.admin-game-grid-banner {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  padding: 3px 6px;
+  font-size: 0.68rem;
+  font-weight: bold;
+  text-align: center;
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-radius: 999px;
+}
+
+.admin-game-grid-category {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.admin-game-grid-photo {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* ===================== */
+/* GRID SIZE TYPOGRAPHY */
+/* ===================== */
+
+.admin-game-grid.grid-size-3 .admin-game-grid-title {
+    font-size: .58rem;
+}
+
+.admin-game-grid.grid-size-4 .admin-game-grid-title {
+    font-size: .52rem;
+}
+
+.admin-game-grid.grid-size-5 .admin-game-grid-title {
+    font-size: .46rem;
+}
+
+.admin-game-grid.grid-size-6 .admin-game-grid-title {
+    font-size: .40rem;
+}
+
+.admin-game-grid.grid-size-7 .admin-game-grid-title {
+    font-size: .34rem;
+}
+
+.admin-game-grid-title{
+    line-height:1.0;
+}
+
+/* ===================== */
+/* GRID SIZE CORNER ELEMENTS */
+/* ===================== */
+
+/* 3×3 */
+.admin-game-grid.grid-size-3 .admin-game-grid-points,
+.admin-game-grid.grid-size-3 .admin-game-grid-count,
+.admin-game-grid.grid-size-3 .admin-game-grid-category,
+.admin-game-grid.grid-size-3 .admin-game-grid-photo {
+  font-size: 0.95rem;
+}
+
+/* 4×4 */
+.admin-game-grid.grid-size-4 .admin-game-grid-points,
+.admin-game-grid.grid-size-4 .admin-game-grid-count,
+.admin-game-grid.grid-size-4 .admin-game-grid-category,
+.admin-game-grid.grid-size-4 .admin-game-grid-photo {
+  font-size: 0.82rem;
+}
+
+/* 5×5 */
+.admin-game-grid.grid-size-5 .admin-game-grid-points,
+.admin-game-grid.grid-size-5 .admin-game-grid-count,
+.admin-game-grid.grid-size-5 .admin-game-grid-category,
+.admin-game-grid.grid-size-5 .admin-game-grid-photo {
+  font-size: 0.7rem;
+}
+
+/* 6×6 */
+.admin-game-grid.grid-size-6 .admin-game-grid-points,
+.admin-game-grid.grid-size-6 .admin-game-grid-count,
+.admin-game-grid.grid-size-6 .admin-game-grid-category,
+.admin-game-grid.grid-size-6 .admin-game-grid-photo {
+  font-size: 0.6rem;
+}
+
+/* 7×7 */
+.admin-game-grid.grid-size-7 .admin-game-grid-points,
+.admin-game-grid.grid-size-7 .admin-game-grid-count,
+.admin-game-grid.grid-size-7 .admin-game-grid-category,
+.admin-game-grid.grid-size-7 .admin-game-grid-photo {
+  font-size: 0.52rem;
+}
+
+.admin-game-grid.grid-size-6 .admin-game-grid-points,
+.admin-game-grid.grid-size-7 .admin-game-grid-points {
+  right: 4px;
+  bottom: 3px;
+}
+
+.admin-game-grid.grid-size-6 .admin-game-grid-count,
+.admin-game-grid.grid-size-7 .admin-game-grid-count {
+  left: 4px;
+  bottom: 3px;
+}
+
+.admin-game-grid.grid-size-6 .admin-game-grid-category,
+.admin-game-grid.grid-size-7 .admin-game-grid-category {
+  top: 4px;
+  right: 4px;
+}
+
+.admin-game-grid.grid-size-6 .admin-game-grid-photo,
+.admin-game-grid.grid-size-7 .admin-game-grid-photo {
+  top: 4px;
+  left: 4px;
+}
+
+.admin-game-grid.grid-size-5 .admin-game-grid-banner {
+  top: 5px;
+  right: 5px;
+  left: 5px;
+
+  padding: 2px 4px;
+  font-size: 0.58rem;
+}
+
+.admin-game-grid.grid-size-6 .admin-game-grid-banner {
+  top: 4px;
+  right: 4px;
+  left: 4px;
+
+  padding: 2px 3px;
+  font-size: 0.5rem;
+}
+
+.admin-game-grid.grid-size-7 .admin-game-grid-banner {
+  top: 3px;
+  right: 3px;
+  left: 3px;
+
+  padding: 1px 2px;
+  font-size: 0.44rem;
+}
+
+.admin-game-grid.grid-size-5 .admin-game-grid-warning {
+  width: 18px;
+  height: 18px;
+  font-size: 0.72rem;
+}
+
+.admin-game-grid.grid-size-6 .admin-game-grid-warning {
+  top: 4px;
+  left: 4px;
+
+  width: 15px;
+  height: 15px;
+
+  font-size: 0.62rem;
+}
+
+.admin-game-grid.grid-size-7 .admin-game-grid-warning {
+  top: 3px;
+  left: 3px;
+
+  width: 13px;
+  height: 13px;
+
+  font-size: 0.54rem;
+}
+
+/* ===================== */
+/* GAME CHALLENGE MODAL */
+/* ===================== */
+
+.admin-game-challenge-description-wrapper {
+  position: relative;
+}
+
+.admin-game-challenge-description-text {
+  padding-right: 40px;
+}
+
+.admin-game-challenge-photo-icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 6px;
+  font-size: 1.6rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.admin-game-challenge-meta-box {
+  margin-top: 14px;
+  padding: 12px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 12px;
+}
+
+.admin-game-challenge-meta-row {
+  margin-bottom: 8px;
+}
+
+.admin-game-challenge-meta-row:last-child {
+  margin-bottom: 0;
+}
+
+/* ===================== */
+/* GAME CHALLENGE EDIT CARDS */
+/* ===================== */
+
+.admin-game-challenge-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.admin-game-challenge-card {
+  padding: 14px;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 12px;
+}
+
+.admin-game-challenge-card.editable {
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.admin-game-challenge-card.editable:hover {
+  background: #24364f;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+}
+
+.admin-game-challenge-card-label {
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.admin-game-challenge-card-value {
+  font-size: 1rem;
+  font-weight: bold;
+  color: white;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.admin-game-challenge-card-value.muted {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.admin-game-challenge-card-wide {
+  grid-column: 1 / -1;
+}
+
+/* ===================== */
+/* CHALLENGE SETUP WIZARD */
+/* ===================== */
+
+.admin-setup-progress-wrap {
+  margin: 10px 0 18px;
+}
+
+.admin-setup-progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.admin-setup-progress-fill {
+  height: 100%;
+  background: #3b82f6;
+  transition: width 0.2s ease;
+}
+
+.admin-setup-progress-meta {
+  margin-top: 8px;
+  font-size: 0.92rem;
+  color: #9ca3af;
+}
+
+.admin-setup-position-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #bfdbfe;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.admin-setup-bulk-box {
+  margin-top: 16px;
+  padding: 14px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 12px;
+}
+
+.admin-setup-bulk-box h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.admin-setup-bulk-box p {
+  margin: 0 0 12px;
+  color: #9ca3af;
+}
+
+.admin-setup-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-game-grid-warning {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f59e0b;
+  color: #111827;
+  font-weight: 900;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+/* ===================== */
+/* ADMIN BINGO LINE INDICATORS */
+/* ===================== */
+
+.admin-bingo-board-shell {
+  margin-top: 10px;
+}
+
+.admin-bingo-board-top {
+  display: grid;
+  grid-template-columns: 1fr 52px;
+  margin-bottom: 8px;
+}
+
+.admin-bingo-board-main {
+  display: grid;
+  grid-template-columns: 1fr 52px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.admin-bingo-board-bottom {
+  display: grid;
+  grid-template-columns: 1fr 52px;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.admin-bingo-row-indicators,
+.admin-bingo-column-indicators {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  align-items: center;
+}
+
+.admin-bingo-diagonal-single {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-bingo-line-indicator {
+  width: 38px;
+  height: 38px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 3px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+
+  color: #d1d5db;
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 9px;
+}
+
+.admin-bingo-line-indicator.solved {
+  color: white;
+  background: #16a34a;
+  border-color: #22c55e;
+}
+
+.admin-bingo-line-indicator {
+  cursor: pointer;
+}
+
+.admin-bingo-line-indicator:hover {
+  transform: translateY(-1px);
+  background: #445066;
+}
+
+.admin-bingo-line-indicator.solved:hover {
+  background: #15803d;
+}
+
+.admin-bingo-board-shell,
+.admin-bingo-board-top,
+.admin-bingo-board-main,
+.admin-bingo-board-bottom {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.admin-bingo-board-main {
+  grid-template-columns: minmax(0, 1fr) 52px;
+}
+
+.admin-bingo-board-bottom {
+  grid-template-columns: minmax(0, 1fr) 52px;
+}
+
+.admin-bingo-board-top {
+  grid-template-columns: minmax(0, 1fr) 52px;
+}
+
+/* ===================== */
+/* CHALLENGE DESCRIPTION IMAGES */
+/* ===================== */
+
+.admin-challenge-image-preview-wrap {
+  margin: 10px 0 14px;
+  padding: 10px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 12px;
+}
+
+.admin-challenge-description-image-preview {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  display: block;
+  background: #0b1220;
+  border-radius: 10px;
+}
+
+.admin-setup-image-box input[type="file"],
+#adminChallengeImageInput {
+  width: 100%;
+  padding: 10px;
+  color: white;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 10px;
+}
+
+.admin-setup-image-remove {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  color: #fca5a5;
+}
+
+
+/* ============================================================
+   MOBILE GAME RAIL / DRAWER
+   ============================================================ */
+
+.admin-games-layout {
+  position: relative;
+}
+
+.admin-game-list-panel,
+.admin-game-detail-panel {
+  min-width: 0;
+}
+
+.admin-game-rail-current,
+.admin-game-drawer-backdrop {
+  display: none;
+}
+
+.admin-game-list-actions {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.admin-game-detail-actions {
+  margin-top: 20px;
+}
+
+@media (max-width: 760px) {
+  #tab-games > h2 {
+    display: none;
+  }
+
+  #adminGamesSplitLayout {
+    position: static;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  #adminGamesSplitLayout .admin-game-detail-panel {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 0 0 0 40px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .admin-game-detail-panel > .admin-panel-header {
+    display: none;
+  }
+
+  #adminGameListPanel {
+    position: fixed;
+    top: calc(var(--admin-game-drawer-top, 100px) + 6px);
+    bottom: 6px;
+    left: 6px;
+    z-index: 2100;
+    display: block;
+    width: 28px;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    cursor: pointer;
+  }
+
+  #adminGameListPanel:not(.drawer-open) .admin-game-list-header,
+  #adminGameListPanel:not(.drawer-open) .admin-game-list-actions,
+  #adminGameListPanel:not(.drawer-open) .admin-game-drawer-list,
+  #adminGameListPanel:not(.drawer-open) #adminGamesList {
+    display: none !important;
+  }
+
+  #adminGameListPanel:not(.drawer-open) .admin-game-rail-current {
+    appearance: none;
+    -webkit-appearance: none;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 10px 3px;
+    color: white;
+    font-family: inherit;
+    background: #1f2d42;
+    border: 1px solid #334155;
+    border-radius: 9px;
+    box-shadow:
+      4px 0 12px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+  }
+
+  #adminGameListPanel:not(.drawer-open) .admin-game-rail-current:hover {
+    background: #24364f;
+    border-color: #4b5563;
+  }
+
+  #adminGameListPanel:not(.drawer-open) .admin-game-rail-name {
+    display: block;
+    max-width: 100%;
+    max-height: calc(100dvh - var(--admin-game-drawer-top, 100px) - 28px);
+    overflow: hidden;
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  #adminGameListPanel.drawer-open {
+    position: fixed;
+    top: var(--admin-game-drawer-top, 100px);
+    bottom: 0;
+    left: 0;
+    z-index: 2300;
+    display: block;
+    width: min(78vw, 380px);
+    height: auto;
+    max-height: none;
+    margin: 0;
+    padding: 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #09152d;
+    border: 1px solid #2a3b56;
+    border-left: 0;
+    border-radius: 0 14px 14px 0;
+    box-shadow: 14px 0 35px rgba(0, 0, 0, 0.48);
+    cursor: default;
+  }
+
+  #adminGameListPanel.drawer-open .admin-game-rail-current {
+    display: none;
+  }
+
+  #adminGameListPanel.drawer-open .admin-game-list-header {
+    display: none;
+  }
+
+  #adminGameListPanel.drawer-open .admin-game-list-actions {
+    display: flex;
+    margin: 0 0 12px;
+  }
+
+  #adminGameListPanel.drawer-open .admin-game-drawer-list,
+  #adminGameListPanel.drawer-open #adminGamesList {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #adminGameDrawerBackdrop:not(.hidden) {
+    position: fixed;
+    top: var(--admin-game-drawer-top, 100px);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2200;
+    display: block;
+    background: rgba(3, 8, 18, 0.58);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+  }
+}
+
+
+/* ============================================================
+   COMPACT GAME DETAILS
+   ============================================================ */
+
+.admin-game-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-game-details-grid .admin-detail-card {
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.admin-game-details-grid .admin-detail-label {
+  margin-bottom: 2px;
+
+  color: #9ca3af;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.admin-game-details-grid .admin-detail-value {
+  overflow: hidden;
+
+  color: white;
+  font-size: 0.94rem;
+  font-weight: 750;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-game-details-grid .admin-detail-value.clickable {
+    display: inline-block;
+
+    cursor: pointer;
+
+    border-bottom: 1px solid rgba(255,255,255,.45);
+
+    transition: border-color .15s;
+}
+
+.admin-game-details-grid .admin-detail-value.clickable:hover {
+    border-bottom-color: rgba(255,255,255,.95);
+}
+
+.admin-game-details-grid .admin-detail-value.clickable:hover {
+    text-decoration-color: rgba(255,255,255,.9);
+}
+
+.admin-game-details-grid .admin-detail-value.muted {
+  color: #9ca3af;
+}
+
+.admin-game-details-grid .admin-detail-value.success-state {
+  color: #86efac;
+}
+
+.admin-game-details-grid .admin-detail-value.danger-state {
+  color: #fca5a5;
+}
+
+.admin-game-details-grid .admin-detail-value.points-state {
+  color: #facc15;
+}
+
+.admin-game-incomplete-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  margin-top: 10px;
+  padding: 9px 11px;
+
+  color: #fcd34d;
+  font-size: 0.85rem;
+
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.42);
+  border-radius: 10px;
+}
+
+@media (max-width: 980px) {
+  .admin-game-details-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-game-details-grid {
+    gap: 6px;
+  }
+
+  .admin-game-details-grid .admin-detail-card {
+    padding: 8px 7px;
+  }
+
+  .admin-game-details-grid .admin-detail-label {
+    font-size: 0.64rem;
+  }
+
+  .admin-game-details-grid .admin-detail-value {
+    font-size: 0.84rem;
+  }
+}
+
+/* ============================================================
+   GAME PLAYER LIST MODAL
+   ============================================================ */
+
+.admin-game-players-list-modal {
+  max-width: 560px;
+}
+
+.admin-game-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-game-player-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 11px;
+  color: white;
+  font: inherit;
+  text-align: left;
+  background: #1f2d42;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.admin-game-player-list-row:hover {
+  background: #263750;
+  border-color: #3b82f6;
+}
+
+.admin-game-player-list-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-game-player-list-meta {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   GAME DETAIL ACTIONS – MATCH PLAYER TAB
+   ============================================================ */
+
+#adminGameDeleteWrapper.admin-game-detail-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+
+#adminGameDeleteWrapper.admin-game-detail-actions.hidden {
+  display: none;
+}
+
+#adminGameDeleteWrapper.admin-game-detail-actions button {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 6px;
+  font-size: 0.7rem;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+   CHALLENGE DETAIL MODAL – STRUCTURED LAYOUT
+   ============================================================ */
+
+.admin-game-challenge-modal {
+  width: min(94vw, 920px);
+  max-width: 920px;
+}
+
+.admin-game-challenge-modal-content {
+  padding-top: 4px;
+}
+
+.admin-game-challenge-detail-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 0;
+}
+
+.admin-game-challenge-detail-grid .admin-game-challenge-card {
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.admin-game-challenge-title-card {
+  padding-right: 44px !important;
+}
+
+.admin-game-challenge-detail-grid .admin-game-challenge-card-label {
+  margin-bottom: 3px;
+  font-size: 0.68rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.admin-game-challenge-detail-grid .admin-game-challenge-card-value {
+  overflow: hidden;
+  font-size: 0.84rem;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-game-challenge-detail-grid .compact-text-card .admin-game-challenge-card-value {
+  font-size: 0.76rem;
+}
+
+.admin-game-challenge-detail-grid .clickable-value {
+  display: inline-block;
+  max-width: 100%;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.48);
+  transition: border-color 0.15s ease;
+}
+
+.admin-game-challenge-detail-grid .editable:hover .clickable-value,
+.admin-game-challenge-detail-grid .clickable-stat:hover .clickable-value {
+  border-bottom-color: rgba(255, 255, 255, 0.95);
+}
+
+.admin-game-challenge-detail-grid .clickable-stat {
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.admin-game-challenge-detail-grid .clickable-stat:hover {
+  background: #24364f;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+}
+
+.admin-game-challenge-detail-grid .stat-card .admin-game-challenge-card-value {
+  font-size: 1rem;
+}
+
+.admin-game-challenge-gallery {
+  margin-top: 12px;
+}
+
+.admin-game-challenge-gallery-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 360px;
+  overflow: hidden;
+  background: #0b1220;
+  border: 1px solid #334155;
+  border-radius: 12px;
+}
+
+.admin-game-challenge-gallery-stage.empty {
+  padding: 20px;
+}
+
+.admin-game-challenge-gallery-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.admin-game-challenge-gallery-caption {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: calc(100% - 20px);
+  padding: 7px 9px;
+  color: white;
+  font-size: 0.72rem;
+  line-height: 1.15;
+  background: rgba(3, 8, 18, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.admin-game-challenge-gallery-caption strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-game-challenge-gallery-caption span {
+  color: #cbd5e1;
+}
+
+.admin-game-challenge-gallery-stage .admin-gallery-arrow {
+  z-index: 2;
+}
+
+.admin-game-challenge-leaderboard {
+  margin-top: 16px !important;
+}
+
+.admin-game-challenge-leaderboard h3 {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 520px) {
+  .admin-game-challenge-modal {
+    width: calc(100vw - 12px);
+    max-width: none;
+  }
+
+  .admin-game-challenge-detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .admin-game-challenge-detail-grid .admin-game-challenge-card {
+    padding: 8px 6px;
+  }
+
+  .admin-game-challenge-detail-grid .admin-game-challenge-card-label {
+    font-size: 0.6rem;
+  }
+
+  .admin-game-challenge-detail-grid .admin-game-challenge-card-value {
+    font-size: 0.72rem;
+  }
+
+  .admin-game-challenge-detail-grid .compact-text-card .admin-game-challenge-card-value {
+    font-size: 0.66rem;
+  }
+
+  .admin-game-challenge-gallery-stage {
+    height: 260px;
+  }
+}
